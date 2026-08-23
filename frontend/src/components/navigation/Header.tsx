@@ -166,7 +166,7 @@ export function Header() {
                     </div>
                     <div className="relative overflow-hidden aspect-[4/5] rounded-xl border border-ivory-300 bg-ivory-200 group/card">
                       <img
-                        src="https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80"
+                        src="/images/products/artisan-mandala-brown-1.jpg"
                         alt="The Oxford Edit"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
                       />

@@ -51,7 +51,7 @@ export function AdminProductFormPage() {
 
   // Images state
   const [images, setImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=1000',
+    '/images/products/artisan-mandala-brown-1.jpg',
   ]);
   const [newImageUrl, setNewImageUrl] = useState('');
 
@@ -598,7 +598,7 @@ export function AdminProductFormPage() {
             type="url"
             value={newImageUrl}
             onChange={e => setNewImageUrl(e.target.value)}
-            placeholder="Paste high-res image URL (e.g. Unsplash URL)..."
+            placeholder="Paste high-res image URL or local path (e.g. /images/products/...)..."
             className="flex-1 rounded-xl bg-ivory-50 border border-ivory-300 px-4 py-2 text-xs text-charcoal-950 outline-none focus:border-charcoal-950 focus:bg-white"
           />
           <button

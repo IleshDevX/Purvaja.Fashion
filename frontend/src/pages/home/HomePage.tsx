@@ -17,9 +17,8 @@ const TESTIMONIALS = [
     quote:
       'The Supima luxury dress shirt fits like it was custom made by a Savile Row tailor. Clean collars that stay sharp all day during client meetings.',
     author: 'Vikram Malhotra',
+    initials: 'VM',
     role: 'Managing Director, Apex Capital',
-    avatar:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
   },
   {
     id: 2,
@@ -27,9 +26,8 @@ const TESTIMONIALS = [
     quote:
       'The fabric quality is unreal. 100s Egyptian cotton feels exceptionally breathable in humid weather, and the mother-of-pearl buttons are a magnificent touch.',
     author: 'Rohan Mehta',
+    initials: 'RM',
     role: 'Partner, McKinsey & Co.',
-    avatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
   },
   {
     id: 3,
@@ -37,23 +35,17 @@ const TESTIMONIALS = [
     quote:
       'Finally a brand that focuses 100% on premium men\'s shirts without filler. Ordering process was smooth, and delivery arrived in luxury packaging within 48 hours.',
     author: 'Aditya Sharma',
+    initials: 'AS',
     role: 'Creative Lead, Design Studio',
-    avatar:
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&auto=format&fit=crop',
   },
 ] as const;
 
-const categoryCard1 =
-  'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto=format&fit=crop';
-const categoryCard2 =
-  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1000&auto=format&fit=crop';
-const categoryCard3Top =
-  'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop';
-const categoryCard3Bottom =
-  'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=800&auto=format&fit=crop';
+const categoryCard1 = '/images/products/artisan-mandala-brown-1.jpg';
+const categoryCard2 = '/images/products/forest-floral-green-1.jpg';
+const categoryCard3Top = '/images/products/heritage-leaf-brown-1.jpg';
+const categoryCard3Bottom = '/images/products/monochrome-abstract-grey-1.jpg';
 
-const promoImage =
-  'https://images.unsplash.com/photo-1550246140-5119ae4790b8?q=80&w=1400&auto=format&fit=crop';
+const promoImage = '/images/products/terra-striped-brown-1.jpg';
 
 const ATELIER_STANDARDS = [
   {
@@ -64,8 +56,7 @@ const ATELIER_STANDARDS = [
       'Yes. Most global destinations are fully supported. Domestic delivery across India is complimentary on all orders above ₹2,500.',
     tag: 'Logistics & Delivery',
     badgeTitle: 'Global Express & Tracking',
-    image:
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200&auto=format&fit=crop',
+    image: '/images/products/egyptian-linen-ivory-1.jpg',
   },
   {
     id: 1,
@@ -75,8 +66,7 @@ const ATELIER_STANDARDS = [
       'Unworn pieces with original tags can be exchanged or returned within 7 days with complimentary doorstep pickup.',
     tag: 'Client Assurance',
     badgeTitle: '7-Day Doorstep Exchange',
-    image:
-      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1200&auto=format&fit=crop',
+    image: '/images/products/natural-linen-cream-1.jpg',
   },
   {
     id: 2,
@@ -86,8 +76,7 @@ const ATELIER_STANDARDS = [
       'Each product page includes our exact collar and chest reference matrix tailored for our Slim and Regular fit silhouettes.',
     tag: 'Tailoring Matrix',
     badgeTitle: 'Collar & Sizing Precision',
-    image:
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1200&auto=format&fit=crop',
+    image: '/images/products/terra-striped-brown-1.jpg',
   },
 ] as const;
 
@@ -539,12 +528,9 @@ export function HomePage() {
 
                 {/* Reviewer Meta */}
                 <div className="mt-8 flex items-center gap-3.5 border-t border-ivory-300/80 pt-5">
-                  <img
-                    src={t.avatar}
-                    alt={t.author}
-                    className="h-11 w-11 rounded-full object-cover ring-2 ring-gold-500/25"
-                    loading="lazy"
-                  />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-charcoal-950 font-serif text-xs font-bold tracking-wider text-gold-300 ring-2 ring-gold-500/30 shrink-0">
+                    {t.initials}
+                  </div>
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-charcoal-950">
                       {t.author}

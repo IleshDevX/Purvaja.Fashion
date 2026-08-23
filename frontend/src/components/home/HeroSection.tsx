@@ -21,12 +21,11 @@ const HERO_SLIDES = [
     stat3Label: 'Tailoring',
     stat3Val: 'Slim & Regular Cuts',
     badgeTag: "Editor's Choice",
-    badgeTitle: 'Supima Luxury Dress Shirt',
+    badgeTitle: 'Artisan Mandala Shirt',
     badgePrice: '₹2,499',
     badgeCompare: '₹3,299',
     link: '/shop?category=formal',
-    image:
-      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=2000&auto=format&fit=crop',
+    image: '/images/products/artisan-mandala-brown-1.jpg',
   },
   {
     id: 1,
@@ -47,8 +46,7 @@ const HERO_SLIDES = [
     badgePrice: '₹2,899',
     badgeCompare: '₹3,699',
     link: '/shop?category=casual',
-    image:
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=2000&auto=format&fit=crop',
+    image: '/images/products/heritage-leaf-brown-1.jpg',
   },
   {
     id: 2,
@@ -65,12 +63,11 @@ const HERO_SLIDES = [
     stat3Label: 'Buttons',
     stat3Val: 'Genuine Mother-of-Pearl',
     badgeTag: 'Bespoke Formal',
-    badgeTitle: 'Monochrome Oxford Shirt',
+    badgeTitle: 'Monochrome Abstract Shirt',
     badgePrice: '₹3,299',
     badgeCompare: '₹4,099',
     link: '/shop?category=formal',
-    image:
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=2000&auto=format&fit=crop',
+    image: '/images/products/monochrome-abstract-grey-1.jpg',
   },
   {
     id: 3,
@@ -91,8 +88,7 @@ const HERO_SLIDES = [
     badgePrice: '₹3,699',
     badgeCompare: '₹4,499',
     link: '/shop?category=casual',
-    image:
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=2000&auto=format&fit=crop',
+    image: '/images/products/forest-floral-green-1.jpg',
   },
 ] as const;
 

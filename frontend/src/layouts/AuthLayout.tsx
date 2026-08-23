@@ -9,7 +9,7 @@ export function AuthLayout({ children }: { children?: ReactNode }) {
         <div
           className="absolute inset-0 bg-cover bg-center opacity-40"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&auto=format&fit=crop&q=80')`,
+            backgroundImage: `url('/images/products/forest-floral-green-1.jpg')`,
           }}
         />
         <div className="relative z-10">
