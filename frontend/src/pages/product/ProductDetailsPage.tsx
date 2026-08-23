@@ -145,10 +145,10 @@ export function ProductDetailsPage() {
   ).slice(0, 4);
 
   return (
-    <div className="py-8 lg:py-16">
-      <div className="max-w-editorial mx-auto px-5 sm:px-8 lg:px-12">
+    <div className="py-4 lg:py-8">
+      <div className="max-w-editorial mx-auto px-4 sm:px-6 lg:px-10">
         {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-2 text-caption text-charcoal-400 mb-8" aria-label="Breadcrumb">
+        <nav className="flex items-center gap-2 text-caption text-charcoal-400 mb-4 sm:mb-6" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-charcoal-800 transition-colors">
             Home
           </Link>
@@ -161,43 +161,43 @@ export function ProductDetailsPage() {
         </nav>
 
         {/* ── Main Editorial Split Layout ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-          {/* LEFT: Large Image Sequence (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+          {/* LEFT: Image Sequence & Hero Stage (6 cols) */}
+          <div className="lg:col-span-6 flex flex-col-reverse lg:flex-row gap-3 sm:gap-4 items-start">
             {/* Thumbnails */}
-            <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible no-scrollbar pb-2 lg:pb-0">
+            <div className="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-visible no-scrollbar pb-1 lg:pb-0 shrink-0">
               {shirt.images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className={`w-16 sm:w-20 aspect-[3/4] bg-ivory-200 overflow-hidden border-2 transition-all flex-shrink-0 ${
+                  className={`w-14 sm:w-16 aspect-[3/4] bg-ivory-200 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
                     selectedImageIndex === idx
-                      ? 'border-charcoal-900 opacity-100'
+                      ? 'border-charcoal-900 opacity-100 shadow-2xs'
                       : 'border-transparent opacity-60 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover object-top" />
                 </button>
               ))}
             </div>
 
-            {/* Hero Stage Image */}
-            <div className="flex-1 relative aspect-[3/4] bg-ivory-200 overflow-hidden shadow-subtle">
+            {/* Hero Stage Image with Contrained Viewport Height */}
+            <div className="flex-1 w-full relative aspect-[3/4] max-h-[58vh] sm:max-h-[62vh] lg:max-h-[65vh] bg-ivory-200 rounded-2xl overflow-hidden shadow-subtle flex items-center justify-center">
               <img
                 src={shirt.images[selectedImageIndex] || shirt.images[0]}
                 alt={shirt.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
               />
               {shirt.isNewArrival && (
-                <span className="absolute top-4 left-4 text-overline text-charcoal-900 bg-ivory-100/95 backdrop-blur-sm px-3 py-1">
+                <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-[0.16em] text-charcoal-900 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-sm shadow-2xs">
                   New Arrival
                 </span>
               )}
             </div>
           </div>
 
-          {/* RIGHT: Sticky Product Information Panel (5 cols) */}
-          <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+          {/* RIGHT: Sticky Product Information Panel (6 cols) */}
+          <div className="lg:col-span-6 lg:sticky lg:top-20 space-y-4 sm:space-y-5">
             <div>
               <div className="flex items-center justify-between text-caption text-gold-600 font-medium mb-1">
                 <span className="tracking-widest uppercase">{shirt.fabric} · {shirt.fit} Fit</span>
@@ -209,23 +209,23 @@ export function ProductDetailsPage() {
                   </div>
                 )}
               </div>
-              <h1 className="font-serif text-heading-xl text-charcoal-900 mb-2 leading-tight">
+              <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-charcoal-900 mb-1.5 leading-tight">
                 {shirt.name}
               </h1>
-              <p className="text-body text-charcoal-500">{shirt.tagline}</p>
+              <p className="text-body-sm text-charcoal-500">{shirt.tagline}</p>
             </div>
 
             {/* Price Row */}
-            <div className="flex items-baseline gap-3 pb-4 border-b border-ivory-300">
-              <span className="font-sans text-3xl sm:text-4xl font-bold tracking-tight text-charcoal-900 tabular-nums">
+            <div className="flex items-baseline gap-3 pb-3 border-b border-ivory-300">
+              <span className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-charcoal-900 tabular-nums">
                 ₹{shirt.price.toLocaleString('en-IN')}
               </span>
               {shirt.compareAtPrice && (
                 <>
-                  <span className="font-sans text-lg sm:text-xl text-charcoal-400 font-medium line-through tabular-nums">
+                  <span className="font-sans text-base sm:text-lg text-charcoal-400 font-medium line-through tabular-nums">
                     ₹{shirt.compareAtPrice.toLocaleString('en-IN')}
                   </span>
-                  <span className="text-caption font-bold text-gold-700 bg-gold-100 px-2.5 py-1 rounded-xs tracking-wider uppercase">
+                  <span className="text-[11px] font-bold text-gold-700 bg-gold-100 px-2 py-0.5 rounded-xs tracking-wider uppercase">
                     Save {discount}%
                   </span>
                 </>
@@ -235,17 +235,17 @@ export function ProductDetailsPage() {
             {/* Color Swatches */}
             {shirt.colors.length > 0 && (
               <div>
-                <label className="block text-overline text-charcoal-500 mb-2">
+                <label className="block text-overline text-charcoal-500 mb-1.5">
                   Fabric Color: <span className="text-charcoal-900 font-normal">{currentColor.name}</span>
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   {shirt.colors.map(color => (
                     <button
                       key={color.name}
                       onClick={() => setSelectedColor(color)}
-                      className={`w-8 h-8 rounded-full border-2 transition-all p-0.5 ${
+                      className={`w-7 h-7 rounded-full border-2 transition-all p-0.5 ${
                         currentColor.name === color.name
-                          ? 'border-charcoal-900 scale-110'
+                          ? 'border-charcoal-900 scale-110 shadow-2xs'
                           : 'border-transparent hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
@@ -258,13 +258,13 @@ export function ProductDetailsPage() {
 
             {/* Size Selector + Size Guide Trigger */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <label className="text-overline text-charcoal-500">Select Size</label>
                 <button
                   onClick={() => setSizeGuideOpen(true)}
-                  className="inline-flex items-center gap-1 text-caption text-charcoal-600 hover:text-charcoal-900 underline underline-offset-4"
+                  className="inline-flex items-center gap-1 text-[11px] text-charcoal-600 hover:text-charcoal-900 underline underline-offset-4"
                 >
-                  <Ruler className="w-3.5 h-3.5" /> Size Guide
+                  <Ruler className="w-3 h-3" /> Size Guide
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -272,9 +272,9 @@ export function ProductDetailsPage() {
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`py-3 text-caption font-medium border transition-all ${
+                    className={`py-2 px-2 text-caption font-medium border transition-all rounded-xs ${
                       currentSize === size
-                        ? 'border-charcoal-900 bg-charcoal-900 text-ivory-100'
+                        ? 'border-charcoal-900 bg-charcoal-900 text-ivory-100 font-bold'
                         : 'border-ivory-300 bg-ivory-50 text-charcoal-800 hover:border-charcoal-400'
                     }`}
                   >
@@ -286,19 +286,19 @@ export function ProductDetailsPage() {
 
             {/* Quantity Selector */}
             <div>
-              <label className="block text-overline text-charcoal-500 mb-2">Quantity</label>
-              <div className="inline-flex items-center border border-ivory-300 bg-ivory-50">
+              <label className="block text-overline text-charcoal-500 mb-1.5">Quantity</label>
+              <div className="inline-flex items-center border border-ivory-300 bg-ivory-50 rounded-xs">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-3 text-charcoal-600 hover:text-charcoal-900"
+                  className="p-2 text-charcoal-600 hover:text-charcoal-900"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-5 text-body-sm font-semibold text-charcoal-900">{quantity}</span>
+                <span className="px-4 text-body-sm font-semibold text-charcoal-900">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="p-3 text-charcoal-600 hover:text-charcoal-900"
+                  className="p-2 text-charcoal-600 hover:text-charcoal-900"
                   aria-label="Increase quantity"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -307,11 +307,11 @@ export function ProductDetailsPage() {
             </div>
 
             {/* CTA Buttons */}
-            <div className="space-y-3 pt-2">
-              <div className="flex gap-3">
+            <div className="space-y-2.5 pt-1">
+              <div className="flex gap-2.5">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 py-4 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors shadow-subtle"
+                  className="flex-1 py-3 bg-charcoal-900 text-ivory-100 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors shadow-subtle rounded-xs"
                 >
                   ADD TO SHOPPING BAG
                 </button>
@@ -323,19 +323,19 @@ export function ProductDetailsPage() {
                       'info',
                     );
                   }}
-                  className={`p-4 border border-ivory-400 transition-colors flex items-center justify-center ${
+                  className={`p-3 border border-ivory-400 transition-colors flex items-center justify-center rounded-xs ${
                     inWishlist
                       ? 'bg-gold-50 border-gold-500 text-gold-600'
                       : 'hover:border-charcoal-900 text-charcoal-700'
                   }`}
                   aria-label="Wishlist"
                 >
-                  <Heart className={`w-5 h-5 ${inWishlist ? 'fill-gold-600' : ''}`} />
+                  <Heart className={`w-4 h-4 ${inWishlist ? 'fill-gold-600' : ''}`} />
                 </button>
               </div>
               <button
                 onClick={handleBuyNow}
-                className="w-full py-3.5 border-2 border-charcoal-900 bg-transparent text-charcoal-900 text-body-sm font-semibold tracking-wider hover:bg-charcoal-900 hover:text-ivory-100 transition-all"
+                className="w-full py-2.5 border-2 border-charcoal-900 bg-transparent text-charcoal-900 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-900 hover:text-ivory-100 transition-all rounded-xs"
               >
                 BUY NOW WITH 1-CLICK
               </button>
