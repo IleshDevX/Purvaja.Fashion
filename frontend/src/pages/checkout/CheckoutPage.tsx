@@ -209,9 +209,10 @@ export function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      autoComplete="given-name"
                       value={firstName}
                       onChange={e => setFirstName(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                      className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                     />
                   </div>
                   <div>
@@ -221,9 +222,10 @@ export function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      autoComplete="family-name"
                       value={lastName}
                       onChange={e => setLastName(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                      className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                     />
                   </div>
                 </div>
@@ -235,11 +237,13 @@ export function CheckoutPage() {
                   <input
                     type="tel"
                     required
+                    inputMode="tel"
+                    autoComplete="tel"
                     pattern="[6-9][0-9]{9}"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="10-digit number"
-                    className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                    className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                   />
                 </div>
 
@@ -250,9 +254,10 @@ export function CheckoutPage() {
                   <input
                     type="text"
                     required
+                    autoComplete="street-address"
                     value={addressLine1}
                     onChange={e => setAddressLine1(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                    className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                   />
                 </div>
 
@@ -264,7 +269,7 @@ export function CheckoutPage() {
                     type="text"
                     value={addressLine2}
                     onChange={e => setAddressLine2(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                    className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                   />
                 </div>
 
@@ -274,9 +279,10 @@ export function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      autoComplete="address-level2"
                       value={city}
                       onChange={e => setCity(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                      className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                     />
                   </div>
                   <div>
@@ -284,9 +290,10 @@ export function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      autoComplete="address-level1"
                       value={state}
                       onChange={e => setState(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                      className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                     />
                   </div>
                   <div>
@@ -296,18 +303,20 @@ export function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      inputMode="numeric"
+                      autoComplete="postal-code"
                       pattern="[0-9]{6}"
                       value={postalCode}
                       onChange={e => setPostalCode(e.target.value)}
                       placeholder="6 digits"
-                      className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                      className="w-full px-3.5 py-2.5 bg-white border border-ivory-300 text-sm sm:text-base text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full mt-4 py-4 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-4 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2 rounded-xl shadow-md"
                 >
                   CONTINUE TO DELIVERY & REVIEW <ArrowRight className="w-4 h-4" />
                 </button>

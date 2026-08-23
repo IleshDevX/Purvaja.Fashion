@@ -70,9 +70,9 @@ export function WishlistPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {savedShirts.map(shirt => (
-              <div key={shirt.id} className="group relative flex flex-col bg-ivory-50 border border-ivory-200">
+              <div key={shirt.id} className="group relative flex flex-col bg-white border border-ivory-300 rounded-2xl overflow-hidden shadow-sm">
                 <div className="relative aspect-[3/4] bg-ivory-200 overflow-hidden">
                   <Link to={`/shirts/${shirt.slug}`} className="block w-full h-full">
                     <img
@@ -86,32 +86,32 @@ export function WishlistPage() {
                       removeFromWishlist(shirt.id);
                       addToast(`Removed "${shirt.name}" from wishlist.`, 'info');
                     }}
-                    className="absolute top-3 right-3 z-10 w-8 h-8 bg-ivory-100/90 rounded-full flex items-center justify-center text-charcoal-500 hover:text-error shadow-subtle transition-colors"
+                    className="absolute top-2.5 right-2.5 z-10 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-charcoal-500 hover:text-error shadow-sm transition-colors"
                     title="Remove"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                   </button>
                 </div>
 
-                <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-caption text-charcoal-400 block mb-1">{shirt.fabric}</span>
+                    <span className="text-[10px] sm:text-caption text-charcoal-400 block mb-0.5 sm:mb-1 truncate">{shirt.fabric}</span>
                     <Link
                       to={`/shirts/${shirt.slug}`}
-                      className="font-serif text-heading text-charcoal-900 hover:text-gold-600 transition-colors line-clamp-1 mb-2"
+                      className="font-serif text-sm sm:text-heading font-medium text-charcoal-900 hover:text-gold-600 transition-colors line-clamp-1 mb-1 sm:mb-2"
                     >
                       {shirt.name}
                     </Link>
-                    <div className="font-sans text-subheading font-bold text-charcoal-900 tabular-nums mb-4">
+                    <div className="font-sans text-xs sm:text-subheading font-bold text-charcoal-900 tabular-nums mb-3 sm:mb-4">
                       ₹{shirt.price.toLocaleString('en-IN')}
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleMoveToBag(shirt)}
-                    className="w-full py-2.5 bg-charcoal-900 text-ivory-100 text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2 sm:py-2.5 bg-charcoal-900 text-ivory-100 text-[11px] sm:text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl shadow-xs"
                   >
-                    <ShoppingBag className="w-4 h-4" /> MOVE TO BAG
+                    <ShoppingBag className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> MOVE TO BAG
                   </button>
                 </div>
               </div>

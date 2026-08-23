@@ -147,69 +147,70 @@ export function AccountPage() {
         {/* 2-Column Sanctuary Layout */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10 items-start">
           {/* Left: Navigation Sidebar (4 cols) */}
+          {/* Left: Navigation Sidebar (4 cols) */}
           <aside className="lg:col-span-4">
-            <div className="rounded-[26px] border border-ivory-300 bg-white p-5 shadow-[0_12px_32px_rgba(26,26,26,0.03)] space-y-2">
+            <div className="rounded-[24px] sm:rounded-[26px] border border-ivory-300 bg-white p-3 sm:p-5 shadow-[0_12px_32px_rgba(26,26,26,0.03)] flex flex-row lg:flex-col overflow-x-auto gap-2 no-scrollbar">
               <button
                 type="button"
                 onClick={() => setActiveTab('profile')}
-                className={`w-full flex items-center justify-between rounded-2xl p-4 text-xs font-bold uppercase tracking-[0.14em] transition-all text-left ${
+                className={`flex-shrink-0 lg:w-full flex items-center justify-between rounded-xl sm:rounded-2xl p-3 sm:p-4 text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] transition-all text-left ${
                   activeTab === 'profile'
                     ? 'bg-charcoal-950 text-white shadow-sm'
                     : 'text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950'
                 }`}
               >
-                <span className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-gold-400" /> Personal Information
+                <span className="flex items-center gap-2 sm:gap-3">
+                  <User className="h-4 w-4 text-gold-400 shrink-0" /> Personal Info
                 </span>
-                <ChevronRight className="h-4 w-4 opacity-60" />
+                <ChevronRight className="h-4 w-4 opacity-60 hidden lg:block" />
               </button>
 
               <Link
                 to="/account/orders"
-                className="w-full flex items-center justify-between rounded-2xl p-4 text-xs font-bold uppercase tracking-[0.14em] text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950 transition-all"
+                className="flex-shrink-0 lg:w-full flex items-center justify-between rounded-xl sm:rounded-2xl p-3 sm:p-4 text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950 transition-all"
               >
-                <span className="flex items-center gap-3">
-                  <Package className="h-4 w-4 text-gold-600" /> Orders & Invoices
+                <span className="flex items-center gap-2 sm:gap-3">
+                  <Package className="h-4 w-4 text-gold-600 shrink-0" /> Orders & Invoices
                 </span>
-                <ChevronRight className="h-4 w-4 opacity-60" />
+                <ChevronRight className="h-4 w-4 opacity-60 hidden lg:block" />
               </Link>
 
               <Link
                 to="/wishlist"
-                className="w-full flex items-center justify-between rounded-2xl p-4 text-xs font-bold uppercase tracking-[0.14em] text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950 transition-all"
+                className="flex-shrink-0 lg:w-full flex items-center justify-between rounded-xl sm:rounded-2xl p-3 sm:p-4 text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950 transition-all"
               >
-                <span className="flex items-center gap-3">
-                  <Heart className="h-4 w-4 text-gold-600" /> Saved Wishlist ({wishlistCount})
+                <span className="flex items-center gap-2 sm:gap-3">
+                  <Heart className="h-4 w-4 text-gold-600 shrink-0" /> Wishlist ({wishlistCount})
                 </span>
-                <ChevronRight className="h-4 w-4 opacity-60" />
+                <ChevronRight className="h-4 w-4 opacity-60 hidden lg:block" />
               </Link>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('addresses')}
-                className={`w-full flex items-center justify-between rounded-2xl p-4 text-xs font-bold uppercase tracking-[0.14em] transition-all text-left ${
+                className={`flex-shrink-0 lg:w-full flex items-center justify-between rounded-xl sm:rounded-2xl p-3 sm:p-4 text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] transition-all text-left ${
                   activeTab === 'addresses'
                     ? 'bg-charcoal-950 text-white shadow-sm'
                     : 'text-charcoal-700 hover:bg-ivory-100 hover:text-charcoal-950'
                 }`}
               >
-                <span className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-gold-400" /> Saved Addresses ({addresses.length})
+                <span className="flex items-center gap-2 sm:gap-3">
+                  <MapPin className="h-4 w-4 text-gold-400 shrink-0" /> Addresses ({addresses.length})
                 </span>
-                <ChevronRight className="h-4 w-4 opacity-60" />
+                <ChevronRight className="h-4 w-4 opacity-60 hidden lg:block" />
               </button>
 
               {isAdmin && (
-                <div className="pt-2">
+                <div className="flex-shrink-0 lg:w-full lg:pt-2">
                   <Link
                     to="/admin"
-                    className="w-full flex items-center justify-between rounded-2xl p-4 text-xs font-bold uppercase tracking-[0.14em] transition-all text-left bg-charcoal-950 text-gold-300 border border-gold-500/40 hover:bg-gold-500 hover:text-charcoal-950 shadow-sm group"
+                    className="flex-shrink-0 lg:w-full flex items-center justify-between rounded-xl sm:rounded-2xl p-3 sm:p-4 text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] transition-all text-left bg-charcoal-950 text-gold-300 border border-gold-500/40 hover:bg-gold-500 hover:text-charcoal-950 shadow-sm group"
                   >
-                    <span className="flex items-center gap-3">
-                      <ShieldCheck className="h-4 w-4 text-gold-400 group-hover:text-charcoal-950" />
-                      Atelier Admin Panel
+                    <span className="flex items-center gap-2 sm:gap-3">
+                      <ShieldCheck className="h-4 w-4 text-gold-400 group-hover:text-charcoal-950 shrink-0" />
+                      Admin Control
                     </span>
-                    <ArrowUpRight className="h-4 w-4 opacity-70 group-hover:opacity-100" />
+                    <ArrowUpRight className="h-4 w-4 opacity-70 group-hover:opacity-100 hidden lg:block" />
                   </Link>
                 </div>
               )}

@@ -150,17 +150,17 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               {/* Sophisticated Luxury Serif Title with Smooth Transition */}
               <div key={`title-${slide.id}`} className="space-y-0 tracking-tight animate-fade-in">
                 <div className="overflow-hidden">
-                  <h1 className="font-serif text-[3.6rem] font-light leading-[0.92] text-charcoal-950 sm:text-[4.8rem] md:text-[5.6rem] lg:text-[6.1rem] xl:text-[6.9rem]">
+                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] text-charcoal-950">
                     {slide.line1}
                   </h1>
                 </div>
                 <div className="overflow-hidden">
-                  <h1 className="font-serif text-[3.6rem] font-light leading-[0.92] text-charcoal-950 sm:text-[4.8rem] md:text-[5.6rem] lg:text-[6.1rem] xl:text-[6.9rem]">
+                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] text-charcoal-950">
                     {slide.line2}
                   </h1>
                 </div>
                 <div className="overflow-hidden">
-                  <h1 className="font-serif text-[3.6rem] font-light italic leading-[0.92] text-gold-700 sm:text-[4.8rem] md:text-[5.6rem] lg:text-[6.1rem] xl:text-[6.9rem]">
+                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light italic leading-[0.92] text-gold-700">
                     {slide.line3}
                   </h1>
                 </div>
@@ -169,31 +169,31 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               {/* Description Paragraph */}
               <p
                 key={`desc-${slide.id}`}
-                className="mt-5 max-w-lg text-sm leading-relaxed text-charcoal-600 sm:text-base animate-fade-in"
+                className="mt-4 sm:mt-5 max-w-lg text-xs xs:text-sm leading-relaxed text-charcoal-600 sm:text-base animate-fade-in"
               >
                 {slide.description}
               </p>
 
               {/* Action Buttons & Slide Progress Indicators */}
-              <div className="mt-7 flex flex-wrap items-center gap-4 sm:gap-6">
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="mt-6 sm:mt-7 flex flex-col xs:flex-row flex-wrap items-start xs:items-center gap-4 sm:gap-6">
+                <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-3 w-full xs:w-auto">
                   <Link
                     to="/shop"
-                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-charcoal-950 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-100 shadow-md transition-all duration-300 hover:bg-charcoal-800 hover:shadow-xl active:scale-95 sm:px-9 sm:py-3.5"
+                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-charcoal-950 px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-100 shadow-md transition-all duration-300 hover:bg-charcoal-800 hover:shadow-xl active:scale-95 text-center"
                   >
                     Shop Collection <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
 
                   <Link
                     to={slide.link}
-                    className="group inline-flex items-center justify-center rounded-full border border-charcoal-900/25 bg-white/80 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-charcoal-900 transition-all duration-300 hover:border-gold-500 hover:bg-charcoal-950 hover:text-white active:scale-95 sm:px-9 sm:py-3.5"
+                    className="group inline-flex items-center justify-center rounded-full border border-charcoal-900/25 bg-white/80 px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-charcoal-900 transition-all duration-300 hover:border-gold-500 hover:bg-charcoal-950 hover:text-white active:scale-95 text-center"
                   >
                     Featured Piece
                   </Link>
                 </div>
 
                 {/* 4 Interactive Slide Progress Pills */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pt-1 xs:pt-0">
                   {HERO_SLIDES.map((s, idx) => {
                     const isActive = currentSlide === idx;
                     return (
@@ -216,34 +216,34 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               {/* Quick Feature Badges */}
               <div
                 key={`stats-${slide.id}`}
-                className="mt-8 flex flex-wrap items-center gap-6 border-t border-charcoal-900/10 pt-5 text-xs text-charcoal-600 sm:gap-8 animate-fade-in"
+                className="mt-6 sm:mt-8 grid grid-cols-3 sm:flex sm:items-center gap-3 sm:gap-6 border-t border-charcoal-900/10 pt-4 sm:pt-5 text-xs text-charcoal-600 sm:gap-8 animate-fade-in"
               >
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
                     {slide.stat1Label}
                   </p>
-                  <p className="mt-1 font-semibold text-charcoal-900">{slide.stat1Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat1Val}</p>
                 </div>
-                <div className="h-7 w-px bg-charcoal-900/10" />
+                <div className="hidden sm:block h-7 w-px bg-charcoal-900/10" />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
                     {slide.stat2Label}
                   </p>
-                  <p className="mt-1 font-semibold text-charcoal-900">{slide.stat2Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat2Val}</p>
                 </div>
-                <div className="h-7 w-px bg-charcoal-900/10" />
+                <div className="hidden sm:block h-7 w-px bg-charcoal-900/10" />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
                     {slide.stat3Label}
                   </p>
-                  <p className="mt-1 font-semibold text-charcoal-900">{slide.stat3Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat3Val}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right Column: Sharp Menswear Editorial Portrait Carousel */}
-          <div className="relative h-[460px] w-full sm:h-[540px] lg:h-[610px] xl:h-[650px]">
+          <div className="relative h-[340px] xs:h-[400px] sm:h-[480px] lg:h-[600px] xl:h-[650px] w-full">
             <div className="relative h-full w-full overflow-hidden rounded-[28px] bg-charcoal-200 shadow-[0_20px_50px_rgba(26,26,26,0.1)] lg:rounded-[34px]">
               {/* Cycling Image */}
               <img

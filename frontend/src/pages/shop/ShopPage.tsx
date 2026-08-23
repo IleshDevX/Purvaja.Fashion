@@ -387,12 +387,12 @@ export function ShopPage({
           {/* ── RIGHT SIDE PRODUCT CATALOG AREA ── */}
           <div>
             {/* Active Filters Bar & Sort Selector */}
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ivory-300 bg-white p-4 shadow-[0_8px_20px_rgba(26,26,26,0.02)]">
+            <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 rounded-2xl border border-ivory-300 bg-white p-3.5 sm:p-4 shadow-[0_8px_20px_rgba(26,26,26,0.02)]">
               {/* Active Filter Chips */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 {hasActiveFilters ? (
                   <>
-                    <span className="font-serif text-sm font-semibold tracking-wider text-gold-700 mr-1.5 uppercase">
+                    <span className="font-serif text-xs sm:text-sm font-semibold tracking-wider text-gold-700 mr-1 uppercase">
                       Active:
                     </span>
                     {selectedFits.map(f => (
@@ -400,9 +400,9 @@ export function ShopPage({
                         key={f}
                         type="button"
                         onClick={() => toggleFit(f)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
-                        {f} Fit <X className="h-3 w-3 text-gold-400" />
+                        {f} <X className="h-3 w-3 text-gold-400" />
                       </button>
                     ))}
                     {selectedFabrics.map(fab => (
@@ -410,7 +410,7 @@ export function ShopPage({
                         key={fab}
                         type="button"
                         onClick={() => toggleFabric(fab)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
                         {fab} <X className="h-3 w-3 text-gold-400" />
                       </button>
@@ -420,61 +420,61 @@ export function ShopPage({
                         key={s}
                         type="button"
                         onClick={() => toggleSize(s)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
-                        Size {s} <X className="h-3 w-3 text-gold-400" />
+                        {s} <X className="h-3 w-3 text-gold-400" />
                       </button>
                     ))}
                     {onlyNewArrivals && (
                       <button
                         type="button"
                         onClick={() => setOnlyNewArrivals(false)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
-                        New In Season <X className="h-3 w-3 text-gold-400" />
+                        New <X className="h-3 w-3 text-gold-400" />
                       </button>
                     )}
                     {onlyDeals && (
                       <button
                         type="button"
                         onClick={() => setOnlyDeals(false)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
-                        Special Deals <X className="h-3 w-3 text-gold-400" />
+                        Deals <X className="h-3 w-3 text-gold-400" />
                       </button>
                     )}
                     {onlyInStock && (
                       <button
                         type="button"
                         onClick={() => setOnlyInStock(false)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-3.5 py-1 text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
-                        In Stock Only <X className="h-3 w-3 text-gold-400" />
+                        In Stock <X className="h-3 w-3 text-gold-400" />
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={clearAllFilters}
-                      className="font-serif text-xs font-semibold text-charcoal-500 hover:text-gold-700 underline underline-offset-4 ml-2 transition-colors"
+                      className="font-serif text-xs font-semibold text-charcoal-500 hover:text-gold-700 underline underline-offset-4 ml-1 transition-colors"
                     >
                       Clear All
                     </button>
                   </>
                 ) : (
-                  <p className="font-serif text-sm text-charcoal-600 font-medium">
-                    Showing all handcrafted menswear shirting
+                  <p className="font-serif text-xs sm:text-sm text-charcoal-600 font-medium">
+                    Showing all handcrafted menswear shirting ({filteredShirts.length})
                   </p>
                 )}
               </div>
 
               {/* Custom Luxury Sort Selector */}
-              <div className="flex items-center gap-2.5 ml-auto relative" ref={sortRef}>
-                <span className="font-serif text-sm font-medium text-charcoal-600">Sort:</span>
-                <div className="relative">
+              <div className="flex items-center justify-between sm:justify-end gap-2.5 relative" ref={sortRef}>
+                <span className="font-serif text-xs sm:text-sm font-medium text-charcoal-600">Sort:</span>
+                <div className="relative flex-1 sm:flex-initial">
                   <button
                     type="button"
                     onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                    className="inline-flex items-center justify-between gap-3 rounded-xl bg-ivory-50 px-4 py-2 border border-ivory-300 font-serif text-sm font-semibold text-charcoal-950 transition-all hover:border-gold-500 hover:bg-white shadow-2xs"
+                    className="w-full sm:w-auto inline-flex items-center justify-between gap-3 rounded-xl bg-ivory-50 px-3.5 sm:px-4 py-2 border border-ivory-300 font-serif text-xs sm:text-sm font-semibold text-charcoal-950 transition-all hover:border-gold-500 hover:bg-white shadow-2xs"
                   >
                     <span>{currentSortLabel}</span>
                     <ChevronDown className={`w-3.5 h-3.5 text-charcoal-600 transition-transform duration-200 ${sortDropdownOpen ? 'rotate-180 text-gold-700' : ''}`} />
@@ -513,21 +513,21 @@ export function ShopPage({
 
             {/* Products Grid / Empty State */}
             {filteredShirts.length === 0 ? (
-              <div className="py-20 text-center rounded-[26px] border border-ivory-300 bg-white p-8">
-                <h3 className="font-serif text-2xl font-light text-charcoal-950 mb-2">No matching pieces</h3>
+              <div className="py-16 sm:py-20 text-center rounded-[24px] sm:rounded-[26px] border border-ivory-300 bg-white p-6 sm:p-8">
+                <h3 className="font-serif text-xl sm:text-2xl font-light text-charcoal-950 mb-2">No matching pieces</h3>
                 <p className="text-xs sm:text-sm text-charcoal-500 max-w-md mx-auto mb-6">
                   We couldn't find shirts matching your exact filter combination. Try clearing some filters.
                 </p>
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="rounded-full bg-charcoal-950 px-7 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-md hover:bg-gold-500 hover:text-charcoal-950 transition-colors"
+                  className="rounded-full bg-charcoal-950 px-6 sm:px-7 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-md hover:bg-gold-500 hover:text-charcoal-950 transition-colors"
                 >
                   Clear All Filters
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5 lg:gap-6">
                 {filteredShirts.map(shirt => {
                   const discount = shirt.compareAtPrice
                     ? Math.round(((shirt.compareAtPrice - shirt.price) / shirt.compareAtPrice) * 100)
@@ -536,11 +536,11 @@ export function ShopPage({
 
                   return (
                     <article key={shirt.id} className="group flex flex-col">
-                      <div className="relative overflow-hidden rounded-[24px] border border-ivory-300 bg-white p-3.5 shadow-[0_10px_28px_rgba(26,26,26,0.03)] transition-all duration-500 hover:-translate-y-1.5 hover:border-gold-500/40 hover:shadow-[0_20px_50px_rgba(26,26,26,0.08)] flex-1 flex flex-col justify-between">
+                      <div className="relative overflow-hidden rounded-[18px] sm:rounded-[24px] border border-ivory-300 bg-white p-2.5 sm:p-3.5 shadow-[0_10px_28px_rgba(26,26,26,0.03)] transition-all duration-500 hover:-translate-y-1.5 hover:border-gold-500/40 hover:shadow-[0_20px_50px_rgba(26,26,26,0.08)] flex-1 flex flex-col justify-between">
                         <div>
                           {/* Image Container */}
                           <Link to={`/shirts/${shirt.slug}`} className="block">
-                            <div className="relative aspect-[0.92] overflow-hidden rounded-[18px] bg-ivory-200">
+                            <div className="relative aspect-[0.92] overflow-hidden rounded-[14px] sm:rounded-[18px] bg-ivory-200">
                               <img
                                 src={shirt.images[0]}
                                 alt={shirt.name}
@@ -549,14 +549,14 @@ export function ShopPage({
                               />
 
                               {/* Badges */}
-                              <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+                              <div className="absolute left-2 sm:left-3 top-2 sm:top-3 flex flex-col gap-1 sm:gap-1.5">
                                 {shirt.isNewArrival && (
-                                  <span className="rounded-full bg-charcoal-950/90 px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-ivory-100 backdrop-blur-sm">
+                                  <span className="rounded-full bg-charcoal-950/90 px-2 sm:px-3 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-ivory-100 backdrop-blur-sm">
                                     NEW
                                   </span>
                                 )}
                                 {discount > 0 && (
-                                  <span className="rounded-full bg-gold-600/90 px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+                                  <span className="rounded-full bg-gold-600/90 px-2 sm:px-3 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
                                     −{discount}%
                                   </span>
                                 )}
@@ -565,9 +565,9 @@ export function ShopPage({
                           </Link>
 
                           {/* Metadata */}
-                          <div className="px-1.5 pb-1 pt-4">
-                            <div className="mb-1.5 flex items-center justify-between gap-3">
-                              <p className="text-xs font-bold uppercase tracking-[0.16em] text-gold-700">
+                          <div className="px-1 sm:px-1.5 pb-1 pt-3 sm:pt-4">
+                            <div className="mb-1 sm:mb-1.5 flex items-center justify-between gap-2">
+                              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.16em] text-gold-700 truncate">
                                 {shirt.fabric}
                               </p>
                               <button
@@ -581,37 +581,37 @@ export function ShopPage({
                                     'info',
                                   );
                                 }}
-                                className="text-charcoal-400 transition-colors hover:text-gold-700"
+                                className="text-charcoal-400 transition-colors hover:text-gold-700 shrink-0 p-0.5"
                                 aria-label="Toggle wishlist"
                               >
-                                <Heart className={`h-4 w-4 ${inWishlist ? 'fill-gold-600 text-gold-600' : ''}`} />
+                                <Heart className={`h-3.5 sm:h-4 w-3.5 sm:w-4 ${inWishlist ? 'fill-gold-600 text-gold-600' : ''}`} />
                               </button>
                             </div>
 
                             <Link to={`/shirts/${shirt.slug}`} className="block">
-                              <h3 className="line-clamp-1 font-serif text-lg font-medium text-charcoal-950 transition-colors group-hover:text-gold-700">
+                              <h3 className="line-clamp-1 font-serif text-sm sm:text-lg font-medium text-charcoal-950 transition-colors group-hover:text-gold-700">
                                 {shirt.name}
                               </h3>
                             </Link>
-                            <p className="mt-1 line-clamp-1 text-xs text-charcoal-500">{shirt.tagline}</p>
+                            <p className="mt-0.5 sm:mt-1 line-clamp-1 text-[11px] sm:text-xs text-charcoal-500 hidden xs:block">{shirt.tagline}</p>
                           </div>
                         </div>
 
                         {/* Price & Rating */}
-                        <div className="mt-4 flex items-center justify-between border-t border-ivory-300 px-1.5 pt-3">
-                          <div className="flex items-baseline gap-2">
-                            <span className="font-sans text-sm font-bold tabular-nums text-charcoal-950">
+                        <div className="mt-2.5 sm:mt-4 flex items-center justify-between border-t border-ivory-300 px-1 sm:px-1.5 pt-2.5 sm:pt-3">
+                          <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                            <span className="font-sans text-xs sm:text-sm font-bold tabular-nums text-charcoal-950">
                               ₹{shirt.price.toLocaleString('en-IN')}
                             </span>
                             {shirt.compareAtPrice && (
-                              <span className="text-xs tabular-nums text-charcoal-400 line-through">
+                              <span className="text-[10px] sm:text-xs tabular-nums text-charcoal-400 line-through">
                                 ₹{shirt.compareAtPrice.toLocaleString('en-IN')}
                               </span>
                             )}
                           </div>
                           {shirt.rating > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-charcoal-600">
-                              <Star className="h-3.5 w-3.5 fill-gold-500 text-gold-500" />
+                            <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[11px] sm:text-xs text-charcoal-600">
+                              <Star className="h-3 sm:h-3.5 w-3 sm:w-3.5 fill-gold-500 text-gold-500" />
                               <span className="font-medium">{shirt.rating}</span>
                             </span>
                           )}

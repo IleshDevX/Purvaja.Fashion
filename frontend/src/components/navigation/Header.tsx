@@ -227,21 +227,21 @@ export function Header() {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
               {(user?.role === 'admin' || user?.email?.includes('admin')) && (
                 <Link
                   to="/admin"
-                  className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-gold-300 border border-gold-500/40 hover:bg-gold-500 hover:text-charcoal-950 transition-colors shadow-2xs"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 px-2.5 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-gold-300 border border-gold-500/40 hover:bg-gold-500 hover:text-charcoal-950 transition-colors shadow-2xs"
                   title="Atelier Admin Control Center"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-gold-400" />
-                  <span>Admin</span>
+                  <span className="hidden xs:inline">Admin</span>
                 </Link>
               )}
 
               <button
                 onClick={() => setSearchOpen(true)}
-                className="p-2 text-charcoal-800 hover:text-gold-700 transition-colors"
+                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-charcoal-800 hover:text-gold-700 transition-colors rounded-full hover:bg-ivory-100/60"
                 aria-label="Search"
               >
                 <Search className="w-5 h-5" />
@@ -249,7 +249,7 @@ export function Header() {
 
               <Link
                 to={status === 'authenticated' ? '/account' : '/auth/login'}
-                className="p-2 text-charcoal-800 hover:text-gold-700 transition-colors hidden sm:block"
+                className="w-10 h-10 sm:w-11 sm:h-11 hidden sm:flex items-center justify-center text-charcoal-800 hover:text-gold-700 transition-colors rounded-full hover:bg-ivory-100/60"
                 aria-label="Account"
               >
                 <User className="w-5 h-5" />
@@ -257,12 +257,12 @@ export function Header() {
 
               <Link
                 to="/wishlist"
-                className="p-2 text-charcoal-800 hover:text-gold-700 transition-colors relative hidden sm:block"
+                className="w-10 h-10 sm:w-11 sm:h-11 hidden sm:flex items-center justify-center text-charcoal-800 hover:text-gold-700 transition-colors relative rounded-full hover:bg-ivory-100/60"
                 aria-label="Wishlist"
               >
                 <Heart className="w-5 h-5" />
                 {wishlistCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-gold-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-gold-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
                     {wishlistCount}
                   </span>
                 )}
@@ -270,12 +270,12 @@ export function Header() {
 
               <button
                 onClick={() => setCartDrawerOpen(true)}
-                className="p-2 text-charcoal-800 hover:text-gold-700 transition-colors relative"
+                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-charcoal-800 hover:text-gold-700 transition-colors relative rounded-full hover:bg-ivory-100/60"
                 aria-label="Shopping bag"
               >
                 <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-charcoal-900 text-ivory-100 text-[10px] font-semibold rounded-full flex items-center justify-center">
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-charcoal-900 text-ivory-100 text-[10px] font-semibold rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
@@ -283,23 +283,25 @@ export function Header() {
             </div>
           </div>
         </div>
-      </header>      {/* ── Elevated Luxury Search Modal ── */}
+      </header>
+
+      {/* ── Elevated Luxury Search Modal ── */}
       {searchOpen && (
         <div
-          className="fixed inset-0 z-[100] bg-charcoal-950/70 backdrop-blur-sm flex items-start justify-center pt-12 sm:pt-20 p-4 animate-fade-in"
+          className="fixed inset-0 z-[100] bg-charcoal-950/70 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-16 p-3 sm:p-4 animate-fade-in overflow-y-auto"
           onClick={() => setSearchOpen(false)}
         >
           <div
-            className="bg-white w-full max-w-2xl rounded-3xl border border-ivory-300 shadow-2xl p-6 sm:p-8 space-y-6 animate-scale-in relative text-charcoal-950"
+            className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl border border-ivory-300 shadow-2xl p-4 sm:p-8 space-y-4 sm:space-y-6 animate-scale-in relative text-charcoal-950 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-ivory-200 pb-4">
+            <div className="flex items-center justify-between border-b border-ivory-200 pb-3 sm:pb-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-gold-700 font-sans">
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.26em] text-gold-700 font-sans">
                   Atelier Search
                 </p>
-                <h2 className="font-serif text-2xl sm:text-3xl font-light tracking-tight text-charcoal-950 mt-1">
+                <h2 className="font-serif text-xl sm:text-3xl font-light tracking-tight text-charcoal-950 mt-0.5">
                   Search Menswear
                 </h2>
               </div>
@@ -315,15 +317,15 @@ export function Header() {
 
             {/* Solid Search Input Bar */}
             <form onSubmit={handleSearch}>
-              <div className="relative flex items-center bg-ivory-50 border-2 border-ivory-300 focus-within:border-charcoal-950 focus-within:bg-white rounded-2xl px-4 py-3 sm:py-3.5 transition-all shadow-2xs">
-                <Search className="w-5 h-5 text-charcoal-400 mr-3 shrink-0" />
+              <div className="relative flex items-center bg-ivory-50 border-2 border-ivory-300 focus-within:border-charcoal-950 focus-within:bg-white rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:py-3.5 transition-all shadow-2xs">
+                <Search className="w-4 sm:w-5 h-4 sm:h-5 text-charcoal-400 mr-2.5 sm:mr-3 shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by shirt name, fabric, or style (e.g. Linen, Egyptian Cotton, Slim Fit)..."
-                  className="w-full bg-transparent text-sm sm:text-base font-medium text-charcoal-950 placeholder:text-charcoal-400 outline-none"
+                  placeholder="Search by shirt name, fabric, or style (e.g. Linen, Slim Fit)..."
+                  className="w-full bg-transparent text-xs sm:text-base font-medium text-charcoal-950 placeholder:text-charcoal-400 outline-none"
                 />
                 {searchQuery && (
                   <button
@@ -354,32 +356,32 @@ export function Header() {
                 </div>
 
                 {liveSearchResults.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-charcoal-500 bg-ivory-50 rounded-2xl border border-ivory-200">
+                  <div className="text-center py-6 sm:py-8 text-xs text-charcoal-500 bg-ivory-50 rounded-xl sm:rounded-2xl border border-ivory-200">
                     No shirts found matching "{searchQuery}". Try searching for "Linen", "Cotton", or "Slim".
                   </div>
                 ) : (
-                  <div className="divide-y divide-ivory-200 max-h-72 overflow-y-auto pr-1">
-                    {liveSearchResults.slice(0, 4).map((shirt) => (
+                  <div className="divide-y divide-ivory-200 max-h-60 sm:max-h-72 overflow-y-auto pr-1">
+                    {liveSearchResults.slice(0, 5).map((shirt) => (
                       <Link
                         key={shirt.id}
                         to={`/shirts/${shirt.slug}`}
                         onClick={() => setSearchOpen(false)}
-                        className="flex items-center justify-between py-3 px-2 rounded-xl hover:bg-ivory-50 transition-colors group"
+                        className="flex items-center justify-between py-2.5 sm:py-3 px-2 rounded-xl hover:bg-ivory-50 transition-colors group"
                       >
-                        <div className="flex items-center gap-3.5">
+                        <div className="flex items-center gap-3">
                           <img
                             src={shirt.images[0]}
                             alt={shirt.name}
-                            className="h-12 w-10 rounded-lg object-cover bg-ivory-100 border border-ivory-300 shrink-0"
+                            className="h-11 w-9 sm:h-12 sm:w-10 rounded-lg object-cover bg-ivory-100 border border-ivory-300 shrink-0"
                           />
                           <div>
-                            <p className="font-serif text-sm font-bold text-charcoal-950 group-hover:text-gold-700 transition-colors line-clamp-1">
+                            <p className="font-serif text-xs sm:text-sm font-bold text-charcoal-950 group-hover:text-gold-700 transition-colors line-clamp-1">
                               {shirt.name}
                             </p>
-                            <p className="text-[11px] text-charcoal-500">{shirt.fabric} · {shirt.fit} Fit</p>
+                            <p className="text-[10px] sm:text-[11px] text-charcoal-500">{shirt.fabric} · {shirt.fit} Fit</p>
                           </div>
                         </div>
-                        <span className="font-sans text-xs font-bold tabular-nums text-charcoal-950">
+                        <span className="font-sans text-xs sm:text-sm font-bold tabular-nums text-charcoal-950">
                           ₹{shirt.price.toLocaleString('en-IN')}
                         </span>
                       </Link>
@@ -392,7 +394,7 @@ export function Header() {
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.22em] text-charcoal-400 font-sans">
                   Popular Curations
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {['Egyptian Cotton', 'Pure Linen', 'Formal Shirts', 'Slim Fit', 'New Arrivals'].map((term) => (
                     <button
                       key={term}
@@ -401,7 +403,7 @@ export function Header() {
                         navigate(`/shop?search=${encodeURIComponent(term)}`);
                         setSearchOpen(false);
                       }}
-                      className="px-3.5 py-1.5 rounded-full bg-ivory-100 border border-ivory-300 text-xs font-semibold text-charcoal-700 hover:bg-charcoal-950 hover:text-white hover:border-charcoal-950 transition-all duration-200"
+                      className="px-3 py-1.5 rounded-full bg-ivory-100 border border-ivory-300 text-xs font-semibold text-charcoal-700 hover:bg-charcoal-950 hover:text-white hover:border-charcoal-950 transition-all duration-200"
                     >
                       {term}
                     </button>
@@ -415,45 +417,113 @@ export function Header() {
 
       {/* ── Full-Screen Mobile Navigation ── */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[55] bg-ivory-100 flex flex-col animate-fade-in lg:hidden">
-          <div className="flex items-center justify-between px-5 h-16">
-            <Link to="/" className="font-serif text-xl font-medium text-charcoal-900">
+        <div className="fixed inset-0 z-[55] bg-ivory-100 flex flex-col animate-fade-in lg:hidden overflow-y-auto pb-safe">
+          <div className="flex items-center justify-between px-5 h-16 border-b border-ivory-300/80 bg-white/90 backdrop-blur-md sticky top-0 z-10">
+            <Link to="/" onClick={() => setMobileMenuOpen(false)} className="font-serif text-2xl font-semibold tracking-tight text-charcoal-950">
               PURVAJA
             </Link>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 text-charcoal-700"
+              className="w-10 h-10 flex items-center justify-center text-charcoal-700 hover:text-charcoal-950 rounded-full hover:bg-ivory-200 transition-colors"
+              aria-label="Close menu"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <nav className="flex-1 flex flex-col justify-center px-8 gap-6">
-            {NAV_LINKS.map(link => (
+
+          <div className="flex-1 flex flex-col justify-between p-6 sm:p-8 space-y-6">
+            <nav className="flex flex-col gap-4 sm:gap-6">
+              {NAV_LINKS.map(link => (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-serif text-2xl sm:text-3xl font-light text-charcoal-950 hover:text-gold-700 transition-colors border-b border-ivory-300/50 pb-3"
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              {/* Mobile Quick Category Filter Links */}
+              <div className="pt-2 pb-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700 mb-3 font-sans">
+                  Quick Filter
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/shop?fabric=Linen"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
+                  >
+                    Pure Linen
+                  </Link>
+                  <Link
+                    to="/shop?fabric=Oxford"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
+                  >
+                    Oxford Weave
+                  </Link>
+                  <Link
+                    to="/shop?fit=Slim"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
+                  >
+                    Slim Fit
+                  </Link>
+                  <Link
+                    to="/shop?fit=Regular"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
+                  >
+                    Regular Fit
+                  </Link>
+                </div>
+              </div>
+            </nav>
+
+            <div className="space-y-3 pt-4 border-t border-ivory-300 bg-white/50 -mx-6 -mb-6 p-6 rounded-t-3xl">
               <Link
-                key={link.label}
-                to={link.href}
+                to={status === 'authenticated' ? '/account' : '/auth/login'}
                 onClick={() => setMobileMenuOpen(false)}
-                className="font-serif text-3xl text-charcoal-900 hover:text-gold-600 transition-colors"
+                className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-ivory-300 text-sm font-semibold text-charcoal-900 shadow-2xs"
               >
-                {link.label}
+                <span className="flex items-center gap-2.5">
+                  <User className="w-4 h-4 text-gold-700" />
+                  {status === 'authenticated' ? `Hello, ${user?.firstName}` : 'Sign In / Register'}
+                </span>
+                <span className="text-xs text-gold-700 font-bold">→</span>
               </Link>
-            ))}
-            <div className="divider-editorial my-4" />
-            <Link
-              to={status === 'authenticated' ? '/account' : '/auth/login'}
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-body text-charcoal-500 hover:text-charcoal-900 transition-colors"
-            >
-              {status === 'authenticated' ? `Hello, ${user?.firstName}` : 'Sign In'}
-            </Link>
-            <Link
-              to="/wishlist"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-body text-charcoal-500 hover:text-charcoal-900 transition-colors"
-            >
-              Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
-            </Link>
-          </nav>
+              
+              <Link
+                to="/wishlist"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-ivory-300 text-sm font-semibold text-charcoal-900 shadow-2xs"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Heart className="w-4 h-4 text-gold-700" />
+                  Wishlist
+                </span>
+                <span className="text-xs bg-gold-100 text-gold-900 px-2 py-0.5 rounded-full font-bold">
+                  {wishlistCount}
+                </span>
+              </Link>
+
+              {(user?.role === 'admin' || user?.email?.includes('admin')) && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl bg-charcoal-950 text-gold-300 text-sm font-bold shadow-md"
+                >
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-gold-400" />
+                    Admin Control Center
+                  </span>
+                  <span className="text-xs">→</span>
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

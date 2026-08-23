@@ -127,7 +127,23 @@
     animation: product-scroll 40s linear infinite;
   }
 
-  .animate-product-scroll:hover {
-    animation-play-state: paused;
+  /* Safe area insets for mobile notched devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 1rem);
+  }
+  .min-tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Responsive table wrapper helper */
+  .table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
+

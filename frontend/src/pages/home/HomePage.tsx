@@ -189,10 +189,10 @@ export function HomePage() {
       <HeroSection featuredProduct={heroProduct} />
 
       {/* 3-Column Curated Menswear Categories Matching Atelier Theme */}
-      <section ref={addRevealRef} className="px-4 py-12 sm:px-6 lg:px-10 lg:py-16">
-        <div className="mx-auto grid max-w-[1720px] gap-5 md:grid-cols-3">
+      <section ref={addRevealRef} className="px-4 py-8 sm:py-12 lg:px-10 lg:py-16">
+        <div className="mx-auto grid max-w-[1720px] gap-5 md:grid-cols-2 lg:grid-cols-3">
           {/* Card 1: Formal & Evening Menswear */}
-          <div className="group relative h-[490px] overflow-hidden rounded-[28px] border border-ivory-300 bg-charcoal-950 shadow-[0_16px_40px_rgba(26,26,26,0.06)] sm:h-[520px] lg:h-[550px]">
+          <div className="group relative h-[420px] xs:h-[480px] sm:h-[520px] lg:h-[550px] overflow-hidden rounded-[24px] sm:rounded-[28px] border border-ivory-300 bg-charcoal-950 shadow-[0_16px_40px_rgba(26,26,26,0.06)]">
             <img
               src={categoryCard1}
               alt="Formal and Evening Menswear Shirting"
@@ -201,19 +201,19 @@ export function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/85 via-charcoal-950/20 to-black/10" />
             
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-ivory-100 sm:p-7">
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 text-ivory-100">
               <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-gold-300">
                 Tailored Evening
               </span>
               <h3 className="mt-1.5 font-serif text-2xl font-light text-ivory-100 sm:text-3xl">
                 The Formal Classic
               </h3>
-              <p className="mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm">
+              <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm line-clamp-2">
                 Sharp wingtip and spread collars for evening distinction.
               </p>
               <Link
                 to="/shop?category=formal"
-                className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-white/95 px-6 py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
+                className="mt-4 sm:mt-5 inline-flex w-full items-center justify-center rounded-full bg-white/95 px-6 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95 text-center"
               >
                 Explore Formal Edit
               </Link>
@@ -221,7 +221,7 @@ export function HomePage() {
           </div>
 
           {/* Card 2: Smart Casual & Linen Menswear */}
-          <div className="group relative h-[490px] overflow-hidden rounded-[28px] border border-ivory-300 bg-charcoal-950 shadow-[0_16px_40px_rgba(26,26,26,0.06)] sm:h-[520px] lg:h-[550px]">
+          <div className="group relative h-[420px] xs:h-[480px] sm:h-[520px] lg:h-[550px] overflow-hidden rounded-[24px] sm:rounded-[28px] border border-ivory-300 bg-charcoal-950 shadow-[0_16px_40px_rgba(26,26,26,0.06)]">
             <img
               src={categoryCard2}
               alt="Smart Casual and Linen Menswear"
@@ -230,19 +230,19 @@ export function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/85 via-charcoal-950/20 to-black/10" />
             
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-ivory-100 sm:p-7">
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 text-ivory-100">
               <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-gold-300">
                 Leisure & Resort
               </span>
               <h3 className="mt-1.5 font-serif text-2xl font-light text-ivory-100 sm:text-3xl">
                 Italian Linen Edit
               </h3>
-              <p className="mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm">
+              <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm line-clamp-2">
                 Breathable Egyptian weaves engineered for warmer days.
               </p>
               <Link
                 to="/shop?category=casual"
-                className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-white/95 px-6 py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
+                className="mt-4 sm:mt-5 inline-flex w-full items-center justify-center rounded-full bg-white/95 px-6 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95 text-center"
               >
                 Explore Casual Edit
               </Link>
@@ -250,23 +250,23 @@ export function HomePage() {
           </div>
 
           {/* Card 3: Stacked 2 Menswear Cards */}
-          <div className="flex h-[490px] flex-col gap-5 sm:h-[520px] lg:h-[550px]">
+          <div className="flex h-auto md:col-span-2 lg:col-span-1 flex-col gap-4 sm:gap-5 md:flex-row lg:flex-col">
             {/* Top Sub-card */}
-            <div className="group relative flex h-[235px] flex-1 items-center justify-between overflow-hidden rounded-[26px] border border-ivory-300 bg-white p-6 shadow-[0_12px_28px_rgba(26,26,26,0.03)] transition-all duration-300 hover:border-gold-500/40 hover:shadow-[0_18px_40px_rgba(26,26,26,0.06)] sm:h-[250px] lg:h-[265px]">
-              <div className="z-10 max-w-[210px]">
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Menswear Classic</p>
-                <h3 className="mt-1.5 font-serif text-xl font-medium leading-tight text-charcoal-950 sm:text-2xl">
+            <div className="group relative flex min-h-[220px] sm:min-h-[240px] flex-1 items-center justify-between overflow-hidden rounded-[24px] sm:rounded-[26px] border border-ivory-300 bg-white p-5 sm:p-6 shadow-[0_12px_28px_rgba(26,26,26,0.03)] transition-all duration-300 hover:border-gold-500/40 hover:shadow-[0_18px_40px_rgba(26,26,26,0.06)]">
+              <div className="z-10 flex-1 pr-3 max-w-[62%]">
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Menswear Classic</p>
+                <h3 className="mt-1 font-serif text-lg sm:text-xl lg:text-2xl font-medium leading-tight text-charcoal-950">
                   Tailored Oxford
                 </h3>
-                <p className="mt-1 text-xs text-charcoal-500">Structured collar & slim fit</p>
+                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Structured collar & slim fit</p>
                 <Link
-                  to="/shop"
-                  className="mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
+                  to="/shop?fabric=Oxford"
+                  className="mt-3 sm:mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
                 >
                   Shop Now
                 </Link>
               </div>
-              <div className="absolute -bottom-2 right-2 h-[88%] w-[42%] overflow-hidden rounded-[20px]">
+              <div className="absolute -bottom-2 right-2 h-[88%] w-[38%] overflow-hidden rounded-[18px] sm:rounded-[20px]">
                 <img
                   src={categoryCard3Top}
                   alt="Tailored Oxford Shirt for Men"
@@ -277,21 +277,21 @@ export function HomePage() {
             </div>
 
             {/* Bottom Sub-card */}
-            <div className="group relative flex h-[235px] flex-1 items-center justify-between overflow-hidden rounded-[26px] border border-ivory-300 bg-white p-6 shadow-[0_12px_28px_rgba(26,26,26,0.03)] transition-all duration-300 hover:border-gold-500/40 hover:shadow-[0_18px_40px_rgba(26,26,26,0.06)] sm:h-[250px] lg:h-[265px]">
-              <div className="z-10 max-w-[210px]">
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Casual Luxury</p>
-                <h3 className="mt-1.5 font-serif text-xl font-medium leading-tight text-charcoal-950 sm:text-2xl">
+            <div className="group relative flex min-h-[220px] sm:min-h-[240px] flex-1 items-center justify-between overflow-hidden rounded-[24px] sm:rounded-[26px] border border-ivory-300 bg-white p-5 sm:p-6 shadow-[0_12px_28px_rgba(26,26,26,0.03)] transition-all duration-300 hover:border-gold-500/40 hover:shadow-[0_18px_40px_rgba(26,26,26,0.06)]">
+              <div className="z-10 flex-1 pr-3 max-w-[62%]">
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Casual Luxury</p>
+                <h3 className="mt-1 font-serif text-lg sm:text-xl lg:text-2xl font-medium leading-tight text-charcoal-950">
                   Egyptian Cotton
                 </h3>
-                <p className="mt-1 text-xs text-charcoal-500">Unmatched softness & sheen</p>
+                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Unmatched softness & sheen</p>
                 <Link
-                  to="/shop"
-                  className="mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
+                  to="/shop?fabric=Poplin"
+                  className="mt-3 sm:mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
                 >
                   Shop Now
                 </Link>
               </div>
-              <div className="absolute -bottom-2 right-2 h-[88%] w-[42%] overflow-hidden rounded-[20px]">
+              <div className="absolute -bottom-2 right-2 h-[88%] w-[38%] overflow-hidden rounded-[18px] sm:rounded-[20px]">
                 <img
                   src={categoryCard3Bottom}
                   alt="Egyptian Cotton Shirt for Men"

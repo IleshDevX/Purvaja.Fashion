@@ -77,11 +77,11 @@ export function AdminDashboardPage() {
       </div>
 
       {/* ── 6 High-Level Operational KPI Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <div className="rounded-2xl border border-ivory-300 bg-white p-5 shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
-          <div className="flex items-center justify-between text-charcoal-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Total Revenue</span>
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className="rounded-2xl border border-ivory-300 bg-white p-3.5 sm:p-5 shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
+          <div className="flex items-center justify-between text-charcoal-400 mb-1.5 sm:mb-2">
+            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.18em]">Total Revenue</span>
+            <TrendingUp className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-emerald-600" />
           </div>
           <p className="font-sans text-xl font-bold tabular-nums text-charcoal-950">
             ₹{metrics?.totalRevenue.toLocaleString('en-IN') ?? '3,48,900'}

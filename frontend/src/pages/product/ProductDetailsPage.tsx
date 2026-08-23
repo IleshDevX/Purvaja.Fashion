@@ -504,25 +504,26 @@ export function ProductDetailsPage() {
 
         {/* Size Guide Modal */}
         {sizeGuideOpen && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-ivory-100 w-full max-w-lg p-6 shadow-overlay border border-ivory-300 relative animate-scale-in">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-lg p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setSizeGuideOpen(false)}
-                className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-900"
+                className="absolute top-4 right-4 p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100"
+                aria-label="Close size guide"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 className="font-serif text-heading-lg text-charcoal-900 mb-1">Tailored Size Chart</h3>
-              <p className="text-caption text-charcoal-500 mb-4">Measurements in inches</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-caption text-charcoal-800 border-collapse">
+              <h3 className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Tailored Size Chart</h3>
+              <p className="text-caption text-charcoal-500 mb-4">Measurements in inches (Collar, Chest & Sleeve)</p>
+              <div className="table-responsive-wrapper rounded-xl border border-ivory-200">
+                <table className="w-full text-caption sm:text-body-sm text-charcoal-800 border-collapse">
                   <thead>
-                    <tr className="border-b border-ivory-300 text-left bg-ivory-200">
-                      <th className="py-2 px-3">Size</th>
-                      <th className="py-2 px-3">Collar</th>
-                      <th className="py-2 px-3">Chest</th>
-                      <th className="py-2 px-3">Waist</th>
-                      <th className="py-2 px-3">Sleeve</th>
+                    <tr className="border-b border-ivory-300 text-left bg-ivory-100">
+                      <th className="py-2.5 px-3 font-semibold">Size</th>
+                      <th className="py-2.5 px-3 font-semibold">Collar</th>
+                      <th className="py-2.5 px-3 font-semibold">Chest</th>
+                      <th className="py-2.5 px-3 font-semibold">Waist</th>
+                      <th className="py-2.5 px-3 font-semibold">Sleeve</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -570,15 +571,16 @@ export function ProductDetailsPage() {
 
         {/* Review Modal */}
         {reviewModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-ivory-100 w-full max-w-md p-6 shadow-overlay border border-ivory-300 relative animate-scale-in">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-md p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setReviewModalOpen(false)}
-                className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-900"
+                className="absolute top-4 right-4 p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100"
+                aria-label="Close review modal"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 className="font-serif text-heading-lg text-charcoal-900 mb-1">Write a Review</h3>
+              <h3 className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Write a Review</h3>
               <p className="text-body-sm text-charcoal-500 mb-4">
                 Share your impressions on fabric, fit, and craftsmanship.
               </p>
@@ -612,7 +614,7 @@ export function ProductDetailsPage() {
                     value={newReviewAuthor}
                     onChange={e => setNewReviewAuthor(e.target.value)}
                     placeholder="e.g. Vikramaditya S."
-                    className="w-full px-3 py-2 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                    className="w-full px-3.5 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                   />
                 </div>
                 <div>
@@ -623,12 +625,12 @@ export function ProductDetailsPage() {
                     value={newReviewComment}
                     onChange={e => setNewReviewComment(e.target.value)}
                     placeholder="Tell us about the drape, stitching, and feel..."
-                    className="w-full px-3 py-2 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none focus:border-charcoal-900"
+                    className="w-full px-3.5 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wide hover:bg-charcoal-800 transition-colors"
+                  className="w-full py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wide hover:bg-charcoal-800 transition-colors rounded-xl shadow-sm"
                 >
                   Submit Verified Review
                 </button>
@@ -636,6 +638,24 @@ export function ProductDetailsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── Mobile Sticky Bottom Buy Bar (Visible only on < 768px screens) ── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-ivory-300 px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] pb-safe">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-serif text-sm font-bold text-charcoal-950 truncate">{shirt.name}</p>
+            <p className="font-sans text-sm font-bold text-charcoal-900 tabular-nums">
+              ₹{shirt.price.toLocaleString('en-IN')} <span className="text-[10px] text-gold-700 font-medium">({currentSize})</span>
+            </p>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            className="px-5 py-2.5 bg-charcoal-950 text-ivory-100 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gold-500 hover:text-charcoal-950 transition-colors shrink-0 shadow-sm"
+          >
+            Add to Bag
+          </button>
+        </div>
       </div>
     </div>
   );
