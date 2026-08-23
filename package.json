@@ -1,0 +1,26 @@
+{
+  "name": "ecommerce-prototype-b-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prototype B - Complete full-stack independent application",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @ecommerce/prototype-b --filter @ecommerce/prototype-b-backend dev",
+    "dev:frontend": "pnpm --filter @ecommerce/prototype-b dev",
+    "dev:backend": "pnpm --filter @ecommerce/prototype-b-backend dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "test:coverage": "pnpm --recursive test:coverage",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0"
+  },
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,11 @@
+packages:
+  - 'frontend'
+  - 'backend'
+
+allowBuilds:
+  argon2: true
+  esbuild: true
+
+onlyBuiltDependencies:
+  - argon2
+  - esbuild

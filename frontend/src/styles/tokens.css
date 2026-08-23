@@ -1,0 +1,30 @@
+:root {
+  /* ── Atelier Design System ── */
+
+  /* Surface */
+  --atl-surface: #FAF8F5;
+  --atl-surface-muted: #F5F0EA;
+  --atl-surface-elevated: #FFFFFF;
+  --atl-surface-contrast: #1A1A1A;
+
+  /* Text */
+  --atl-text-primary: #1A1A1A;
+  --atl-text-secondary: #525252;
+  --atl-text-muted: #737373;
+  --atl-text-inverse: #FAF8F5;
+  --atl-text-accent: #B8956A;
+
+  /* Borders */
+  --atl-border: #E0D5C5;
+  --atl-border-subtle: #EDE6DB;
+  --atl-border-strong: #A3A3A3;
+
+  /* Accent — Aged Gold */
+  --atl-accent: #B8956A;
+  --atl-accent-hover: #A07A4E;
+  --atl-accent-muted: #F5ECDE;
+
+  /* Overlay */
+  --atl-overlay: rgba(26, 26, 26, 0.5);
+  --atl-overlay-light: rgba(26, 26, 26, 0.25);
+}
