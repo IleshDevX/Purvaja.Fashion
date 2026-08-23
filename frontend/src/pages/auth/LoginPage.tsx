@@ -142,24 +142,37 @@ export function LoginPage() {
         </button>
       </form>
 
-      {/* Quick Demo Logins for Pair Programming & Client Testing */}
-      <div className="p-4 bg-ivory-200 border border-ivory-300 space-y-2">
-        <span className="text-overline text-charcoal-500 block mb-1">Instant Demo Access</span>
+      {/* Quick Demo Logins for Vercel & Client Testing */}
+      <div className="p-4 bg-ivory-200 border border-ivory-300 rounded-xl space-y-3">
+        <div>
+          <span className="text-overline text-gold-700 block font-bold">Instant Vercel Access Credentials</span>
+          <p className="text-[11px] text-charcoal-600 mt-0.5">
+            Click below or type credentials to test Customer or Admin features (Add products, Inventory, Orders):
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleQuickDemoCustomer}
             type="button"
-            className="px-3 py-1.5 bg-ivory-50 border border-ivory-300 text-caption font-medium text-charcoal-800 hover:border-charcoal-900 transition-colors text-left"
+            className="px-3 py-2 bg-ivory-50 border border-ivory-300 rounded-lg text-caption font-medium text-charcoal-800 hover:border-charcoal-900 hover:bg-white transition-colors text-left flex flex-col gap-0.5"
           >
-            👤 Demo Customer
+            <span className="font-bold flex items-center gap-1">👤 Demo Customer</span>
+            <span className="text-[10px] text-charcoal-500 font-mono">customer@purvajafashion.com</span>
           </button>
+
           <button
             onClick={handleQuickDemoAdmin}
             type="button"
-            className="px-3 py-1.5 bg-ivory-50 border border-ivory-300 text-caption font-medium text-charcoal-800 hover:border-charcoal-900 transition-colors text-left"
+            className="px-3 py-2 bg-charcoal-950 text-white rounded-lg text-caption font-medium hover:bg-gold-600 hover:text-charcoal-950 transition-colors text-left flex flex-col gap-0.5"
           >
-            🛡️ Demo Admin
+            <span className="font-bold flex items-center gap-1 text-gold-300 hover:text-charcoal-950">🛡️ Demo Admin</span>
+            <span className="text-[10px] opacity-80 font-mono">admin@purvajafashion.com</span>
           </button>
+        </div>
+
+        <div className="text-[10px] text-charcoal-500 pt-1 border-t border-ivory-300/60">
+          💡 <span className="font-semibold text-charcoal-700">Admin Tip:</span> Logging in with any email containing <code className="bg-ivory-100 px-1 py-0.5 rounded text-charcoal-900 font-mono">admin</code> grants access to <span className="font-bold text-charcoal-900">/admin</span> (Product Management, Adding Products, Orders).
         </div>
       </div>
 

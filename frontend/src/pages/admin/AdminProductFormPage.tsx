@@ -6,6 +6,7 @@ import {
   Check,
 } from 'lucide-react';
 import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
+import { developmentProductStore } from '../../features/products/store/developmentProductStore.js';
 import {
   Shirt,
   ShirtFit,
@@ -164,7 +165,7 @@ export function AdminProductFormPage() {
     setVariants(prev => prev.filter(v => v.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErrors({});
 
@@ -218,6 +219,7 @@ export function AdminProductFormPage() {
           careInstructions,
         };
       }
+      await developmentProductStore.updateProduct(productId, formData);
       addToast(`Updated "${name}" successfully.`, 'success');
     } else {
       const newShirt: Shirt = {
@@ -230,6 +232,7 @@ export function AdminProductFormPage() {
         ...formData,
       };
       DEVELOPMENT_SHIRTS.unshift(newShirt);
+      await developmentProductStore.createProduct(formData);
       addToast(`Created new shirt "${name}" in catalog.`, 'success');
     }
 
