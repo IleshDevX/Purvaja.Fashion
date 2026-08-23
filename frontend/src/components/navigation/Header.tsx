@@ -296,10 +296,10 @@ export function Header() {
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-ivory-200 pb-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-800">
+                <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-gold-700 font-sans">
                   Atelier Search
-                </span>
-                <h2 className="font-serif text-2xl font-light text-charcoal-950 sm:text-3xl mt-0.5">
+                </p>
+                <h2 className="font-serif text-2xl sm:text-3xl font-light tracking-tight text-charcoal-950 mt-1">
                   Search Menswear
                 </h2>
               </div>
@@ -389,11 +389,11 @@ export function Header() {
               </div>
             ) : (
               <div className="space-y-3">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-charcoal-400">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.22em] text-charcoal-400 font-sans">
                   Popular Curations
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {['Egyptian Cotton', 'Pure Linen', 'Formal Shirts', 'Slim Fit', 'New Arrivals', 'Artisan Mandala'].map((term) => (
+                  {['Egyptian Cotton', 'Pure Linen', 'Formal Shirts', 'Slim Fit', 'New Arrivals'].map((term) => (
                     <button
                       key={term}
                       type="button"
