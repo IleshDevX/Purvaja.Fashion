@@ -278,33 +278,24 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
 
               {/* Floating Featured Product Card Badge */}
               <div className="absolute bottom-5 left-5 right-5 sm:bottom-6 sm:left-6 sm:right-6">
-                <div
+                <Link
+                  to={slide.link}
                   key={`badge-${slide.id}`}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-white/20 bg-black/45 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-black/60 sm:p-4.5 animate-fade-in"
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-white/20 bg-black/50 px-5 py-3.5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-black/70 group/badge animate-fade-in"
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="inline-block text-[10px] font-bold uppercase tracking-[0.24em] text-gold-300">
-                      {slide.badgeTag}
-                    </span>
-                    <h3 className="truncate font-serif text-lg font-bold text-ivory-100 sm:text-xl">
+                    <h3 className="truncate font-serif text-lg font-bold text-ivory-100 sm:text-xl group-hover/badge:text-gold-300 transition-colors">
                       {slide.badgeTitle}
                     </h3>
-                    <p className="text-xs font-medium text-ivory-200/85">
-                      {slide.badgePrice}{' '}
-                      <span className="text-[11px] text-ivory-300/60 line-through">
-                        {slide.badgeCompare}
-                      </span>
-                    </p>
                   </div>
 
-                  <Link
-                    to={slide.link}
-                    className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-charcoal-950 shadow-md transition-all duration-300 hover:scale-105 hover:bg-gold-400 hover:text-charcoal-950"
+                  <span
+                    className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white text-charcoal-950 shadow-md transition-all duration-300 group-hover/badge:scale-105 group-hover/badge:bg-gold-400 group-hover/badge:text-charcoal-950"
                     aria-label="View featured piece"
                   >
-                    <ChevronRight className="h-5 w-5" />
-                  </Link>
-                </div>
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </Link>
               </div>
             </div>
           </div>
