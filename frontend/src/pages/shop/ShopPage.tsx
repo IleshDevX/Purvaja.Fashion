@@ -54,10 +54,6 @@ export function ShopPage({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
 
-  // Quick Add Size Popover
-  const [quickAddShirt, setQuickAddShirt] = useState<Shirt | null>(null);
-  const [selectedQuickSize, setSelectedQuickSize] = useState<ShirtSize | null>(null);
-
   useEffect(() => {
     if (defaultNewArrivalsOnly) setOnlyNewArrivals(true);
     if (defaultDealsOnly) setOnlyDeals(true);
@@ -193,27 +189,6 @@ export function ShopPage({
     (onlyInStock ? 1 : 0) +
     (onlyNewArrivals ? 1 : 0) +
     (onlyDeals ? 1 : 0);
-
-  const handleExecuteQuickAdd = () => {
-    if (!quickAddShirt || !selectedQuickSize) return;
-
-    const primaryColor = quickAddShirt.colors[0] || { name: 'Standard', hex: '#000000' };
-    addItem({
-      shirtId: quickAddShirt.id,
-      name: quickAddShirt.name,
-      slug: quickAddShirt.slug,
-      image: quickAddShirt.images[0] || '',
-      price: quickAddShirt.price,
-      compareAtPrice: quickAddShirt.compareAtPrice,
-      color: primaryColor,
-      size: selectedQuickSize,
-      quantity: 1,
-    });
-
-    addToast(`Added "${quickAddShirt.name}" (${selectedQuickSize}) to your bag.`, 'success');
-    setQuickAddShirt(null);
-    setSelectedQuickSize(null);
-  };
 
   return (
     <div className="min-h-screen bg-ivory-100 py-8 lg:py-12 text-charcoal-900">
@@ -586,21 +561,6 @@ export function ShopPage({
                                   </span>
                                 )}
                               </div>
-
-                              {/* Quick Buy Hover Button */}
-                              <div className="absolute inset-x-3 bottom-3 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    setQuickAddShirt(shirt);
-                                    setSelectedQuickSize(shirt.sizes[0] || null);
-                                  }}
-                                  className="inline-flex w-full items-center justify-center rounded-full bg-white/95 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-transform duration-200 hover:scale-[1.02] hover:bg-gold-400 hover:text-charcoal-950"
-                                >
-                                  + Quick Add
-                                </button>
-                              </div>
                             </div>
                           </Link>
 
@@ -816,60 +776,6 @@ export function ShopPage({
                   Apply
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Add Size Modal */}
-        {quickAddShirt && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white w-full max-w-sm p-6 rounded-[24px] shadow-2xl border border-ivory-300 relative animate-scale-in">
-              <button
-                type="button"
-                onClick={() => setQuickAddShirt(null)}
-                className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-950 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Quick Selection</span>
-              <h3 className="font-serif text-xl font-bold text-charcoal-950 mt-1 mb-1">{quickAddShirt.name}</h3>
-              <p className="text-xs text-charcoal-500 mb-4">
-                Select your collar and chest size to instantly add to your bag.
-              </p>
-              <div className="flex items-center gap-2 font-sans text-xl font-bold text-charcoal-950 tabular-nums mb-5">
-                ₹{quickAddShirt.price.toLocaleString('en-IN')}
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-charcoal-400 mb-2">
-                  Available Sizes
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {quickAddShirt.sizes.map(size => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setSelectedQuickSize(size)}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                        selectedQuickSize === size
-                          ? 'bg-charcoal-950 text-white shadow-sm'
-                          : 'border border-ivory-300 bg-ivory-50 text-charcoal-800 hover:border-charcoal-950'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleExecuteQuickAdd}
-                disabled={!selectedQuickSize}
-                className="w-full py-3.5 rounded-full bg-charcoal-950 text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-gold-500 hover:text-charcoal-950 transition-colors disabled:opacity-50"
-              >
-                Add to Shopping Bag
-              </button>
             </div>
           </div>
         )}

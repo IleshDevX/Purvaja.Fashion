@@ -113,13 +113,6 @@ function ProductCard({ shirt, className = '' }: { shirt: Shirt; className?: stri
                 NEW IN 20%
               </span>
             </div>
-
-            {/* Quick Buy Hover Pill */}
-            <div className="absolute inset-x-4 bottom-4 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <span className="inline-flex w-full items-center justify-center rounded-full bg-white/95 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-charcoal-950 shadow-lg backdrop-blur-sm transition-transform duration-200 hover:scale-[1.02] hover:bg-gold-400 hover:text-charcoal-950">
-                Buy Now
-              </span>
-            </div>
           </div>
         </Link>
 
