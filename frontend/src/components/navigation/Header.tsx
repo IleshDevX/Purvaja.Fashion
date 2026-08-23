@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
+import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
 
 const NAV_LINKS = [
   { label: 'New In', href: '/new-arrivals' },
@@ -26,11 +27,34 @@ export function Header() {
   const wishlistCount = useWishlistStore(s => s.getItemCount());
   const { user, status } = useAuthStore();
 
+  const liveSearchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return DEVELOPMENT_SHIRTS.filter(
+      s =>
+        s.name.toLowerCase().includes(q) ||
+        s.fabric.toLowerCase().includes(q) ||
+        s.fit.toLowerCase().includes(q) ||
+        s.collar.toLowerCase().includes(q) ||
+        s.description.toLowerCase().includes(q),
+    );
+  }, [searchQuery]);
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -39,12 +63,14 @@ export function Header() {
 
   useEffect(() => {
     if (searchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
     }
   }, [searchOpen]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
@@ -257,46 +283,137 @@ export function Header() {
             </div>
           </div>
         </div>
-      </header>
-
-      {/* ── Full-Screen Search Overlay ── */}
+      </header>      {/* ── Elevated Luxury Search Modal ── */}
       {searchOpen && (
-        <div className="fixed inset-0 z-[60] bg-ivory-100/98 backdrop-blur-lg flex flex-col animate-fade-in">
-          <div className="max-w-content mx-auto w-full px-6 pt-20 pb-10 flex-1">
-            <div className="flex justify-end mb-8">
-              <button
-                onClick={() => setSearchOpen(false)}
-                className="p-2 text-charcoal-500 hover:text-charcoal-900 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+        <div
+          className="fixed inset-0 z-[100] bg-charcoal-950/70 backdrop-blur-sm flex items-start justify-center pt-12 sm:pt-20 p-4 animate-fade-in"
+          onClick={() => setSearchOpen(false)}
+        >
+          <div
+            className="bg-white w-full max-w-2xl rounded-3xl border border-ivory-300 shadow-2xl p-6 sm:p-8 space-y-6 animate-scale-in relative text-charcoal-950"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-ivory-200 pb-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-800">
+                  Atelier Search
+                </span>
+                <h2 className="font-serif text-2xl font-light text-charcoal-950 sm:text-3xl mt-0.5">
+                  Search Menswear
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-charcoal-400 bg-ivory-100 px-2.5 py-1 rounded-md border border-ivory-300">
+                  ESC to close
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(false)}
+                  className="p-2 text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
+                  aria-label="Close search"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-            <form onSubmit={handleSearch} className="mb-12">
-              <div className="border-b-2 border-charcoal-900 pb-3">
+
+            {/* Solid Search Input Bar */}
+            <form onSubmit={handleSearch}>
+              <div className="relative flex items-center bg-ivory-50 border-2 border-ivory-300 focus-within:border-charcoal-950 focus-within:bg-white rounded-2xl px-4 py-3 sm:py-3.5 transition-all shadow-2xs">
+                <Search className="w-5 h-5 text-charcoal-400 mr-3 shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search shirts, fabrics, styles..."
-                  className="w-full bg-transparent text-display-lg font-serif text-charcoal-900 placeholder:text-charcoal-300 outline-none"
+                  placeholder="Search by shirt name, fabric, or style (e.g. Linen, Egyptian Cotton, Slim Fit)..."
+                  className="w-full bg-transparent text-sm sm:text-base font-medium text-charcoal-950 placeholder:text-charcoal-400 outline-none"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 text-charcoal-400 hover:text-charcoal-950"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </form>
-            <div>
-              <h3 className="text-overline text-charcoal-400 mb-4">Popular Searches</h3>
-              <div className="flex flex-wrap gap-3">
-                {['Egyptian Cotton', 'Linen', 'Formal Shirts', 'Slim Fit', 'New Arrivals'].map(term => (
-                  <button
-                    key={term}
-                    onClick={() => { navigate(`/shop?search=${encodeURIComponent(term)}`); setSearchOpen(false); }}
-                    className="px-4 py-2 border border-charcoal-200 text-body-sm text-charcoal-600 hover:border-charcoal-900 hover:text-charcoal-900 transition-colors"
-                  >
-                    {term}
-                  </button>
-                ))}
+
+            {/* Dynamic Results / Popular Curations */}
+            {searchQuery.trim() ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-charcoal-500 font-medium">
+                  <span>Matching Pieces ({liveSearchResults.length})</span>
+                  {liveSearchResults.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleSearch()}
+                      className="text-gold-800 font-bold hover:underline"
+                    >
+                      View all in Shop →
+                    </button>
+                  )}
+                </div>
+
+                {liveSearchResults.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-charcoal-500 bg-ivory-50 rounded-2xl border border-ivory-200">
+                    No shirts found matching "{searchQuery}". Try searching for "Linen", "Cotton", or "Slim".
+                  </div>
+                ) : (
+                  <div className="divide-y divide-ivory-200 max-h-72 overflow-y-auto pr-1">
+                    {liveSearchResults.slice(0, 4).map((shirt) => (
+                      <Link
+                        key={shirt.id}
+                        to={`/shirts/${shirt.slug}`}
+                        onClick={() => setSearchOpen(false)}
+                        className="flex items-center justify-between py-3 px-2 rounded-xl hover:bg-ivory-50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <img
+                            src={shirt.images[0]}
+                            alt={shirt.name}
+                            className="h-12 w-10 rounded-lg object-cover bg-ivory-100 border border-ivory-300 shrink-0"
+                          />
+                          <div>
+                            <p className="font-serif text-sm font-bold text-charcoal-950 group-hover:text-gold-700 transition-colors line-clamp-1">
+                              {shirt.name}
+                            </p>
+                            <p className="text-[11px] text-charcoal-500">{shirt.fabric} · {shirt.fit} Fit</p>
+                          </div>
+                        </div>
+                        <span className="font-sans text-xs font-bold tabular-nums text-charcoal-950">
+                          ₹{shirt.price.toLocaleString('en-IN')}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-charcoal-400">
+                  Popular Curations
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {['Egyptian Cotton', 'Pure Linen', 'Formal Shirts', 'Slim Fit', 'New Arrivals', 'Artisan Mandala'].map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => {
+                        navigate(`/shop?search=${encodeURIComponent(term)}`);
+                        setSearchOpen(false);
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-ivory-100 border border-ivory-300 text-xs font-semibold text-charcoal-700 hover:bg-charcoal-950 hover:text-white hover:border-charcoal-950 transition-all duration-200"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
