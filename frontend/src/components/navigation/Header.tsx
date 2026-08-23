@@ -303,19 +303,14 @@ export function Header() {
                   Search Menswear
                 </h2>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-charcoal-400 bg-ivory-100 px-2.5 py-1 rounded-md border border-ivory-300">
-                  ESC to close
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(false)}
-                  className="p-2 text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
-                  aria-label="Close search"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="p-2 text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
+                aria-label="Close search"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Solid Search Input Bar */}
