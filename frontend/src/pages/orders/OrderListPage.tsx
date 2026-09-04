@@ -1,21 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Package,
   Truck,
-  RotateCcw,
-  XCircle,
-  ChevronRight,
   Search,
-  ExternalLink,
   X,
   AlertTriangle,
   ArrowLeft,
   User,
   Heart,
 } from 'lucide-react';
-import { developmentOrderStore } from '../../features/orders/store/developmentOrderStore.js';
 import { Order, OrderStatus } from '../../features/orders/types/order.js';
+import { useOrdersQuery } from '../../features/orders/hooks/useOrders.js';
+import { orderService } from '../../features/orders/services/orderService.js';
 import {
   ORDER_STATUS_CONFIG,
   canCancelOrder,
@@ -26,7 +24,6 @@ import { useToast } from '../../app/providers.js';
 
 export function OrderListPage() {
   const { addToast } = useToast();
-  const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cancelModalOrder, setCancelModalOrder] = useState<Order | null>(null);
@@ -34,43 +31,31 @@ export function OrderListPage() {
   const [returnModalOrder, setReturnModalOrder] = useState<Order | null>(null);
   const [returnReason, setReturnReason] = useState('Size fit issue — need exchange');
 
-  const loadOrders = async () => {
-    const list = await developmentOrderStore.getOrders({
-      status: statusFilter,
-      searchQuery,
-    });
-    setOrders(list);
-  };
-
-  useEffect(() => {
-    loadOrders();
-  }, [statusFilter, searchQuery]);
+  const queryClient = useQueryClient();
+  const { data: orders = [] } = useOrdersQuery({ status: statusFilter, searchQuery });
+  const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ['orders'] });
 
   const handleCancelOrderConfirm = async () => {
     if (!cancelModalOrder) return;
-    const res = await developmentOrderStore.cancelOrder(cancelModalOrder.id, cancelReason);
-    if (res.success) {
-      addToast(res.message, 'success');
+    try {
+      await orderService.cancel(cancelModalOrder.id, cancelReason);
+      addToast('Order cancellation request submitted.', 'success');
       setCancelModalOrder(null);
-      loadOrders();
-    } else {
-      addToast(res.message, 'error');
+      void refreshOrders();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to cancel this order.', 'error');
     }
   };
 
   const handleReturnOrderConfirm = async () => {
     if (!returnModalOrder) return;
-    const res = await developmentOrderStore.requestReturn(
-      returnModalOrder.id,
-      returnModalOrder.items[0]?.id || '',
-      returnReason,
-    );
-    if (res.success) {
-      addToast(res.message, 'success');
+    try {
+      await orderService.requestReturn(returnModalOrder.id, returnReason);
+      addToast('Return request submitted.', 'success');
       setReturnModalOrder(null);
-      loadOrders();
-    } else {
-      addToast(res.message, 'error');
+      void refreshOrders();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to request a return.', 'error');
     }
   };
 
@@ -332,10 +317,11 @@ export function OrderListPage() {
                 <strong className="text-charcoal-900">#{cancelModalOrder.orderNumber}</strong>?
               </p>
               <div>
-                <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                <label htmlFor="cancel-reason" className="block text-caption text-charcoal-700 font-medium mb-1">
                   Reason for Cancellation
                 </label>
                 <select
+                  id="cancel-reason"
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
                   className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none"
@@ -379,10 +365,11 @@ export function OrderListPage() {
                 Order <strong className="text-charcoal-900">#{returnModalOrder.orderNumber}</strong> · 7-Day Guarantee
               </p>
               <div>
-                <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                <label htmlFor="return-reason" className="block text-caption text-charcoal-700 font-medium mb-1">
                   Reason for Return
                 </label>
                 <select
+                  id="return-reason"
                   value={returnReason}
                   onChange={e => setReturnReason(e.target.value)}
                   className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none"

@@ -28,6 +28,11 @@ export const SLEEVES: ShirtSleeve[] = ['Full Sleeve', 'Half Sleeve'];
 export const PATTERNS: ShirtPattern[] = ['Solid', 'Striped', 'Checked', 'Textured'];
 export const SIZES: ShirtSize[] = ['38 (S)', '39 (M)', '40 (M)', '42 (L)', '44 (XL)', '46 (XXL)'];
 
+const imagePathSchema = z.string().min(1, 'Product image is required').refine(
+  value => value.startsWith('/') || /^https:\/\/.+/i.test(value),
+  'Use a site-relative path or an HTTPS image URL',
+);
+
 export const variantSchema = z.object({
   id: z.string().min(1, 'Variant ID is required'),
   color: z.object({
@@ -75,9 +80,7 @@ export const productFormSchema = z
     isNewArrival: z.boolean().default(false),
     isFeatured: z.boolean().default(false),
     isDeal: z.boolean().default(false),
-    images: z
-      .array(z.string().url('Must be a valid image URL'))
-      .min(1, 'At least one product image is required'),
+    images: z.array(imagePathSchema).min(1, 'At least one product image is required'),
     variants: z.array(variantSchema).min(1, 'At least one variant must be specified'),
   })
   .refine(

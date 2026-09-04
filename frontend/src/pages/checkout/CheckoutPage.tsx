@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MapPin,
-  Truck,
-  CreditCard,
   Check,
-  ShieldCheck,
   Tag,
   ArrowRight,
   ArrowLeft,
@@ -25,6 +21,7 @@ import {
   calculateOrderPricing,
 } from '../../features/checkout/utils/pricing.js';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
+import { addressSchema } from '../../features/checkout/schemas/addressSchema.js';
 import { useToast } from '../../app/providers.js';
 
 export function CheckoutPage() {
@@ -51,18 +48,17 @@ export function CheckoutPage() {
   } = useCheckoutStore();
 
   // Local Form state for Address
-  const [firstName, setFirstName] = useState(shippingAddress?.firstName || user?.firstName || 'Alexander');
-  const [lastName, setLastName] = useState(shippingAddress?.lastName || user?.lastName || 'Wright');
-  const [phone, setPhone] = useState(shippingAddress?.phone || '9876543210');
-  const [addressLine1, setAddressLine1] = useState(shippingAddress?.addressLine1 || 'Flat 402, Highline Residency, 12th Main');
-  const [addressLine2, setAddressLine2] = useState(shippingAddress?.addressLine2 || 'Indiranagar');
-  const [city, setCity] = useState(shippingAddress?.city || 'Bengaluru');
-  const [state, setState] = useState(shippingAddress?.state || 'Karnataka');
-  const [postalCode, setPostalCode] = useState(shippingAddress?.postalCode || '560038');
+  const [firstName, setFirstName] = useState(shippingAddress?.firstName || user?.firstName || '');
+  const [lastName, setLastName] = useState(shippingAddress?.lastName || user?.lastName || '');
+  const [phone, setPhone] = useState(shippingAddress?.phone || '');
+  const [addressLine1, setAddressLine1] = useState(shippingAddress?.addressLine1 || '');
+  const [addressLine2, setAddressLine2] = useState(shippingAddress?.addressLine2 || '');
+  const [city, setCity] = useState(shippingAddress?.city || '');
+  const [state, setState] = useState(shippingAddress?.state || '');
+  const [postalCode, setPostalCode] = useState(shippingAddress?.postalCode || '');
   const [country] = useState('India');
 
   const [couponInput, setCouponInput] = useState('');
-  const [simulateFailure, setSimulateFailure] = useState(false);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -79,7 +75,7 @@ export function CheckoutPage() {
       return;
     }
 
-    const addr: ShippingAddress = {
+    const candidate: ShippingAddress = {
       firstName,
       lastName,
       phone,
@@ -90,7 +86,12 @@ export function CheckoutPage() {
       postalCode,
       country,
     };
-    setShippingAddress(addr);
+    const parsed = addressSchema.safeParse(candidate);
+    if (!parsed.success) {
+      addToast(parsed.error.issues[0]?.message ?? 'Please check your delivery address.', 'error');
+      return;
+    }
+    setShippingAddress(parsed.data);
     setCurrentStep('delivery');
   };
 
@@ -114,11 +115,11 @@ export function CheckoutPage() {
       return;
     }
 
-    const res = await processPayment(items, simulateFailure);
+    const res = await processPayment(items);
     if (res.success && res.orderId) {
       clearCart();
       addToast('Order confirmed successfully!', 'success');
-      navigate('/checkout/success');
+      navigate(`/checkout/success?orderId=${encodeURIComponent(res.orderId)}`);
     } else {
       addToast(res.error || 'Payment declined by gateway.', 'error');
       navigate('/checkout/failure');
@@ -203,10 +204,11 @@ export function CheckoutPage() {
               <form onSubmit={handleAddressSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                    <label htmlFor="checkout-first-name" className="block text-caption text-charcoal-700 font-medium mb-1">
                       First Name *
                     </label>
                     <input
+                      id="checkout-first-name"
                       type="text"
                       required
                       autoComplete="given-name"
@@ -216,10 +218,11 @@ export function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                    <label htmlFor="checkout-last-name" className="block text-caption text-charcoal-700 font-medium mb-1">
                       Last Name *
                     </label>
                     <input
+                      id="checkout-last-name"
                       type="text"
                       required
                       autoComplete="family-name"
@@ -231,10 +234,11 @@ export function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                  <label htmlFor="checkout-phone" className="block text-caption text-charcoal-700 font-medium mb-1">
                     Mobile Phone (For delivery updates) *
                   </label>
                   <input
+                    id="checkout-phone"
                     type="tel"
                     required
                     inputMode="tel"
@@ -248,10 +252,11 @@ export function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                  <label htmlFor="checkout-address-line-1" className="block text-caption text-charcoal-700 font-medium mb-1">
                     Street Address / Flat / Floor *
                   </label>
                   <input
+                    id="checkout-address-line-1"
                     type="text"
                     required
                     autoComplete="street-address"
@@ -262,10 +267,11 @@ export function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                  <label htmlFor="checkout-address-line-2" className="block text-caption text-charcoal-700 font-medium mb-1">
                     Locality / Landmark / Area (Optional)
                   </label>
                   <input
+                    id="checkout-address-line-2"
                     type="text"
                     value={addressLine2}
                     onChange={e => setAddressLine2(e.target.value)}
@@ -275,8 +281,9 @@ export function CheckoutPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-caption text-charcoal-700 font-medium mb-1">City *</label>
+                    <label htmlFor="checkout-city" className="block text-caption text-charcoal-700 font-medium mb-1">City *</label>
                     <input
+                      id="checkout-city"
                       type="text"
                       required
                       autoComplete="address-level2"
@@ -286,8 +293,9 @@ export function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-caption text-charcoal-700 font-medium mb-1">State *</label>
+                    <label htmlFor="checkout-state" className="block text-caption text-charcoal-700 font-medium mb-1">State *</label>
                     <input
+                      id="checkout-state"
                       type="text"
                       required
                       autoComplete="address-level1"
@@ -297,10 +305,11 @@ export function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-caption text-charcoal-700 font-medium mb-1">
+                    <label htmlFor="checkout-postal-code" className="block text-caption text-charcoal-700 font-medium mb-1">
                       PIN Code *
                     </label>
                     <input
+                      id="checkout-postal-code"
                       type="text"
                       required
                       inputMode="numeric"
@@ -470,17 +479,6 @@ export function CheckoutPage() {
                     </div>
                   </label>
                 ))}
-              </div>
-
-              {/* Simulation switch for testing */}
-              <div className="p-3 bg-ivory-200 border border-ivory-300 flex items-center justify-between text-caption text-charcoal-700">
-                <span>Simulation: Test Payment Authorization Failure</span>
-                <input
-                  type="checkbox"
-                  checked={simulateFailure}
-                  onChange={e => setSimulateFailure(e.target.checked)}
-                  className="accent-charcoal-900"
-                />
               </div>
 
               <div className="flex gap-3 pt-4">

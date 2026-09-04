@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Plus,
   Minus,
 } from 'lucide-react';
-import { adminDevelopmentService } from '../../features/admin/services/adminDevelopmentService.js';
+import { adminService } from '../../features/admin/services/adminService.js';
 import { InventoryItem } from '../../features/admin/types/admin.js';
 import { useToast } from '../../app/providers.js';
 
@@ -14,23 +14,23 @@ export function AdminInventoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
 
-  const loadInventory = async () => {
-    const list = await adminDevelopmentService.getInventory(filter);
+  const loadInventory = useCallback(async () => {
+    const list = await adminService.getInventory(filter);
     setItems(list);
-  };
+  }, [filter]);
 
   useEffect(() => {
-    loadInventory();
-  }, [filter]);
+    void loadInventory();
+  }, [loadInventory]);
 
   const handleStockAdjust = async (variantId: string, currentStock: number, delta: number) => {
     const target = Math.max(0, currentStock + delta);
-    const res = await adminDevelopmentService.updateVariantStock(variantId, target);
-    if (res.success) {
-      addToast(res.message, 'success');
-      loadInventory();
-    } else {
-      addToast(res.message, 'error');
+    try {
+      await adminService.updateVariantStock(variantId, target);
+      addToast(`Updated stock level to ${target} units.`, 'success');
+      void loadInventory();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to update stock.', 'error');
     }
   };
 
@@ -68,6 +68,8 @@ export function AdminInventoryPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="h-4 w-4 text-charcoal-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
+            id="admin-inventory-search"
+            aria-label="Search inventory"
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -147,6 +149,7 @@ export function AdminInventoryPage() {
                       onClick={() => handleStockAdjust(item.id, item.stock, -1)}
                       className="p-1.5 rounded-lg bg-ivory-100 text-charcoal-700 hover:bg-ivory-200 hover:text-charcoal-950"
                       title="Decrease Stock"
+                      aria-label="Decrease stock"
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
@@ -163,6 +166,7 @@ export function AdminInventoryPage() {
                       onClick={() => handleStockAdjust(item.id, item.stock, 1)}
                       className="p-1.5 rounded-lg bg-ivory-100 text-charcoal-700 hover:bg-ivory-200 hover:text-charcoal-950"
                       title="Increase Stock"
+                      aria-label="Increase stock"
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>

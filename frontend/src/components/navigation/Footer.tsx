@@ -5,6 +5,7 @@ import { ArrowUpRight, Globe, Instagram, Linkedin, Twitter, Check } from 'lucide
 export function Footer() {
   const [subscribed, setSubscribed] = useState(false);
   const [email, setEmail] = useState('');
+  const [legalMessage, setLegalMessage] = useState('');
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +53,9 @@ export function Footer() {
                 Subscribe to our newsletter
               </p>
               <form onSubmit={handleSubscribe} className="relative max-w-sm">
+                <label htmlFor="footer-newsletter-email" className="sr-only">Email address</label>
                 <input
+                  id="footer-newsletter-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -152,7 +155,7 @@ export function Footer() {
                 key={label}
                 href={href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 aria-label={label}
                 className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-ivory-200/80 transition-all duration-300 hover:border-gold-400 hover:bg-gold-400 hover:text-charcoal-950 hover:scale-105"
               >
@@ -166,11 +169,12 @@ export function Footer() {
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-ivory-200/50">
           <p>© {new Date().getFullYear()} Purvaja Fashion Atelier. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <span className="hover:text-ivory-100 cursor-pointer transition-colors">Privacy Policy</span>
-            <span className="hover:text-ivory-100 cursor-pointer transition-colors">Terms of Service</span>
-            <span className="hover:text-ivory-100 cursor-pointer transition-colors">Cookie Preferences</span>
+            <button type="button" onClick={() => setLegalMessage('Privacy policy publication is pending before launch.')} className="hover:text-ivory-100 transition-colors">Privacy Policy</button>
+            <button type="button" onClick={() => setLegalMessage('Terms of service publication is pending before launch.')} className="hover:text-ivory-100 transition-colors">Terms of Service</button>
+            <button type="button" onClick={() => setLegalMessage('Cookie preferences will be available when the consent provider is configured.')} className="hover:text-ivory-100 transition-colors">Cookie Preferences</button>
           </div>
         </div>
+        {legalMessage && <p role="status" className="mt-3 text-center text-xs text-gold-400">{legalMessage}</p>}
       </div>
     </footer>
   );

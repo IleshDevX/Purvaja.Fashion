@@ -21,6 +21,35 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiSuccessResponse<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+export function unwrapApiData<T>(payload: unknown): T {
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'success' in payload &&
+    (payload as { success?: unknown }).success === false
+  ) {
+    const error = (payload as { error?: ApiErrorResponse }).error;
+    throw new ApiError(error?.message ?? 'The request could not be completed.', error?.code);
+  }
+
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'data' in payload &&
+    (payload as { success?: unknown }).success === true
+  ) {
+    return (payload as ApiSuccessResponse<T>).data;
+  }
+
+  return payload as T;
+}
+
 export function createApiClient(): AxiosInstance {
   const instance = axios.create({
     baseURL: config.apiUrl,

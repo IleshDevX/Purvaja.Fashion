@@ -1,9 +1,11 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { ShirtColor, ShirtSize } from '../features/products/types/product.js';
 
 export interface CartItem {
   id: string;
   shirtId: string;
+  variantId: string;
   name: string;
   slug: string;
   image: string;
@@ -27,14 +29,14 @@ interface CartState {
   getTotalSavings: () => number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>()(persist((set, get) => ({
   items: [],
   isDrawerOpen: false,
 
   setDrawerOpen: (open: boolean) => set({ isDrawerOpen: open }),
 
   addItem: (item: Omit<CartItem, 'id'>) => {
-    const id = `${item.shirtId}-${item.color.name}-${item.size}`;
+    const id = `${item.shirtId}-${item.variantId}`;
     set(state => {
       const existingIndex = state.items.findIndex(i => i.id === id);
       const existingItem = state.items[existingIndex];
@@ -84,4 +86,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       return sum;
     }, 0);
   },
+}), {
+  name: 'purvaja-cart-v2',
+  storage: createJSONStorage(() => localStorage),
+  partialize: state => ({ items: state.items }),
 }));

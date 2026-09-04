@@ -14,9 +14,11 @@ export function ForgotPasswordPage() {
     e.preventDefault();
     if (!email.trim()) return;
 
-    await forgotPassword({ email });
-    setSubmitted(true);
-    addToast('Password reset link sent to your email.', 'success');
+    const success = await forgotPassword({ email });
+    if (success) {
+      setSubmitted(true);
+      addToast('If an account exists, recovery instructions will be sent shortly.', 'success');
+    }
   };
 
   return (
@@ -46,9 +48,10 @@ export function ForgotPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">Email Address</label>
+            <label htmlFor="forgot-password-email" className="block text-caption text-charcoal-700 font-medium mb-1">Email Address</label>
             <div className="relative">
               <input
+                id="forgot-password-email"
                 type="email"
                 required
                 value={email}

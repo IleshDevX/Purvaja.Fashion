@@ -9,13 +9,12 @@ import {
   Tag,
   Truck,
   ShieldCheck,
-  Check,
   X,
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
 import { useCheckoutStore } from '../../features/checkout/store/checkoutStore.js';
 import { calculateOrderPricing, FREE_SHIPPING_THRESHOLD } from '../../features/checkout/utils/pricing.js';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
+import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
 import { useToast } from '../../app/providers.js';
 
 export function CartPage() {
@@ -25,6 +24,7 @@ export function CartPage() {
   const { coupon, applyCoupon, removeCoupon, deliveryOptionId } = useCheckoutStore();
 
   const [couponCodeInput, setCouponCodeInput] = useState('');
+  const { data: recommendedShirts = [] } = useProductsQuery({ limit: 4, sort: 'featured' });
 
   const pricing = calculateOrderPricing(items, deliveryOptionId, coupon);
 
@@ -40,8 +40,6 @@ export function CartPage() {
       addToast(res.message, 'error');
     }
   };
-
-  const recommendedShirts = DEVELOPMENT_SHIRTS.slice(0, 4);
 
   return (
     <div className="py-8 lg:py-16">

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Search, User, Heart, ShoppingBag, Menu, X, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
+import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
 
 const NAV_LINKS = [
   { label: 'New In', href: '/new-arrivals' },
@@ -26,19 +26,12 @@ export function Header() {
   const setCartDrawerOpen = useCartStore(s => s.setDrawerOpen);
   const wishlistCount = useWishlistStore(s => s.getItemCount());
   const { user, status } = useAuthStore();
+  const { data: searchProducts = [] } = useProductsQuery({ search: searchQuery || undefined, limit: 6 });
 
   const liveSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
-    return DEVELOPMENT_SHIRTS.filter(
-      s =>
-        s.name.toLowerCase().includes(q) ||
-        s.fabric.toLowerCase().includes(q) ||
-        s.fit.toLowerCase().includes(q) ||
-        s.collar.toLowerCase().includes(q) ||
-        s.description.toLowerCase().includes(q),
-    );
-  }, [searchQuery]);
+    return searchProducts;
+  }, [searchProducts, searchQuery]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -228,7 +221,7 @@ export function Header() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-              {(user?.role === 'admin' || user?.email?.includes('admin')) && (
+              {user?.role === 'admin' && (
                 <Link
                   to="/admin"
                   className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 px-2.5 sm:px-3.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-gold-300 border border-gold-500/40 hover:bg-gold-500 hover:text-charcoal-950 transition-colors shadow-2xs"
@@ -320,11 +313,13 @@ export function Header() {
               <div className="relative flex items-center bg-ivory-50 border-2 border-ivory-300 focus-within:border-charcoal-950 focus-within:bg-white rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:py-3.5 transition-all shadow-2xs">
                 <Search className="w-4 sm:w-5 h-4 sm:h-5 text-charcoal-400 mr-2.5 sm:mr-3 shrink-0" />
                 <input
+                  id="header-product-search"
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by shirt name, fabric, or style (e.g. Linen, Slim Fit)..."
+                  aria-label="Search products"
                   className="w-full bg-transparent text-xs sm:text-base font-medium text-charcoal-950 placeholder:text-charcoal-400 outline-none"
                 />
                 {searchQuery && (
@@ -509,7 +504,7 @@ export function Header() {
                 </span>
               </Link>
 
-              {(user?.role === 'admin' || user?.email?.includes('admin')) && (
+              {user?.role === 'admin' && (
                 <Link
                   to="/admin"
                   onClick={() => setMobileMenuOpen(false)}

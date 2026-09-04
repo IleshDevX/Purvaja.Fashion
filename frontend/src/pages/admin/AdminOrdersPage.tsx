@@ -1,40 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Package,
   Search,
   Eye,
 } from 'lucide-react';
-import { developmentOrderStore } from '../../features/orders/store/developmentOrderStore.js';
-import { Order, OrderStatus } from '../../features/orders/types/order.js';
-import { ORDER_STATUS_CONFIG } from '../../features/orders/utils/orderStatus.js';
+import { OrderStatus } from '../../features/orders/types/order.js';
+import { adminService } from '../../features/admin/services/adminService.js';
 import { useToast } from '../../app/providers.js';
 
 export function AdminOrdersPage() {
   const { addToast } = useToast();
-  const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
-
-  const loadOrders = async () => {
-    const list = await developmentOrderStore.getOrders({
-      status: statusFilter,
-      searchQuery,
-    });
-    setOrders(list);
-  };
-
-  useEffect(() => {
-    loadOrders();
-  }, [statusFilter, searchQuery]);
+  const queryClient = useQueryClient();
+  const { data: allOrders = [] } = useQuery({ queryKey: ['admin-orders'], queryFn: () => adminService.listOrders() });
+  const orders = allOrders.filter(order =>
+    (statusFilter === 'all' || order.status === statusFilter) &&
+    (!searchQuery || order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) || order.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))),
+  );
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    const res = await developmentOrderStore.updateOrderStatus(orderId, newStatus);
-    if (res.success) {
-      addToast(res.message, 'success');
-      loadOrders();
-    } else {
-      addToast(res.message, 'error');
+    try {
+      await adminService.updateOrderStatus(orderId, newStatus);
+      await queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      addToast('Order status updated.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to update order status.', 'error');
     }
   };
 
@@ -65,6 +58,8 @@ export function AdminOrdersPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="h-4 w-4 text-charcoal-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
+            id="admin-order-search"
+            aria-label="Search orders"
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -116,12 +111,7 @@ export function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ivory-200">
-              {orders.map(order => {
-                const statusMeta = ORDER_STATUS_CONFIG[order.status] || {
-                  label: order.status,
-                };
-
-                return (
+              {orders.map(order => (
                   <tr key={order.id} className="hover:bg-ivory-50/60 transition-colors">
                     {/* Order Ref */}
                     <td className="py-4 px-4 font-mono font-bold text-charcoal-950">
@@ -193,8 +183,7 @@ export function AdminOrdersPage() {
                       </Link>
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>

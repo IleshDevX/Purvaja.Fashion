@@ -4,20 +4,11 @@ import {
   ShippingAddress,
   DeliveryOptionId,
   PaymentMethodId,
-  PaymentMethod,
   CouponDiscount,
   CheckoutStep,
-  ConfirmedOrder,
 } from '../types/checkout.js';
-import {
-  calculateOrderPricing,
-  AVAILABLE_DELIVERY_OPTIONS,
-  AVAILABLE_PAYMENT_METHODS,
-  DEVELOPMENT_COUPONS,
-} from '../utils/pricing.js';
-import { developmentOrderStore } from '../../orders/store/developmentOrderStore.js';
-import { apiClient } from '../../../services/api/client.js';
-import { config } from '../../../app/config.js';
+import type { CheckoutSession } from '../../../services/api/contracts.js';
+import { orderService } from '../../orders/services/orderService.js';
 
 interface CheckoutState {
   shippingAddress: ShippingAddress | null;
@@ -27,7 +18,7 @@ interface CheckoutState {
   currentStep: CheckoutStep;
   isProcessing: boolean;
   paymentStatus: 'idle' | 'processing' | 'success' | 'failure' | 'cancelled';
-  lastConfirmedOrder: ConfirmedOrder | null;
+  lastCheckout: CheckoutSession | null;
 
   setShippingAddress: (address: ShippingAddress) => void;
   setDeliveryOptionId: (id: DeliveryOptionId) => void;
@@ -37,7 +28,6 @@ interface CheckoutState {
   setCurrentStep: (step: CheckoutStep) => void;
   processPayment: (
     items: CartItem[],
-    simulateFailure?: boolean,
   ) => Promise<{ success: boolean; orderId?: string; error?: string }>;
   resetCheckout: () => void;
 }
@@ -50,7 +40,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
   currentStep: 'address',
   isProcessing: false,
   paymentStatus: 'idle',
-  lastConfirmedOrder: null,
+  lastCheckout: null,
 
   setShippingAddress: (address: ShippingAddress) => set({ shippingAddress: address }),
 
@@ -60,19 +50,16 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
 
   applyCoupon: (rawCode: string) => {
     const code = rawCode.trim().toUpperCase();
-    const match = DEVELOPMENT_COUPONS[code];
-    if (match) {
-      set({ coupon: match });
-      return { success: true, message: `Coupon ${code} applied successfully!` };
-    }
-    return { success: false, message: 'Invalid coupon code. Try SHIRT10 or WELCOME20.' };
+    if (!code) return { success: false, message: 'Enter a promotional code.' };
+    set({ coupon: { code, description: 'Eligibility is confirmed securely at payment.' } });
+    return { success: true, message: 'Promotional code saved for secure validation at payment.' };
   },
 
   removeCoupon: () => set({ coupon: null }),
 
   setCurrentStep: (step: CheckoutStep) => set({ currentStep: step }),
 
-  processPayment: async (items: CartItem[], simulateFailure = false) => {
+  processPayment: async (items: CartItem[]) => {
     if (get().isProcessing) {
       return { success: false, error: 'Payment is already being processed.' };
     }
@@ -88,65 +75,33 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
 
     set({ isProcessing: true, paymentStatus: 'processing' });
 
-    if (!config.isProd && simulateFailure) {
-      set({ isProcessing: false, paymentStatus: 'failure' });
-      return { success: false, error: 'Payment authorization declined by gateway.' };
-    }
-
-    const deliveryOption = AVAILABLE_DELIVERY_OPTIONS[deliveryOptionId];
-    const paymentMethod: PaymentMethod = AVAILABLE_PAYMENT_METHODS.find(
-      p => p.id === paymentMethodId,
-    ) ?? {
-      id: 'phonepe',
-      name: 'PhonePe Secure Payment',
-      description: 'Pay securely via UPI, Cards, or NetBanking',
-    };
-    const pricing = calculateOrderPricing(items, deliveryOptionId, coupon);
-
-    let orderId = `ORD-${Date.now().toString().slice(-6)}`;
-    const hasCustomBackend = Boolean(import.meta.env.VITE_API_URL);
-
-    if (config.isProd && hasCustomBackend) {
-      try {
-        const response = await apiClient.post('/orders/checkout', {
-          items,
-          shippingAddress,
-          deliveryOptionId,
-          paymentMethodId,
-          couponCode: coupon?.code,
-        });
-        const serverOrderId = (response.data as { orderId?: string; data?: { orderId?: string } })?.orderId ??
-          (response.data as { data?: { orderId?: string } })?.data?.orderId;
-        if (!serverOrderId) throw new Error('Checkout response did not include an order reference.');
-        orderId = serverOrderId;
-      } catch (error) {
-        console.warn('Backend checkout endpoint unreachable, placing order locally:', error);
-        await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+      const checkout = await orderService.checkout({
+        lines: items.map(item => ({
+          productId: item.shirtId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+        shippingAddress,
+        deliveryOptionId,
+        paymentMethodId,
+        couponCode: coupon?.code,
+      });
+      if (!checkout.orderId) {
+        throw new Error('Checkout response was invalid.');
       }
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 300));
+
+      set({
+        isProcessing: false,
+        paymentStatus: 'success',
+        lastCheckout: checkout,
+      });
+      return { success: true, orderId: checkout.orderId };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Payment could not be processed.';
+      set({ isProcessing: false, paymentStatus: 'failure' });
+      return { success: false, error: message };
     }
-
-    const confirmedOrder: ConfirmedOrder = {
-      orderId,
-      createdAt: new Date().toISOString(),
-      items: [...items],
-      shippingAddress: { ...shippingAddress },
-      deliveryOption,
-      paymentMethod,
-      pricing,
-      status: 'confirmed',
-    };
-
-    await developmentOrderStore.createOrderFromCheckout(confirmedOrder);
-
-    set({
-      isProcessing: false,
-      paymentStatus: 'success',
-      lastConfirmedOrder: confirmedOrder,
-    });
-
-    return { success: true, orderId: confirmedOrder.orderId };
   },
 
   resetCheckout: () => {
@@ -158,7 +113,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
       currentStep: 'address',
       isProcessing: false,
       paymentStatus: 'idle',
-      lastConfirmedOrder: null,
+      lastCheckout: null,
     });
   },
 }));

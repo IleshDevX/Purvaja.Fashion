@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { useToast } from '../../app/providers.js';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { resetPassword, isLoading } = useAuthStore();
 
@@ -20,7 +21,12 @@ export function ResetPasswordPage() {
       return;
     }
 
-    const success = await resetPassword({ password, confirmPassword });
+    const token = searchParams.get('token');
+    if (!token) {
+      addToast('This password-reset link is missing its security token.', 'error');
+      return;
+    }
+    const success = await resetPassword({ password, confirmPassword, token });
     if (success) {
       setCompleted(true);
       addToast('Your password has been successfully updated.', 'success');
@@ -54,9 +60,10 @@ export function ResetPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">New Password</label>
+            <label htmlFor="reset-password" className="block text-caption text-charcoal-700 font-medium mb-1">New Password</label>
             <div className="relative">
               <input
+                id="reset-password"
                 type="password"
                 required
                 minLength={8}
@@ -70,11 +77,12 @@ export function ResetPasswordPage() {
           </div>
 
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">
+            <label htmlFor="reset-password-confirm" className="block text-caption text-charcoal-700 font-medium mb-1">
               Confirm New Password
             </label>
             <div className="relative">
               <input
+                id="reset-password-confirm"
                 type="password"
                 required
                 minLength={8}

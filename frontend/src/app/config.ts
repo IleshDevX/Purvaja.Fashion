@@ -38,8 +38,7 @@ const rawConfig = {
 const parsed = configSchema.safeParse(rawConfig);
 
 if (!parsed.success) {
-  // eslint-disable-next-line no-console
-  console.error('Invalid frontend configuration:', parsed.error.format());
+  throw new Error(`Invalid frontend configuration: ${parsed.error.message}`);
 }
 
-export const config: Config = parsed.success ? parsed.data : rawConfig;
+export const config: Config = parsed.data;

@@ -46,7 +46,7 @@ export function AccountPage() {
     }
   }, [user]);
 
-  const isAdmin = user?.role === 'admin' || email.toLowerCase().includes('admin');
+  const isAdmin = user?.role === 'admin';
 
   const [addresses] = useState([
     {
@@ -69,13 +69,17 @@ export function AccountPage() {
     navigate('/');
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    const saved = await updateProfile({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
     });
+    if (!saved) {
+      addToast('Unable to update profile. Please try again.', 'error');
+      return;
+    }
     setIsEditing(false);
     addToast('Profile details updated successfully.', 'success');
   };
@@ -267,10 +271,11 @@ export function AccountPage() {
                   {/* Form Inputs Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-first-name" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         First Name
                       </label>
                       <input
+                        id="account-first-name"
                         type="text"
                         disabled={!isEditing}
                         value={firstName}
@@ -285,10 +290,11 @@ export function AccountPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-last-name" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         Last Name
                       </label>
                       <input
+                        id="account-last-name"
                         type="text"
                         disabled={!isEditing}
                         value={lastName}
@@ -303,10 +309,11 @@ export function AccountPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-email" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         Email Address
                       </label>
                       <input
+                        id="account-email"
                         type="email"
                         disabled={!isEditing}
                         value={email}
@@ -321,10 +328,11 @@ export function AccountPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-phone" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         Phone Number
                       </label>
                       <input
+                        id="account-phone"
                         type="tel"
                         disabled={!isEditing}
                         value={phone}
@@ -338,10 +346,11 @@ export function AccountPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-fit" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         Preferred Fit Profile
                       </label>
                       <select
+                        id="account-fit"
                         disabled={!isEditing}
                         value={preferredFit}
                         onChange={e => setPreferredFit(e.target.value)}
@@ -358,10 +367,11 @@ export function AccountPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
+                      <label htmlFor="account-collar" className="block text-[11px] font-bold uppercase tracking-[0.16em] text-charcoal-500 mb-2">
                         Preferred Collar Style
                       </label>
                       <select
+                        id="account-collar"
                         disabled={!isEditing}
                         value={preferredCollar}
                         onChange={e => setPreferredCollar(e.target.value)}

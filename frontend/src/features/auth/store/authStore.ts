@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   User,
   AuthState,
@@ -8,20 +7,19 @@ import {
   ForgotPasswordRequest,
   ResetPasswordRequest,
 } from '../types/auth.js';
-import { authDevelopmentService } from '../services/authDevelopmentService.js';
+import { authService } from '../services/authService.js';
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, _get) => ({
+export const useAuthStore = create<AuthState>()(set => ({
       user: null,
-      status: 'guest',
+      status: 'loading',
+      isInitializing: true,
       isLoading: false,
       error: null,
 
       login: async (credentials: LoginCredentials): Promise<boolean> => {
         set({ isLoading: true, error: null });
         try {
-          const user = await authDevelopmentService.login(credentials);
+          const user = await authService.login(credentials);
           set({ user, status: 'authenticated', isLoading: false, error: null });
           return true;
         } catch (err: unknown) {
@@ -37,7 +35,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (credentials: RegisterCredentials): Promise<boolean> => {
         set({ isLoading: true, error: null });
         try {
-          const user = await authDevelopmentService.register(credentials);
+          const user = await authService.register(credentials);
           set({ user, status: 'authenticated', isLoading: false, error: null });
           return true;
         } catch (err: unknown) {
@@ -53,7 +51,7 @@ export const useAuthStore = create<AuthState>()(
       forgotPassword: async (request: ForgotPasswordRequest): Promise<boolean> => {
         set({ isLoading: true, error: null });
         try {
-          await authDevelopmentService.forgotPassword(request);
+          await authService.forgotPassword(request);
           set({ isLoading: false, error: null });
           return true;
         } catch {
@@ -65,7 +63,7 @@ export const useAuthStore = create<AuthState>()(
       resetPassword: async (request: ResetPasswordRequest): Promise<boolean> => {
         set({ isLoading: true, error: null });
         try {
-          await authDevelopmentService.resetPassword(request);
+          await authService.resetPassword(request);
           set({ isLoading: false, error: null });
           return true;
         } catch {
@@ -75,23 +73,35 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        set({ user: null, status: 'guest', error: null, isLoading: false });
+        void authService.logout().catch(() => undefined);
+        set({ user: null, status: 'guest', isInitializing: false, error: null, isLoading: false });
       },
 
       clearError: () => {
         set({ error: null });
       },
 
-      updateProfile: (updated: Partial<User>) => {
-        set(state => ({
-          user: state.user ? { ...state.user, ...updated } : null,
-        }));
+      updateProfile: async (updated: Pick<User, 'firstName' | 'lastName' | 'email'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          const user = await authService.updateProfile(updated);
+          set({ user, isLoading: false });
+          return true;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Unable to update profile.';
+          set({ error: message, isLoading: false });
+          return false;
+        }
       },
-    }),
-    {
-      name: 'purvaja-atelier-auth-session',
-      storage: createJSONStorage(() => localStorage),
-      partialize: state => ({ user: state.user, status: state.status }),
-    }
-  )
-);
+
+      initialize: async () => {
+        set({ status: 'loading', isInitializing: true });
+        try {
+          const user = await authService.getCurrentUser();
+          set({ user, status: 'authenticated', isInitializing: false, error: null });
+        } catch {
+          // An unauthenticated response is expected for first-time visitors.
+          set({ user: null, status: 'guest', isInitializing: false, error: null });
+        }
+      },
+    }));

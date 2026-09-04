@@ -1,21 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Star,
   Heart,
   Truck,
   RotateCcw,
-  ShieldCheck,
   Ruler,
   ChevronRight,
   Minus,
   Plus,
   Check,
   X,
-  Sparkles,
 } from 'lucide-react';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
 import { ShirtColor, ShirtSize } from '../../features/products/types/product.js';
+import { useCreateProductReview, useProductQuery, useProductReviewsQuery } from '../../features/products/hooks/useProducts.js';
+import { PageLoadingFallback } from '../../components/common/PageLoadingFallback.js';
 import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useToast } from '../../app/providers.js';
@@ -28,52 +27,31 @@ export function ProductDetailsPage() {
   const toggleWishlist = useWishlistStore(s => s.toggleWishlist);
   const isInWishlist = useWishlistStore(s => s.isInWishlist);
 
-  // Find product by id or slug
-  const shirt = useMemo(() => {
-    if (!productId) return null;
-    const target = productId.toLowerCase();
-    return (
-      DEVELOPMENT_SHIRTS.find(
-        s => s.id.toLowerCase() === target || s.slug.toLowerCase() === target,
-      ) || null
-    );
-  }, [productId]);
+  const { data: productResult, isPending, isError } = useProductQuery(productId);
+  const { data: reviews = [] } = useProductReviewsQuery(productId);
+  const createReview = useCreateProductReview(productId);
+  const shirt = productResult?.product ?? null;
 
   // Selected state
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<ShirtColor | null>(() => shirt?.colors[0] || null);
-  const [selectedSize, setSelectedSize] = useState<ShirtSize | null>(() => shirt?.sizes[0] || null);
+  const [selectedColor, setSelectedColor] = useState<ShirtColor | null>(null);
+  const [selectedSize, setSelectedSize] = useState<ShirtSize | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'details' | 'care' | 'sizing'>('details');
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [newReviewRating, setNewReviewRating] = useState(5);
-  const [newReviewAuthor, setNewReviewAuthor] = useState('');
   const [newReviewComment, setNewReviewComment] = useState('');
 
-  // Sample reviews
-  const [reviews, setReviews] = useState([
-    {
-      id: 'rev-1',
-      author: 'Vikramaditya S.',
-      rating: 5,
-      date: 'Aug 14, 2026',
-      title: 'Spectacular texture and drape',
-      comment:
-        'The collar holds its structure perfectly under a tailored blazer, while the cotton feels buttery soft against the skin.',
-    },
-    {
-      id: 'rev-2',
-      author: 'Sameer N.',
-      rating: 5,
-      date: 'Aug 02, 2026',
-      title: 'True luxury at an honest price',
-      comment:
-        'Easily rivals Italian custom bespoke shirts. Stitch density is immaculate and size 40 is spot on.',
-    },
-  ]);
+  useEffect(() => {
+    setSelectedImageIndex(0);
+    setSelectedColor(shirt?.colors[0] ?? null);
+    setSelectedSize(shirt?.sizes[0] ?? null);
+  }, [shirt]);
 
-  if (!shirt) {
+  if (isPending) return <PageLoadingFallback />;
+
+  if (isError || !shirt) {
     return (
       <div className="py-24 text-center max-w-md mx-auto px-6">
         <h2 className="font-serif text-display text-charcoal-900 mb-4">Piece Not Found</h2>
@@ -99,8 +77,16 @@ export function ProductDetailsPage() {
     : 0;
 
   const handleAddToCart = () => {
+    const variant = shirt.variants.find(
+      item => item.color.name === currentColor.name && item.size === currentSize,
+    );
+    if (!variant || !variant.inStock) {
+      addToast('This size and color combination is currently unavailable.', 'error');
+      return;
+    }
     addItem({
       shirtId: shirt.id,
+      variantId: variant.id,
       name: shirt.name,
       slug: shirt.slug,
       image: shirt.images[0] || '',
@@ -118,31 +104,24 @@ export function ProductDetailsPage() {
     navigate('/checkout');
   };
 
-  const handleAddReviewSubmit = (e: React.FormEvent) => {
+  const handleAddReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReviewAuthor.trim() || !newReviewComment.trim()) return;
-
-    setReviews(prev => [
-      {
-        id: `rev-${Date.now()}`,
-        author: newReviewAuthor.trim(),
+    if (!newReviewComment.trim()) return;
+    try {
+      await createReview.mutateAsync({
         rating: newReviewRating,
-        date: 'Today',
-        title: 'Verified Customer Review',
+        title: 'Customer review',
         comment: newReviewComment.trim(),
-      },
-      ...prev,
-    ]);
-
-    addToast('Thank you! Your verified review has been published.', 'success');
-    setReviewModalOpen(false);
-    setNewReviewAuthor('');
-    setNewReviewComment('');
+      });
+      addToast('Your review was submitted for moderation.', 'success');
+      setReviewModalOpen(false);
+      setNewReviewComment('');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to submit your review.', 'error');
+    }
   };
 
-  const relatedShirts = DEVELOPMENT_SHIRTS.filter(
-    s => s.id !== shirt.id && (s.fabric === shirt.fabric || s.fit === shirt.fit),
-  ).slice(0, 4);
+  const relatedShirts = productResult?.relatedProducts ?? [];
 
   return (
     <div className="py-4 lg:py-8">
@@ -234,13 +213,14 @@ export function ProductDetailsPage() {
 
             {/* Color Swatches */}
             {shirt.colors.length > 0 && (
-              <div>
-                <label className="block text-overline text-charcoal-500 mb-1.5">
+              <fieldset>
+                <legend className="block text-overline text-charcoal-500 mb-1.5">
                   Fabric Color: <span className="text-charcoal-900 font-normal">{currentColor.name}</span>
-                </label>
+                </legend>
                 <div className="flex items-center gap-2.5">
                   {shirt.colors.map(color => (
                     <button
+                      type="button"
                       key={color.name}
                       onClick={() => setSelectedColor(color)}
                       className={`w-7 h-7 rounded-full border-2 transition-all p-0.5 ${
@@ -253,14 +233,15 @@ export function ProductDetailsPage() {
                     />
                   ))}
                 </div>
-              </div>
+              </fieldset>
             )}
 
             {/* Size Selector + Size Guide Trigger */}
-            <div>
+            <fieldset>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-overline text-charcoal-500">Select Size</label>
+                <legend className="text-overline text-charcoal-500">Select Size</legend>
                 <button
+                  type="button"
                   onClick={() => setSizeGuideOpen(true)}
                   className="inline-flex items-center gap-1 text-[11px] text-charcoal-600 hover:text-charcoal-900 underline underline-offset-4"
                 >
@@ -270,6 +251,7 @@ export function ProductDetailsPage() {
               <div className="grid grid-cols-3 gap-2">
                 {shirt.sizes.map(size => (
                   <button
+                    type="button"
                     key={size}
                     onClick={() => setSelectedSize(size)}
                     className={`py-2 px-2 text-caption font-medium border transition-all rounded-xs ${
@@ -282,13 +264,14 @@ export function ProductDetailsPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             {/* Quantity Selector */}
-            <div>
-              <label className="block text-overline text-charcoal-500 mb-1.5">Quantity</label>
+            <div role="group" aria-label="Quantity">
+              <span className="block text-overline text-charcoal-500 mb-1.5">Quantity</span>
               <div className="inline-flex items-center border border-ivory-300 bg-ivory-50 rounded-xs">
                 <button
+                  type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="p-2 text-charcoal-600 hover:text-charcoal-900"
                   aria-label="Decrease quantity"
@@ -297,6 +280,7 @@ export function ProductDetailsPage() {
                 </button>
                 <span className="px-4 text-body-sm font-semibold text-charcoal-900">{quantity}</span>
                 <button
+                  type="button"
                   onClick={() => setQuantity(quantity + 1)}
                   className="p-2 text-charcoal-600 hover:text-charcoal-900"
                   aria-label="Increase quantity"
@@ -586,14 +570,18 @@ export function ProductDetailsPage() {
               </p>
               <form onSubmit={handleAddReviewSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-caption text-charcoal-600 mb-1">Rating</label>
-                  <div className="flex gap-1">
+                  <fieldset>
+                  <legend className="block text-caption text-charcoal-600 mb-1">Rating</legend>
+                  <div className="flex gap-1" role="radiogroup" aria-label="Rating">
                     {[1, 2, 3, 4, 5].map(r => (
                       <button
                         type="button"
                         key={r}
                         onClick={() => setNewReviewRating(r)}
                         className="p-1"
+                        role="radio"
+                        aria-checked={r === newReviewRating}
+                        aria-label={`${r} star${r === 1 ? '' : 's'}`}
                       >
                         <Star
                           className={`w-6 h-6 ${
@@ -605,21 +593,12 @@ export function ProductDetailsPage() {
                       </button>
                     ))}
                   </div>
+                  </fieldset>
                 </div>
                 <div>
-                  <label className="block text-caption text-charcoal-600 mb-1">Your Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={newReviewAuthor}
-                    onChange={e => setNewReviewAuthor(e.target.value)}
-                    placeholder="e.g. Vikramaditya S."
-                    className="w-full px-3.5 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 rounded-xl outline-none focus:border-charcoal-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-caption text-charcoal-600 mb-1">Review Comments</label>
+                  <label htmlFor="review-comments" className="block text-caption text-charcoal-600 mb-1">Review Comments</label>
                   <textarea
+                    id="review-comments"
                     rows={4}
                     required
                     value={newReviewComment}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { User, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 import { useToast } from '../../app/providers.js';
@@ -17,7 +17,7 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword] = useState(false);
 
   const redirectTarget = sanitizeInternalRedirect(searchParams.get('redirect'));
 
@@ -64,8 +64,9 @@ export function RegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">First Name</label>
+            <label htmlFor="register-first-name" className="block text-caption text-charcoal-700 font-medium mb-1">First Name</label>
             <input
+              id="register-first-name"
               type="text"
               required
               value={firstName}
@@ -75,8 +76,9 @@ export function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">Last Name</label>
+            <label htmlFor="register-last-name" className="block text-caption text-charcoal-700 font-medium mb-1">Last Name</label>
             <input
+              id="register-last-name"
               type="text"
               required
               value={lastName}
@@ -88,9 +90,10 @@ export function RegisterPage() {
         </div>
 
         <div>
-          <label className="block text-caption text-charcoal-700 font-medium mb-1">Email Address</label>
+          <label htmlFor="register-email" className="block text-caption text-charcoal-700 font-medium mb-1">Email Address</label>
           <div className="relative">
             <input
+              id="register-email"
               type="email"
               required
               value={email}
@@ -103,9 +106,10 @@ export function RegisterPage() {
         </div>
 
         <div>
-          <label className="block text-caption text-charcoal-700 font-medium mb-1">Phone Number (Optional)</label>
+          <label htmlFor="register-phone" className="block text-caption text-charcoal-700 font-medium mb-1">Phone Number (Optional)</label>
           <div className="relative">
             <input
+              id="register-phone"
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
@@ -118,8 +122,9 @@ export function RegisterPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">Password</label>
+            <label htmlFor="register-password" className="block text-caption text-charcoal-700 font-medium mb-1">Password</label>
             <input
+              id="register-password"
               type={showPassword ? 'text' : 'password'}
               required
               minLength={8}
@@ -130,8 +135,9 @@ export function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-caption text-charcoal-700 font-medium mb-1">Confirm Password</label>
+            <label htmlFor="register-confirm-password" className="block text-caption text-charcoal-700 font-medium mb-1">Confirm Password</label>
             <input
+              id="register-confirm-password"
               type={showPassword ? 'text' : 'password'}
               required
               minLength={8}

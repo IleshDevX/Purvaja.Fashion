@@ -5,10 +5,9 @@ import {
   Trash2,
   Check,
 } from 'lucide-react';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
-import { developmentProductStore } from '../../features/products/store/developmentProductStore.js';
+import { adminService } from '../../features/admin/services/adminService.js';
+import { useProductQuery } from '../../features/products/hooks/useProducts.js';
 import {
-  Shirt,
   ShirtFit,
   ShirtFabric,
   ShirtCollar,
@@ -33,6 +32,7 @@ export function AdminProductFormPage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const isEditing = Boolean(productId);
+  const { data: productResult, isPending: isLoadingProduct } = useProductQuery(productId);
 
   // Form Fields
   const [name, setName] = useState('');
@@ -78,7 +78,7 @@ export function AdminProductFormPage() {
 
   // Variant addition form fields
   const [varColorName, setVarColorName] = useState('White Crisp');
-  const [varColorHex, setVarColorHex] = useState('#FFFFFF');
+  const [varColorHex] = useState('#FFFFFF');
   const [varSize, setVarSize] = useState<ShirtSize>('42 (L)');
   const [varStock, setVarStock] = useState<number>(25);
 
@@ -86,31 +86,26 @@ export function AdminProductFormPage() {
 
   // Prefill when editing
   useEffect(() => {
-    if (isEditing && productId) {
-      const existing = DEVELOPMENT_SHIRTS.find(s => s.id === productId);
-      if (existing) {
-        setName(existing.name);
-        setSlug(existing.slug);
-        setTagline(existing.tagline);
-        setDescription(existing.description);
-        setPrice(existing.price);
-        setCompareAtPrice(existing.compareAtPrice || '');
-        setFit(existing.fit);
-        setFabric(existing.fabric);
-        setCollar(existing.collar);
-        setSleeve(existing.sleeve);
-        setPattern(existing.pattern);
-        setIsFeatured(Boolean(existing.isFeatured));
-        setIsNewArrival(Boolean(existing.isNewArrival));
-        setIsDeal(Boolean(existing.compareAtPrice && existing.compareAtPrice > existing.price));
-        setImages(existing.images);
-        setVariants(existing.variants);
-      } else {
-        addToast('Shirt not found in catalog.', 'error');
-        navigate('/admin/products');
-      }
+    if (isEditing && productId && productResult?.product) {
+      const existing = productResult.product;
+      setName(existing.name);
+      setSlug(existing.slug);
+      setTagline(existing.tagline);
+      setDescription(existing.description);
+      setPrice(existing.price);
+      setCompareAtPrice(existing.compareAtPrice || '');
+      setFit(existing.fit);
+      setFabric(existing.fabric);
+      setCollar(existing.collar);
+      setSleeve(existing.sleeve);
+      setPattern(existing.pattern);
+      setIsFeatured(Boolean(existing.isFeatured));
+      setIsNewArrival(Boolean(existing.isNewArrival));
+      setIsDeal(Boolean(existing.compareAtPrice && existing.compareAtPrice > existing.price));
+      setImages(existing.images);
+      setVariants(existing.variants);
     }
-  }, [isEditing, productId]);
+  }, [isEditing, productId, productResult]);
 
   // Auto-generate slug from name if creating
   const handleNameChange = (val: string) => {
@@ -200,44 +195,21 @@ export function AdminProductFormPage() {
       return;
     }
 
-    const uniqueColors = Array.from(new Map(variants.map(v => [v.color.name, v.color])).values());
-    const uniqueSizes = Array.from(new Set(variants.map(v => v.size)));
-    const careInstructions = [
-      'Machine wash cold (30°C) on delicate cycle with mild detergent',
-      'Warm steam iron while slightly damp for crisp sartorial finish',
-      'Hang dry away from direct sunlight',
-    ];
-
-    if (isEditing && productId) {
-      const idx = DEVELOPMENT_SHIRTS.findIndex(s => s.id === productId);
-      if (idx !== -1) {
-        DEVELOPMENT_SHIRTS[idx] = {
-          ...DEVELOPMENT_SHIRTS[idx],
-          ...formData,
-          colors: uniqueColors,
-          sizes: uniqueSizes,
-          careInstructions,
-        };
+    try {
+      if (isEditing && productId) {
+        await adminService.updateProduct(productId, validation.data);
+        addToast(`Updated "${name}" successfully.`, 'success');
+      } else {
+        await adminService.createProduct(validation.data);
+        addToast(`Created new shirt "${name}" in catalog.`, 'success');
       }
-      await developmentProductStore.updateProduct(productId, formData);
-      addToast(`Updated "${name}" successfully.`, 'success');
-    } else {
-      const newShirt: Shirt = {
-        id: `shirt-${Date.now().toString().slice(-4)}`,
-        rating: 4.9,
-        reviewCount: 1,
-        colors: uniqueColors,
-        sizes: uniqueSizes,
-        careInstructions,
-        ...formData,
-      };
-      DEVELOPMENT_SHIRTS.unshift(newShirt);
-      await developmentProductStore.createProduct(formData);
-      addToast(`Created new shirt "${name}" in catalog.`, 'success');
+      navigate('/admin/products');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to save this product.', 'error');
     }
-
-    navigate('/admin/products');
   };
+
+  if (isEditing && isLoadingProduct) return null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-12 text-charcoal-900">

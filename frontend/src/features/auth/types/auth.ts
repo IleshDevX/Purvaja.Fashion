@@ -36,6 +36,7 @@ export interface ResetPasswordRequest {
 export interface AuthState {
   user: User | null;
   status: AuthStatus;
+  isInitializing: boolean;
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
@@ -44,5 +45,6 @@ export interface AuthState {
   resetPassword: (request: ResetPasswordRequest) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
-  updateProfile: (updated: Partial<User>) => void;
+  updateProfile: (updated: Pick<User, 'firstName' | 'lastName' | 'email'>) => Promise<boolean>;
+  initialize: () => Promise<void>;
 }

@@ -1,33 +1,15 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Package,
   Truck,
   ArrowLeft,
-  Calendar,
-  CreditCard,
-  MapPin,
-  CheckCircle2,
   Printer,
 } from 'lucide-react';
-import { developmentOrderStore } from '../../features/orders/store/developmentOrderStore.js';
-import { Order } from '../../features/orders/types/order.js';
+import { useOrderQuery } from '../../features/orders/hooks/useOrders.js';
 import { ORDER_STATUS_CONFIG } from '../../features/orders/utils/orderStatus.js';
 
 export function OrderDetailsPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      if (!orderId) return;
-      const res = await developmentOrderStore.getOrderById(orderId);
-      setOrder(res);
-      setLoading(false);
-    }
-    load();
-  }, [orderId]);
+  const { data: order, isPending: loading } = useOrderQuery(orderId);
 
   if (loading) {
     return (

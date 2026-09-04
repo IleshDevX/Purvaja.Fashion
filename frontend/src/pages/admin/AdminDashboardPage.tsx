@@ -8,16 +8,12 @@ import {
   AlertTriangle,
   Clock,
   ArrowRight,
-  Sparkles,
-  ChevronRight,
   Eye,
-  CheckCircle2,
   Package,
 } from 'lucide-react';
-import { adminDevelopmentService, AdminDashboardMetrics } from '../../features/admin/services/adminDevelopmentService.js';
-import { developmentOrderStore } from '../../features/orders/store/developmentOrderStore.js';
+import { adminService } from '../../features/admin/services/adminService.js';
+import { AdminDashboardMetrics } from '../../features/admin/types/admin.js';
 import { Order } from '../../features/orders/types/order.js';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
 import { ORDER_STATUS_CONFIG } from '../../features/orders/utils/orderStatus.js';
 
 export function AdminDashboardPage() {
@@ -25,21 +21,24 @@ export function AdminDashboardPage() {
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [chartData, setChartData] = useState<{ label: string; revenue: number; orders: number }[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [topShirts, setTopShirts] = useState<Array<{ product: { id: string; name: string; images: string[]; price: number }; unitsSold: number; totalRevenue: number }>>([]);
 
   useEffect(() => {
-    adminDevelopmentService.getDashboardMetrics().then(setMetrics);
-    adminDevelopmentService.getSalesChartData(timeframe).then(setChartData);
-    developmentOrderStore.getOrders().then(orders => setRecentOrders(orders.slice(0, 5)));
+    void Promise.all([
+      adminService.getDashboardMetrics(),
+      adminService.getSalesChartData(timeframe),
+      adminService.listOrders(),
+      adminService.getTopProducts(),
+    ]).then(([nextMetrics, nextChartData, orders, topProducts]) => {
+      setMetrics(nextMetrics);
+      setChartData(nextChartData);
+      setRecentOrders(orders.slice(0, 5));
+      setTopShirts(topProducts);
+    });
   }, [timeframe]);
 
   const maxRevenue = chartData.length ? Math.max(...chartData.map(d => d.revenue)) : 100000;
 
-  // Top selling shirts using real development shirt data
-  const topShirts = DEVELOPMENT_SHIRTS.slice(0, 4).map((shirt, idx) => ({
-    ...shirt,
-    unitsSold: [84, 62, 53, 41][idx] || 30,
-    totalRevenue: ([84, 62, 53, 41][idx] || 30) * shirt.price,
-  }));
 
   return (
     <div className="space-y-8 animate-fade-in text-charcoal-900">
@@ -168,7 +167,7 @@ export function AdminDashboardPage() {
             <div>
               <h3 className="font-serif text-lg font-bold text-charcoal-950">Sartorial Revenue Performance</h3>
               <p className="text-xs text-charcoal-500 mt-0.5">
-                Gross order turnover tracking (Development Sandbox Data)
+                Gross order turnover tracking
               </p>
             </div>
 
@@ -379,29 +378,28 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {topShirts.map((shirt, idx) => (
+            {topShirts.map(({ product, unitsSold, totalRevenue }, idx) => (
               <div
-                key={shirt.id}
+                key={product.id}
                 className="p-3 rounded-xl border border-ivory-200 bg-ivory-50/60 flex items-center justify-between gap-3 hover:bg-ivory-100/80 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="font-serif text-xs font-bold text-gold-800 w-4">{idx + 1}.</span>
                   <img
-                    src={shirt.images[0]}
-                    alt={shirt.name}
+                    src={product.images[0]}
+                    alt={product.name}
                     className="h-10 w-8 rounded-lg object-cover bg-white shrink-0 border border-ivory-300"
                   />
                   <div className="min-w-0">
-                    <p className="font-serif text-xs font-bold text-charcoal-950 truncate">{shirt.name}</p>
-                    <p className="text-[10px] text-charcoal-500">{shirt.fabric} · {shirt.fit} Fit</p>
+                    <p className="font-serif text-xs font-bold text-charcoal-950 truncate">{product.name}</p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
                   <p className="font-sans text-xs font-bold tabular-nums text-charcoal-950">
-                    ₹{shirt.totalRevenue.toLocaleString('en-IN')}
+                    ₹{totalRevenue.toLocaleString('en-IN')}
                   </p>
-                  <p className="text-[10px] text-emerald-700 font-semibold">{shirt.unitsSold} units</p>
+                  <p className="text-[10px] text-emerald-700 font-semibold">{unitsSold} units</p>
                 </div>
               </div>
             ))}

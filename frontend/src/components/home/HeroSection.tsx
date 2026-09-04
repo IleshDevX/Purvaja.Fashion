@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import gsap from 'gsap';
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import type { Shirt } from '../../features/products/types/product.js';
 
@@ -96,7 +95,7 @@ interface HeroSectionProps {
   featuredProduct?: Shirt;
 }
 
-export function HeroSection({ featuredProduct }: HeroSectionProps) {
+export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -148,23 +147,11 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               </div>
 
               {/* Sophisticated Luxury Serif Title with Smooth Transition */}
-              <div key={`title-${slide.id}`} className="space-y-0 tracking-tight animate-fade-in">
-                <div className="overflow-hidden">
-                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] text-charcoal-950">
-                    {slide.line1}
-                  </h1>
-                </div>
-                <div className="overflow-hidden">
-                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] text-charcoal-950">
-                    {slide.line2}
-                  </h1>
-                </div>
-                <div className="overflow-hidden">
-                  <h1 className="font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light italic leading-[0.92] text-gold-700">
-                    {slide.line3}
-                  </h1>
-                </div>
-              </div>
+              <h1 key={`title-${slide.id}`} className="space-y-0 font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] tracking-tight text-charcoal-950 animate-fade-in">
+                <span className="block overflow-hidden">{slide.line1}</span>
+                <span className="block overflow-hidden">{slide.line2}</span>
+                <span className="block overflow-hidden italic text-gold-700">{slide.line3}</span>
+              </h1>
 
               {/* Description Paragraph */}
               <p
@@ -250,6 +237,9 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
                 key={`img-${slide.id}`}
                 src={slide.image}
                 alt={slide.badgeTitle}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 className="h-full w-full object-cover object-[center_15%] transition-all duration-700 animate-fade-in"
               />
 
@@ -324,5 +314,3 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
     </section>
   );
 }
-
-

@@ -8,13 +8,10 @@ import {
   Star,
   Heart,
   RotateCcw,
-  Sparkles,
-  ArrowRight,
 } from 'lucide-react';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
-import { Shirt, ShirtFit, ShirtFabric, ShirtSize, ShirtSortOption } from '../../features/products/types/product.js';
+import { ShirtFit, ShirtFabric, ShirtSize, ShirtSortOption } from '../../features/products/types/product.js';
+import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
-import { useCartStore } from '../../store/cartStore.js';
 import { useToast } from '../../app/providers.js';
 
 const FITS: ShirtFit[] = ['Slim', 'Regular', 'Relaxed'];
@@ -37,7 +34,6 @@ export function ShopPage({
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToast } = useToast();
-  const addItem = useCartStore(s => s.addItem);
   const toggleWishlist = useWishlistStore(s => s.toggleWishlist);
   const isInWishlist = useWishlistStore(s => s.isInWishlist);
 
@@ -80,9 +76,19 @@ export function ShopPage({
   ];
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Featured Curations';
+  const { data: products = [] } = useProductsQuery({
+    search: searchQuery || undefined,
+    fit: selectedFits,
+    fabric: selectedFabrics,
+    size: selectedSizes,
+    inStock: onlyInStock || undefined,
+    newArrivals: onlyNewArrivals || undefined,
+    deals: onlyDeals || undefined,
+    sort: sortBy,
+  });
 
   const filteredShirts = useMemo(() => {
-    let result = [...DEVELOPMENT_SHIRTS];
+    let result = [...products];
 
     // Search query filter
     if (searchQuery.trim()) {
@@ -147,7 +153,7 @@ export function ShopPage({
     }
 
     return result;
-  }, [searchQuery, selectedFits, selectedFabrics, selectedSizes, onlyInStock, onlyNewArrivals, onlyDeals, sortBy]);
+  }, [products, searchQuery, selectedFits, selectedFabrics, selectedSizes, onlyInStock, onlyNewArrivals, onlyDeals, sortBy]);
 
   const toggleFit = (fit: ShirtFit) => {
     setSelectedFits(prev => (prev.includes(fit) ? prev.filter(f => f !== fit) : [...prev, fit]));

@@ -4,8 +4,9 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowRight, Check, Heart, Minus, Plus, Sparkles, Star } from 'lucide-react';
 import { HeroSection } from '../../components/home/HeroSection.js';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
 import type { Shirt } from '../../features/products/types/product.js';
+import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
+import { PageLoadingFallback } from '../../components/common/PageLoadingFallback.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -44,8 +45,6 @@ const categoryCard1 = '/images/products/artisan-mandala-brown-1.jpg';
 const categoryCard2 = '/images/products/forest-floral-green-1.jpg';
 const categoryCard3Top = '/images/products/heritage-leaf-brown-1.jpg';
 const categoryCard3Bottom = '/images/products/monochrome-abstract-grey-1.jpg';
-
-const promoImage = '/images/products/terra-striped-brown-1.jpg';
 
 const ATELIER_STANDARDS = [
   {
@@ -150,9 +149,10 @@ export function HomePage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const revealRefs = useRef<HTMLElement[]>([]);
   const [openFaq, setOpenFaq] = useState<number>(0);
+  const { data: products = [], isPending, isError } = useProductsQuery({ limit: 10, sort: 'featured' });
 
-  const heroProduct = DEVELOPMENT_SHIRTS[0];
-  const collectionProducts = DEVELOPMENT_SHIRTS.slice(0, 10);
+  const heroProduct = products[0];
+  const collectionProducts = products.slice(0, 10);
 
   const addRevealRef = (element: HTMLElement | null) => {
     if (!element) return;
@@ -183,6 +183,11 @@ export function HomePage() {
   }, []);
 
   const activeStandard = ATELIER_STANDARDS[openFaq] ?? ATELIER_STANDARDS[0];
+
+  if (isPending) return <PageLoadingFallback />;
+  if (isError || !heroProduct) {
+    return <div className="py-24 text-center text-body text-charcoal-600">The collection is temporarily unavailable. Please try again shortly.</div>;
+  }
 
   return (
     <div ref={rootRef} className="bg-ivory-100 text-charcoal-900">

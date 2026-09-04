@@ -5,6 +5,7 @@ import { AuthLayout } from '../layouts/AuthLayout.js';
 import { CheckoutLayout } from '../layouts/CheckoutLayout.js';
 import { ProtectedRoute } from '../features/auth/components/ProtectedRoute.js';
 import { GuestRoute } from '../features/auth/components/GuestRoute.js';
+import { AdminRoute } from '../features/auth/components/AdminRoute.js';
 import { PageLoadingFallback } from '../components/common/PageLoadingFallback.js';
 
 // Page-level code splitting using React.lazy()
@@ -228,7 +229,7 @@ export const router = createBrowserRouter([
   // Admin Route Group (AdminLayout - Step 11)
   {
     path: '/admin',
-    element: withSuspense(<AdminLayout />),
+    element: <AdminRoute>{withSuspense(<AdminLayout />)}</AdminRoute>,
     children: [
       {
         index: true,

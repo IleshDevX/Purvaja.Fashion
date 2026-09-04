@@ -8,27 +8,24 @@ import {
   CreditCard,
   Send,
 } from 'lucide-react';
-import { developmentOrderStore } from '../../features/orders/store/developmentOrderStore.js';
-import { Order, OrderStatus } from '../../features/orders/types/order.js';
+import { OrderStatus } from '../../features/orders/types/order.js';
+import { adminService } from '../../features/admin/services/adminService.js';
 import { useToast } from '../../app/providers.js';
 
 export function AdminOrderDetailsPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { addToast } = useToast();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<Awaited<ReturnType<typeof adminService.getOrder>> | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('processing');
 
-  const loadOrder = async () => {
-    if (!orderId) return;
-    const found = await developmentOrderStore.getOrderById(orderId);
-    if (found) {
-      setOrder(found);
-      setSelectedStatus(found.status);
-    }
-  };
-
   useEffect(() => {
-    loadOrder();
+    if (!orderId) return;
+    void adminService.getOrder(orderId)
+      .then(found => {
+        setOrder(found);
+        setSelectedStatus(found.status);
+      })
+      .catch(() => setOrder(null));
   }, [orderId]);
 
   if (!order) {
@@ -48,12 +45,13 @@ export function AdminOrderDetailsPage() {
   }
 
   const handleUpdateStatus = async () => {
-    const res = await developmentOrderStore.updateOrderStatus(order.id, selectedStatus);
-    if (res.success) {
-      addToast(res.message, 'success');
-      loadOrder();
-    } else {
-      addToast(res.message, 'error');
+    try {
+      await adminService.updateOrderStatus(order.id, selectedStatus);
+      addToast('Order status updated.', 'success');
+      const updated = await adminService.getOrder(order.id);
+      setOrder(updated);
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to update order status.', 'error');
     }
   };
 

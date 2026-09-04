@@ -5,16 +5,16 @@ import {
   Eye,
   X,
 } from 'lucide-react';
-import { adminDevelopmentService } from '../../features/admin/services/adminDevelopmentService.js';
-import { SyntheticCustomer } from '../../features/admin/data/syntheticCustomers.js';
+import { adminService } from '../../features/admin/services/adminService.js';
+import { AdminCustomer } from '../../features/admin/types/admin.js';
 
 export function AdminCustomersPage() {
-  const [customers, setCustomers] = useState<SyntheticCustomer[]>([]);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<SyntheticCustomer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<AdminCustomer | null>(null);
 
   useEffect(() => {
-    adminDevelopmentService.getCustomers(searchQuery).then(setCustomers);
+    void adminService.getCustomers(searchQuery).then(setCustomers);
   }, [searchQuery]);
 
   return (
@@ -43,6 +43,8 @@ export function AdminCustomersPage() {
         <div className="relative max-w-md">
           <Search className="h-4 w-4 text-charcoal-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
+            id="admin-customer-search"
+            aria-label="Search customers"
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}

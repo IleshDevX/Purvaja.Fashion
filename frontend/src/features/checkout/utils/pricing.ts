@@ -42,28 +42,10 @@ export const AVAILABLE_PAYMENT_METHODS: PaymentMethod[] = [
   },
 ];
 
-export const DEVELOPMENT_COUPONS: Record<string, CouponDiscount> = {
-  SHIRT10: {
-    code: 'SHIRT10',
-    percentOff: 10,
-    description: "10% discount on all men's shirts",
-  },
-  WELCOME20: {
-    code: 'WELCOME20',
-    percentOff: 20,
-    description: '20% discount on first luxury shirt order',
-  },
-  FLAT500: {
-    code: 'FLAT500',
-    fixedOff: 500,
-    description: '₹500 flat discount',
-  },
-};
-
 export function calculateOrderPricing(
   items: CartItem[],
   deliveryOptionId: DeliveryOptionId = 'standard',
-  coupon: CouponDiscount | null = null,
+  _coupon: CouponDiscount | null = null,
 ): OrderPricing {
   const subtotal = items.reduce((sum, item) => sum + Math.round(item.price) * item.quantity, 0);
 
@@ -74,14 +56,8 @@ export function calculateOrderPricing(
     return sum;
   }, 0);
 
-  let couponDiscount = 0;
-  if (coupon && subtotal > 0) {
-    if (coupon.percentOff) {
-      couponDiscount = Math.round((subtotal * coupon.percentOff) / 100);
-    } else if (coupon.fixedOff) {
-      couponDiscount = Math.min(subtotal, Math.round(coupon.fixedOff));
-    }
-  }
+  // The server validates promotional eligibility and is the source of truth for discounts.
+  const couponDiscount = 0;
 
   const deliveryOption =
     AVAILABLE_DELIVERY_OPTIONS[deliveryOptionId] || AVAILABLE_DELIVERY_OPTIONS.standard;

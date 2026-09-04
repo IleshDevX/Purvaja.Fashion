@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -9,13 +10,14 @@ import {
   AlertTriangle,
   Shirt,
 } from 'lucide-react';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
 import { Shirt as ShirtType } from '../../features/products/types/product.js';
+import { adminService } from '../../features/admin/services/adminService.js';
 import { useToast } from '../../app/providers.js';
 
 export function AdminProductsPage() {
   const { addToast } = useToast();
-  const [shirts, setShirts] = useState<ShirtType[]>(DEVELOPMENT_SHIRTS);
+  const queryClient = useQueryClient();
+  const { data: shirts = [] } = useQuery({ queryKey: ['admin-products'], queryFn: () => adminService.listProducts() });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock' | 'new_arrivals' | 'deals'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'rating_desc'>('newest');
@@ -60,11 +62,16 @@ export function AdminProductsPage() {
     return result;
   }, [shirts, searchQuery, statusFilter, sortBy]);
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteModalShirt) return;
-    setShirts(prev => prev.filter(s => s.id !== deleteModalShirt.id));
-    addToast(`"${deleteModalShirt.name}" was removed from the development catalog.`, 'info');
-    setDeleteModalShirt(null);
+    try {
+      await adminService.deleteProduct(deleteModalShirt.id);
+      await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      addToast(`"${deleteModalShirt.name}" was removed from the catalog.`, 'success');
+      setDeleteModalShirt(null);
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to remove this product.', 'error');
+    }
   };
 
   return (
@@ -111,7 +118,7 @@ export function AdminProductsPage() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as any)}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
             className="rounded-xl bg-ivory-50 border border-ivory-300 px-3 py-2 text-xs font-semibold text-charcoal-900 outline-none cursor-pointer hover:border-charcoal-400"
           >
             <option value="all">All Statuses</option>
@@ -125,7 +132,7 @@ export function AdminProductsPage() {
           {/* Sort Selector */}
           <select
             value={sortBy}
-            onChange={e => setSortBy(e.target.value as any)}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
             className="rounded-xl bg-ivory-50 border border-ivory-300 px-3 py-2 text-xs font-semibold text-charcoal-900 outline-none cursor-pointer hover:border-charcoal-400"
           >
             <option value="newest">Sort: Newest</option>
@@ -329,7 +336,7 @@ export function AdminProductsPage() {
               Are you sure you want to remove <span className="font-bold text-charcoal-950">"{deleteModalShirt.name}"</span> from the atelier catalog?
             </p>
             <p className="text-[11px] text-amber-900 font-medium bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-              Note: This development-state deletion will remove the shirt during the active session.
+              This action permanently removes the product from the catalog.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

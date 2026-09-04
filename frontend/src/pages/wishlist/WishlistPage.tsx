@@ -2,15 +2,19 @@ import { Link } from 'react-router-dom';
 import { Heart, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useCartStore } from '../../store/cartStore.js';
-import { DEVELOPMENT_SHIRTS } from '../../features/products/data/shirts.js';
+import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
+import { PageLoadingFallback } from '../../components/common/PageLoadingFallback.js';
 import { useToast } from '../../app/providers.js';
 
 export function WishlistPage() {
   const { addToast } = useToast();
   const { savedItemIds, removeFromWishlist, clearWishlist } = useWishlistStore();
   const addItem = useCartStore(s => s.addItem);
+  const { data: products = [], isPending } = useProductsQuery();
 
-  const savedShirts = DEVELOPMENT_SHIRTS.filter(s => savedItemIds.includes(s.id));
+  const savedShirts = products.filter(s => savedItemIds.includes(s.id));
+
+  if (isPending) return <PageLoadingFallback />;
 
   const handleMoveToBag = (shirt: (typeof savedShirts)[0]) => {
     const primaryColor = shirt.colors[0] || { name: 'Standard', hex: '#000000' };
@@ -18,6 +22,9 @@ export function WishlistPage() {
 
     addItem({
       shirtId: shirt.id,
+      variantId: shirt.variants.find(
+        variant => variant.color.name === primaryColor.name && variant.size === primarySize,
+      )?.id ?? '',
       name: shirt.name,
       slug: shirt.slug,
       image: shirt.images[0] || '',

@@ -1,13 +1,18 @@
-import { Link, Navigate } from 'react-router-dom';
-import { CheckCircle2, Truck, Package, ArrowRight } from 'lucide-react';
-import { useCheckoutStore } from '../../features/checkout/store/checkoutStore.js';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, Truck, ArrowRight } from 'lucide-react';
+import { PageLoadingFallback } from '../../components/common/PageLoadingFallback.js';
+import { useOrderQuery } from '../../features/orders/hooks/useOrders.js';
 
 export function CheckoutSuccessPage() {
-  const lastConfirmedOrder = useCheckoutStore(s => s.lastConfirmedOrder);
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get('orderId') ?? undefined;
+  const { data: order, isPending, isError } = useOrderQuery(orderId);
 
-  if (!lastConfirmedOrder) {
+  if (!orderId) {
     return <Navigate to="/shop" replace />;
   }
+  if (isPending) return <PageLoadingFallback />;
+  if (isError || !order) return <Navigate to={`/checkout/failure?orderId=${encodeURIComponent(orderId)}`} replace />;
 
   return (
     <div className="py-8 lg:py-16 max-w-2xl mx-auto">
@@ -22,7 +27,7 @@ export function CheckoutSuccessPage() {
           <p className="text-body-sm text-charcoal-500 mt-2">
             Order Reference:{' '}
             <strong className="text-charcoal-900 font-mono tracking-wider">
-              #{lastConfirmedOrder.orderId}
+              #{order.orderNumber}
             </strong>
           </p>
         </div>
@@ -36,19 +41,19 @@ export function CheckoutSuccessPage() {
           <div className="flex justify-between items-center pb-3 border-b border-ivory-200 text-caption text-charcoal-600">
             <span>Delivering To:</span>
             <span className="font-semibold text-charcoal-900">
-              {lastConfirmedOrder.shippingAddress.firstName} {lastConfirmedOrder.shippingAddress.lastName}
+              {order.shippingAddress.firstName} {order.shippingAddress.lastName}
             </span>
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-ivory-200 text-caption text-charcoal-600">
             <span>Address:</span>
             <span className="text-charcoal-800 text-right truncate max-w-xs">
-              {lastConfirmedOrder.shippingAddress.addressLine1}, {lastConfirmedOrder.shippingAddress.city}
+              {order.shippingAddress.addressLine1}, {order.shippingAddress.city}
             </span>
           </div>
           <div className="flex justify-between items-center text-caption text-charcoal-600">
             <span>Amount Paid:</span>
             <span className="font-serif text-heading text-charcoal-900">
-              ₹{lastConfirmedOrder.pricing.grandTotal.toLocaleString('en-IN')}
+              ₹{order.grandTotal.toLocaleString('en-IN')}
             </span>
           </div>
         </div>
@@ -56,7 +61,7 @@ export function CheckoutSuccessPage() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Link
-            to={`/account/orders/${lastConfirmedOrder.orderId}/tracking`}
+            to={`/account/orders/${order.id}/tracking`}
             className="flex-1 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
           >
             <Truck className="w-4 h-4" /> TRACK LIVE PACKAGE

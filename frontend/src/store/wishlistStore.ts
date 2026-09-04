@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface WishlistState {
   savedItemIds: string[];
@@ -9,7 +10,7 @@ interface WishlistState {
   getItemCount: () => number;
 }
 
-export const useWishlistStore = create<WishlistState>((set, get) => ({
+export const useWishlistStore = create<WishlistState>()(persist((set, get) => ({
   savedItemIds: [],
 
   toggleWishlist: (shirtId: string) => {
@@ -40,4 +41,8 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   clearWishlist: () => set({ savedItemIds: [] }),
 
   getItemCount: () => get().savedItemIds.length,
+}), {
+  name: 'purvaja-wishlist-v2',
+  storage: createJSONStorage(() => localStorage),
+  partialize: state => ({ savedItemIds: state.savedItemIds }),
 }));

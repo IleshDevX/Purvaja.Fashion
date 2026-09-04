@@ -3,8 +3,10 @@ packages:
   - 'backend'
 
 allowBuilds:
+  '@prisma/engines': set this to true or false
   argon2: true
   esbuild: true
+  prisma: set this to true or false
 
 onlyBuiltDependencies:
   - argon2

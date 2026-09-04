@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
-import { adminDevelopmentService, AdminStoreSettings } from '../../features/admin/services/adminDevelopmentService.js';
+import { adminService } from '../../features/admin/services/adminService.js';
+import { AdminStoreSettings } from '../../features/admin/types/admin.js';
 import { useToast } from '../../app/providers.js';
 
 export function AdminSettingsPage() {
@@ -8,14 +9,19 @@ export function AdminSettingsPage() {
   const [settings, setSettings] = useState<AdminStoreSettings | null>(null);
 
   useEffect(() => {
-    adminDevelopmentService.getSettings().then(setSettings);
+    void adminService.getSettings().then(setSettings);
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
-    await adminDevelopmentService.updateSettings(settings);
-    addToast('Atelier operational preferences updated.', 'success');
+    try {
+      const saved = await adminService.updateSettings(settings);
+      setSettings(saved);
+      addToast('Atelier operational preferences updated.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to save preferences.', 'error');
+    }
   };
 
   if (!settings) return null;
@@ -141,13 +147,6 @@ export function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* Development Environment Notice */}
-      <div className="rounded-2xl border border-ivory-300 bg-white p-5 text-xs text-charcoal-500 space-y-1 shadow-2xs">
-        <p className="font-bold text-charcoal-900">Development State Notice</p>
-        <p>
-          Preferences are managed in the local frontend state store. When real backend administrative endpoints are connected in subsequent steps, these options will integrate with persistent server configuration.
-        </p>
-      </div>
     </form>
   );
 }

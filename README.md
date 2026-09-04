@@ -69,7 +69,7 @@ pnpm build
 |---|---|---|
 | **Frontend Port** | `5173` | `5174` |
 | **Backend Port** | `5000` | `5001` |
-| **Database** | `mongodb://localhost:27017/ecommerce_dev` | `mongodb://localhost:27017/ecommerce_proto_b` |
+| **Database** | Independent legacy configuration | PostgreSQL on Supabase (planned) |
 | **CORS Origin** | `http://localhost:5173` | `http://localhost:5174` |
 | **Visual Direction** | Modern Card Marketplace | Luxury Editorial Magazine ("Atelier") |
 | **Typography** | `Inter` sans-serif | `Cormorant Garamond` serif + `Outfit` body |

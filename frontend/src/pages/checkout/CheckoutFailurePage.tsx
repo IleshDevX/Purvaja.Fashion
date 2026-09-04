@@ -1,7 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertCircle, RotateCcw, ShoppingBag } from 'lucide-react';
 
 export function CheckoutFailurePage() {
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get('orderId');
   return (
     <div className="py-8 lg:py-16 max-w-xl mx-auto">
       <div className="bg-ivory-100 p-8 sm:p-12 border border-ivory-300 shadow-subtle text-center space-y-6">
@@ -24,7 +26,7 @@ export function CheckoutFailurePage() {
 
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Link
-            to="/checkout"
+            to={orderId ? `/checkout?orderId=${encodeURIComponent(orderId)}` : '/checkout'}
             className="flex-1 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" /> RETRY PAYMENT

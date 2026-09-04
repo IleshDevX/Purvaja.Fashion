@@ -13,7 +13,6 @@ import {
   LogOut,
   ArrowUpRight,
   ShieldCheck,
-  Search,
   Sparkles,
   ChevronRight,
   User,
@@ -257,13 +256,8 @@ export function AdminLayout() {
             </div>
           </div>
 
-          {/* Right: Sandbox Badge, Demo Notifications, and Quick Profile */}
+          {/* Right: Notifications and quick profile */}
           <div className="flex items-center gap-3">
-            {/* Development Mode Badge */}
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-gold-400/50 bg-gold-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-gold-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-gold-600 animate-pulse" />
-              Dev Environment
-            </span>
 
             {/* Notifications Placeholder */}
             <div className="relative">

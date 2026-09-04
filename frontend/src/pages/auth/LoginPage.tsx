@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 import { useToast } from '../../app/providers.js';
@@ -28,34 +28,6 @@ export function LoginPage() {
     }
   };
 
-  const handleQuickDemoCustomer = async () => {
-    setEmail('customer@purvajafashion.com');
-    setPassword('Customer@12345');
-    const success = await login({
-      email: 'customer@purvajafashion.com',
-      password: 'Customer@12345',
-      rememberMe: true,
-    });
-    if (success) {
-      addToast('Logged in as Alexander Wright (Customer).', 'success');
-      navigate(redirectTarget);
-    }
-  };
-
-  const handleQuickDemoAdmin = async () => {
-    setEmail('admin@purvajafashion.com');
-    setPassword('Admin@12345');
-    const success = await login({
-      email: 'admin@purvajafashion.com',
-      password: 'Admin@12345',
-      rememberMe: true,
-    });
-    if (success) {
-      addToast('Logged in as Purvaja Admin.', 'success');
-      navigate(redirectTarget);
-    }
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -74,11 +46,12 @@ export function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-caption text-charcoal-700 font-medium mb-1">
+          <label htmlFor="login-email" className="block text-caption text-charcoal-700 font-medium mb-1">
             Email Address
           </label>
           <div className="relative">
             <input
+              id="login-email"
               type="email"
               required
               value={email}
@@ -92,7 +65,7 @@ export function LoginPage() {
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-caption text-charcoal-700 font-medium">Password</label>
+            <label htmlFor="login-password" className="text-caption text-charcoal-700 font-medium">Password</label>
             <Link
               to="/auth/forgot-password"
               className="text-caption text-charcoal-500 hover:text-charcoal-900 transition-colors"
@@ -102,6 +75,7 @@ export function LoginPage() {
           </div>
           <div className="relative">
             <input
+              id="login-password"
               type={showPassword ? 'text' : 'password'}
               required
               value={password}
@@ -114,6 +88,7 @@ export function LoginPage() {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -141,40 +116,6 @@ export function LoginPage() {
           {isLoading ? 'AUTHENTICATING...' : 'SIGN IN'}
         </button>
       </form>
-
-      {/* Quick Demo Logins for Vercel & Client Testing */}
-      <div className="p-4 bg-ivory-200 border border-ivory-300 rounded-xl space-y-3">
-        <div>
-          <span className="text-overline text-gold-700 block font-bold">Instant Vercel Access Credentials</span>
-          <p className="text-[11px] text-charcoal-600 mt-0.5">
-            Click below or type credentials to test Customer or Admin features (Add products, Inventory, Orders):
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={handleQuickDemoCustomer}
-            type="button"
-            className="px-3 py-2 bg-ivory-50 border border-ivory-300 rounded-lg text-caption font-medium text-charcoal-800 hover:border-charcoal-900 hover:bg-white transition-colors text-left flex flex-col gap-0.5"
-          >
-            <span className="font-bold flex items-center gap-1">👤 Demo Customer</span>
-            <span className="text-[10px] text-charcoal-500 font-mono">customer@purvajafashion.com</span>
-          </button>
-
-          <button
-            onClick={handleQuickDemoAdmin}
-            type="button"
-            className="px-3 py-2 bg-charcoal-950 text-white rounded-lg text-caption font-medium hover:bg-gold-600 hover:text-charcoal-950 transition-colors text-left flex flex-col gap-0.5"
-          >
-            <span className="font-bold flex items-center gap-1 text-gold-300 hover:text-charcoal-950">🛡️ Demo Admin</span>
-            <span className="text-[10px] opacity-80 font-mono">admin@purvajafashion.com</span>
-          </button>
-        </div>
-
-        <div className="text-[10px] text-charcoal-500 pt-1 border-t border-ivory-300/60">
-          💡 <span className="font-semibold text-charcoal-700">Admin Tip:</span> Logging in with any email containing <code className="bg-ivory-100 px-1 py-0.5 rounded text-charcoal-900 font-mono">admin</code> grants access to <span className="font-bold text-charcoal-900">/admin</span> (Product Management, Adding Products, Orders).
-        </div>
-      </div>
 
       <div className="text-center pt-2 text-body-sm text-charcoal-500">
         New to Purvaja Fashion?{' '}
