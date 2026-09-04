@@ -16,6 +16,10 @@ enum AccountStatus {
   SUSPENDED
   DISABLED
 }
+enum EmailVerificationPurpose {
+  REGISTRATION
+  EMAIL_CHANGE
+}
 enum ProductStatus {
   DRAFT
   ACTIVE
@@ -27,7 +31,10 @@ enum VariantStatus {
 }
 enum InventoryMovementType {
   INITIAL
+  RESTOCK
   ADJUSTMENT
+  DAMAGE
+  CORRECTION
   SALE
   RETURN
   CANCELLATION
@@ -54,9 +61,12 @@ enum OrderStatus {
 }
 enum PaymentStatus {
   PENDING
+  INITIATED
   AUTHORIZED
   PAID
+  SUCCESS
   FAILED
+  EXPIRED
   REFUNDED
   CANCELLED
 }
@@ -68,6 +78,12 @@ enum PaymentMethod {
   CASH_ON_DELIVERY
   UPI
 }
+enum InventoryReservationStatus {
+  ACTIVE
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
 enum CouponDiscountType {
   PERCENTAGE
   FIXED
@@ -77,6 +93,10 @@ model User {
   id                      String                   @id @default(uuid()) @db.Uuid
   email                   String                   @unique @db.VarChar(320)
   passwordHash            String                   @map("password_hash") @db.VarChar(255)
+  firstName               String                   @default("") @map("first_name") @db.VarChar(100)
+  lastName                String                   @default("") @map("last_name") @db.VarChar(100)
+  phone                   String?                  @db.VarChar(32)
+  pendingEmail            String?                  @map("pending_email") @db.VarChar(320)
   role                    UserRole                 @default(CUSTOMER)
   status                  AccountStatus            @default(ACTIVE)
   emailVerifiedAt         DateTime?                @map("email_verified_at") @db.Timestamptz(6)
@@ -115,6 +135,7 @@ model EmailVerificationToken {
   id        String    @id @default(uuid()) @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   tokenHash String    @unique @map("token_hash") @db.Char(64)
+  purpose   EmailVerificationPurpose @default(REGISTRATION)
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -164,6 +185,7 @@ model Category {
   name        String            @db.VarChar(120)
   slug        String            @unique @db.VarChar(160)
   description String?           @db.Text
+  isActive    Boolean           @default(true) @map("is_active")
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   products    ProductCategory[]
@@ -231,17 +253,20 @@ model ProductVariant {
   colorHex           String             @map("color_hex") @db.Char(7)
   priceOverridePaise Int?               @map("price_override_paise")
   stockQuantity      Int                @default(0) @map("stock_quantity")
+  lowStockThreshold  Int                @default(10) @map("low_stock_threshold")
   status             VariantStatus      @default(ACTIVE)
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
   cartItems          CartItem[]
   inventoryMovements InventoryMovement[]
+  inventoryReservations InventoryReservation[]
   orderItems         OrderItem[]
   product            Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@unique([productId, colorName, size])
   @@index([productId])
   @@index([status])
+  @@index([stockQuantity], map: "product_variants_stock_quantity_idx")
   @@map("product_variants")
 }
 
@@ -339,6 +364,7 @@ model Order {
   couponRedemptions   CouponRedemption[]
   items               OrderItem[]
   payments            Payment[]
+  inventoryReservations InventoryReservation[]
   user                User          @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
@@ -374,12 +400,32 @@ model Payment {
   amountPaise       Int             @map("amount_paise")
   status            PaymentStatus   @default(PENDING)
   providerReference String?         @unique @map("provider_reference") @db.VarChar(255)
+  idempotencyKey    String          @unique @map("idempotency_key") @db.Uuid
+  expiresAt         DateTime?       @map("expires_at") @db.Timestamptz(6)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
   order             Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@map("payments")
+}
+
+model InventoryReservation {
+  id          String                     @id @default(uuid()) @db.Uuid
+  orderId     String                     @map("order_id") @db.Uuid
+  variantId   String                     @map("variant_id") @db.Uuid
+  quantity    Int
+  status      InventoryReservationStatus @default(ACTIVE)
+  expiresAt   DateTime                   @map("expires_at") @db.Timestamptz(6)
+  releasedAt  DateTime?                  @map("released_at") @db.Timestamptz(6)
+  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  order       Order                      @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  variant     ProductVariant             @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, variantId])
+  @@index([status, expiresAt])
+  @@index([variantId, status])
+  @@map("inventory_reservations")
 }
 
 model Coupon {

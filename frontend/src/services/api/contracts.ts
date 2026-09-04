@@ -1,4 +1,3 @@
-import type { ShippingAddress } from '../../features/checkout/types/checkout.js';
 import type { Order, OrderStatus, PaymentStatus } from '../../features/orders/types/order.js';
 import type { Shirt } from '../../features/products/types/product.js';
 
@@ -16,14 +15,15 @@ export interface CheckoutLineInput {
 }
 
 export interface CheckoutRequest {
-  lines: CheckoutLineInput[];
-  shippingAddress: ShippingAddress;
+  addressId?: string;
+  shippingAddress: { recipientName: string; phone: string; line1: string; line2?: string; city: string; state: string; postalCode: string; country: string };
   deliveryOptionId: 'standard' | 'express';
-  paymentMethodId: 'phonepe' | 'cod';
   couponCode?: string;
+  idempotencyKey?: string;
 }
 
 export interface CheckoutSession {
+  paymentId: string;
   orderId: string;
   paymentStatus: PaymentStatus;
   redirectUrl?: string;
@@ -37,6 +37,7 @@ export interface OrderPaymentStatus {
 }
 
 export interface ProductListParams {
+  page?: number;
   search?: string;
   category?: string;
   fit?: string[];
@@ -44,6 +45,7 @@ export interface ProductListParams {
   size?: string[];
   color?: string[];
   sleeve?: string[];
+  collar?: string[];
   pattern?: string[];
   minPrice?: number;
   maxPrice?: number;

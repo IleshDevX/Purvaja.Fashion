@@ -1,24 +1,110 @@
-name: CI
+name: CI/CD Quality Gates
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
+  quality-gates:
+    name: Quality Gates & Automated Verification
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: purvaja_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 5001
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
+      DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      SESSION_SECRET: ci-test-session-secret-32-chars-minimum-quality-gate
+      FRONTEND_URL: http://localhost:5174
+      CORS_ORIGIN: http://localhost:5174
+      EMAIL_FROM: noreply@purvaja.fashion
+      VITE_API_URL: http://localhost:5001/api/v1
+      VITE_APP_NAME: Purvaja Fashion - Atelier CI
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 11.22.0
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: pnpm db:validate
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Deploy Prisma migrations to fresh CI database
+        run: pnpm db:migrate
+
+      - name: Seed deterministic test fixtures (50 products / 300 variants)
+        run: pnpm db:seed
+
+      - name: Execute monorepo linting
+        run: pnpm lint
+
+      - name: Execute TypeScript typechecks
+        run: pnpm typecheck
+
+      - name: Build production bundles (Backend & Frontend)
+        run: pnpm build
+
+      - name: Run backend test suite with coverage
+        run: pnpm --filter @ecommerce/prototype-b-backend test:coverage
+
+      - name: Run frontend test suite with coverage
+        run: pnpm --filter @ecommerce/prototype-b test:coverage
+
+      - name: Verify clean git tree (no unstaged artifacts, drift, or untracked files)
+        run: |
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Working tree is dirty! Untracked or modified files found:"
+            git status --porcelain
+            exit 1
+          fi

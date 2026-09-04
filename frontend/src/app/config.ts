@@ -10,13 +10,8 @@ export const configSchema = z.object({
 export type Config = z.infer<typeof configSchema>;
 
 const getApiUrl = (): string => {
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    if (import.meta.env.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL;
-    }
-    if (import.meta.env.DEV) {
-      return 'http://localhost:5001/api/v1';
-    }
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
   return '/api/v1';
 };

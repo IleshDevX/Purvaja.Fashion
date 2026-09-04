@@ -5,12 +5,12 @@ import type { Order, OrderFilterOptions, OrderStatus } from '../types/order.js';
 
 export const orderService = {
   async checkout(request: CheckoutRequest): Promise<CheckoutSession> {
-    const response = await apiClient.post('/orders/checkout', request);
+    const response = await apiClient.post('/checkout', request, { headers: { 'Idempotency-Key': request.idempotencyKey } });
     return unwrapApiData<CheckoutSession>(response.data);
   },
 
   async list(options: OrderFilterOptions = {}): Promise<Order[]> {
-    const response = await apiClient.get(`/orders/my-orders?${toSearchParams(options)}`);
+    const response = await apiClient.get(`/orders?${toSearchParams(options)}`);
     const data = unwrapApiData<Order[] | { items: Order[] }>(response.data);
     return Array.isArray(data) ? data : data.items;
   },
@@ -21,7 +21,7 @@ export const orderService = {
   },
 
   async getPaymentStatus(orderId: string): Promise<OrderPaymentStatus> {
-    const response = await apiClient.get(`/orders/${encodeURIComponent(orderId)}/status`);
+    const response = await apiClient.get(`/orders/${encodeURIComponent(orderId)}`);
     return unwrapApiData<OrderPaymentStatus>(response.data);
   },
 

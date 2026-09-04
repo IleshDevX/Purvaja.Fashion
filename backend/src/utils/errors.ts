@@ -30,6 +30,10 @@ export class ValidationError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message = 'Conflict', code = 'CONFLICT') { super(message, 409, code); }
+}
+
 export class UnauthorizedError extends AppError {
   constructor(message = 'Unauthorized access', code = 'UNAUTHORIZED') {
     super(message, 401, code);

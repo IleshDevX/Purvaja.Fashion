@@ -23,7 +23,7 @@ export interface DeliveryOption {
   freeThreshold?: number;
 }
 
-export type PaymentMethodId = 'phonepe' | 'cod';
+export type PaymentMethodId = 'phonepe';
 
 export interface PaymentMethod {
   id: PaymentMethodId;

@@ -5,41 +5,63 @@ import {
   Minus,
 } from 'lucide-react';
 import { adminService } from '../../features/admin/services/adminService.js';
-import { InventoryItem } from '../../features/admin/types/admin.js';
+import type { AdminPage, InventoryItem } from '../../features/admin/types/admin.js';
 import { useToast } from '../../app/providers.js';
 
 export function AdminInventoryPage() {
   const { addToast } = useToast();
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [pageData, setPageData] = useState<AdminPage<InventoryItem> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const loadInventory = useCallback(async () => {
-    const list = await adminService.getInventory(filter);
-    setItems(list);
-  }, [filter]);
+  const loadInventory = useCallback(
+    async (currentFilter: typeof filter, search: string, currentPage: number) => {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await adminService.getInventory(currentFilter, currentPage, 25, search);
+        setPageData(data);
+      } catch {
+        setError('Unable to load inventory matrix.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    void loadInventory();
-  }, [loadInventory]);
+    const timer = window.setTimeout(() => {
+      void loadInventory(filter, searchQuery, page);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [filter, searchQuery, page, loadInventory]);
+
+  const handleFilterChange = (nextFilter: typeof filter) => {
+    setFilter(nextFilter);
+    setPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+  };
 
   const handleStockAdjust = async (variantId: string, currentStock: number, delta: number) => {
     const target = Math.max(0, currentStock + delta);
     try {
       await adminService.updateVariantStock(variantId, target);
       addToast(`Updated stock level to ${target} units.`, 'success');
-      void loadInventory();
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Unable to update stock.', 'error');
+      void loadInventory(filter, searchQuery, page);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Unable to update stock.', 'error');
     }
   };
 
-  const filteredItems = items.filter(
-    i =>
-      i.shirtName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.color.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const items = pageData?.items ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in text-charcoal-900">
@@ -58,7 +80,7 @@ export function AdminInventoryPage() {
         </div>
 
         <span className="text-xs font-semibold text-charcoal-700 bg-white px-4 py-2 rounded-xl border border-ivory-300 shadow-2xs self-start sm:self-auto">
-          Total: <span className="font-bold text-charcoal-950">{filteredItems.length}</span> Active SKUs
+          Total: <span className="font-bold text-charcoal-950">{pageData?.total ?? 0}</span> Active SKUs
         </span>
       </div>
 
@@ -72,7 +94,7 @@ export function AdminInventoryPage() {
             aria-label="Search inventory"
             type="text"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => handleSearchChange(e.target.value)}
             placeholder="Search SKU code, shirt, or colorway..."
             className="w-full rounded-xl bg-ivory-50 border border-ivory-300 pl-10 pr-4 py-2 text-xs text-charcoal-950 placeholder:text-charcoal-400 outline-none focus:border-charcoal-950 focus:bg-white"
           />
@@ -84,7 +106,7 @@ export function AdminInventoryPage() {
             <button
               key={f}
               type="button"
-              onClick={() => setFilter(f)}
+              onClick={() => handleFilterChange(f)}
               className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors shrink-0 ${
                 filter === f
                   ? 'bg-charcoal-950 text-white font-bold shadow-xs'
@@ -96,6 +118,8 @@ export function AdminInventoryPage() {
           ))}
         </div>
       </div>
+
+      {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
 
       {/* Inventory Matrix Table */}
       <div className="rounded-2xl border border-ivory-300 bg-white overflow-x-auto shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
@@ -112,7 +136,13 @@ export function AdminInventoryPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-ivory-200">
-            {filteredItems.map(item => (
+            {loading && !pageData ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-sm text-charcoal-500">
+                  Loading inventory matrix…
+                </td>
+              </tr>
+            ) : items.map(item => (
               <tr key={item.id} className="hover:bg-ivory-50/60 transition-colors">
                 <td className="py-4 px-4 font-serif text-sm font-bold text-charcoal-950">
                   {item.shirtName}
@@ -176,6 +206,39 @@ export function AdminInventoryPage() {
             ))}
           </tbody>
         </table>
+
+        {pageData && !pageData.items.length && (
+          <p className="p-8 text-center text-sm text-charcoal-500">
+            No SKUs match this filter or search query.
+          </p>
+        )}
+
+        {pageData && (
+          <div className="flex items-center justify-between border-t border-ivory-200 p-4 text-xs text-charcoal-600">
+            <span>{pageData.total} total SKUs</span>
+            <div className="space-x-2">
+              <button
+                type="button"
+                disabled={pageData.page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-[11px] text-charcoal-400">
+                Page {pageData.page} of {Math.max(pageData.totalPages, 1)}
+              </span>
+              <button
+                type="button"
+                disabled={pageData.page >= pageData.totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

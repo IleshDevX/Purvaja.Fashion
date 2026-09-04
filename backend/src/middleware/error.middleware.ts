@@ -35,7 +35,6 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       code: errorCode,
       message,
       ...(details ? { details } : {}),
-      ...(env.NODE_ENV === 'development' ? { stack: err.stack } : {}),
     },
   });
 };

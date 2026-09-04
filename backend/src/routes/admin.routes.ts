@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { UserRole } from '../generated/prisma/client.js';
+import * as controller from '../controllers/admin.controller.js';
+import { requireAuth, requireCsrf, requireRole } from '../middleware/auth.middleware.js';
+const router=Router(); router.use(requireAuth,requireRole(UserRole.ADMIN));
+router.get('/dashboard',controller.dashboard);
+router.get('/products',controller.products); router.post('/products',requireCsrf,controller.createProduct); router.get('/products/:id',controller.productDetail); router.patch('/products/:id',requireCsrf,controller.updateProduct);
+router.get('/categories',controller.categories); router.post('/categories',requireCsrf,controller.createCategory); router.patch('/categories/:id',requireCsrf,controller.updateCategory);
+router.get('/variants',controller.variants); router.post('/variants',requireCsrf,controller.createVariant); router.patch('/variants/:id',requireCsrf,controller.updateVariant);
+router.get('/inventory',controller.inventory); router.get('/inventory/movements',controller.movements); router.get('/inventory/reservations',controller.reservations); router.post('/inventory/adjustments',requireCsrf,controller.adjust);
+router.patch('/inventory/:id',requireCsrf,controller.setStock);
+router.get('/orders',controller.orders); router.get('/orders/:id',controller.orderDetail); router.patch('/orders/:id/status',requireCsrf,controller.updateOrder);
+router.get('/customers',controller.customers); router.get('/customers/:id',controller.customerDetail); router.get('/coupons',controller.coupons); router.post('/coupons',requireCsrf,controller.createCoupon); router.patch('/coupons/:id',requireCsrf,controller.updateCoupon); router.get('/audit-logs',controller.auditLogs);
+export default router;

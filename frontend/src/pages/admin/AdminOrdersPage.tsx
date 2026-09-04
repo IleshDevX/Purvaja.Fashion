@@ -1,191 +1,182 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Package,
-  Search,
-  Eye,
-} from 'lucide-react';
-import { OrderStatus } from '../../features/orders/types/order.js';
+import { Search } from 'lucide-react';
 import { adminService } from '../../features/admin/services/adminService.js';
-import { useToast } from '../../app/providers.js';
+import type { AdminOrder, AdminOrderTransition, AdminPage } from '../../features/admin/types/admin.js';
+
+const transitions: Record<AdminOrder['status'], AdminOrderTransition[]> = {
+  PENDING: [],
+  CONFIRMED: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: [],
+  CANCELLED: [],
+  RETURN_REQUESTED: [],
+  RETURNED: [],
+};
 
 export function AdminOrdersPage() {
-  const { addToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
-  const queryClient = useQueryClient();
-  const { data: allOrders = [] } = useQuery({ queryKey: ['admin-orders'], queryFn: () => adminService.listOrders() });
-  const orders = allOrders.filter(order =>
-    (statusFilter === 'all' || order.status === statusFilter) &&
-    (!searchQuery || order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) || order.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))),
-  );
+  const [data, setData] = useState<AdminPage<AdminOrder> | null>(null);
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+  const load = useCallback(async (searchQuery: string, page = 1) => {
     try {
-      await adminService.updateOrderStatus(orderId, newStatus);
-      await queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      addToast('Order status updated.', 'success');
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : 'Unable to update order status.', 'error');
+      setError('');
+      setData(await adminService.listOrders(searchQuery, page));
+    } catch {
+      setError('Unable to load orders.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(search), 250);
+    return () => window.clearTimeout(timer);
+  }, [search, load]);
+
+  const change = async (id: string, status: AdminOrderTransition) => {
+    try {
+      setUpdating(id);
+      await adminService.updateOrderStatus(id, status);
+      await load(search, data?.page ?? 1);
+    } catch {
+      setError('The requested order transition is not valid.');
+    } finally {
+      setUpdating(null);
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in text-charcoal-900">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ivory-300 pb-6">
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold-800">
-            Tailoring Operations
-          </span>
-          <h1 className="font-serif text-3xl font-light text-charcoal-950 sm:text-4xl mt-0.5">
-            Client Orders & Invoices
-          </h1>
-          <p className="text-xs text-charcoal-500 mt-1">
-            Track order dispatch lifecycles, manage shipment status, and review customer invoices.
-          </p>
-        </div>
-
-        <span className="text-xs font-semibold text-charcoal-700 bg-white px-4 py-2 rounded-xl border border-ivory-300 shadow-2xs self-start sm:self-auto">
-          Total: <span className="font-bold text-charcoal-950">{orders.length}</span> Tailored Tickets
-        </span>
+      <div className="border-b border-ivory-300 pb-6">
+        <p className="text-[10px] font-bold uppercase tracking-[.22em] text-gold-800">Fulfilment</p>
+        <h1 className="mt-1 font-serif text-3xl font-light text-charcoal-950 sm:text-4xl">
+          Tailored Orders
+        </h1>
+        <p className="mt-1 text-xs text-charcoal-500">
+          Client order status, financial balances, and dispatch pipeline transitions.
+        </p>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-white p-4 rounded-2xl border border-ivory-300 shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 text-charcoal-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            id="admin-order-search"
-            aria-label="Search orders"
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by Order # or item name..."
-            className="w-full rounded-xl bg-ivory-50 border border-ivory-300 pl-10 pr-4 py-2 text-xs text-charcoal-950 placeholder:text-charcoal-400 outline-none focus:border-charcoal-950 focus:bg-white"
-          />
-        </div>
-
-        {/* Status Filter Tabs */}
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-          {(['all', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'] as const).map(
-            st => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setStatusFilter(st)}
-                className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors shrink-0 ${
-                  statusFilter === st
-                    ? 'bg-charcoal-950 text-white font-bold shadow-xs'
-                    : 'bg-ivory-50 text-charcoal-700 hover:text-charcoal-950 hover:bg-ivory-100'
-                }`}
-              >
-                {st}
-              </button>
-            ),
-          )}
-        </div>
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-charcoal-400" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search order number or customer email..."
+          className="w-full rounded-xl border border-ivory-300 bg-white py-2 pl-9 pr-3 text-xs text-charcoal-950 outline-none focus:border-charcoal-950"
+        />
       </div>
 
-      {/* Orders Table */}
-      {orders.length === 0 ? (
-        <div className="p-16 rounded-2xl border border-ivory-300 bg-white text-center max-w-md mx-auto space-y-3 shadow-2xs">
-          <Package className="h-10 w-10 text-charcoal-300 mx-auto" />
-          <h3 className="font-serif text-lg font-bold text-charcoal-950">No Orders Found</h3>
-          <p className="text-xs text-charcoal-500">There are no orders matching your current filter criteria.</p>
-        </div>
+      {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
+
+      {!data ? (
+        <div className="rounded-xl bg-white p-6 text-sm text-charcoal-500">Loading orders…</div>
       ) : (
-        <div className="rounded-2xl border border-ivory-300 bg-white overflow-x-auto shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
+        <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white shadow-2xs">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-ivory-200 bg-ivory-50/80 text-charcoal-500 uppercase tracking-widest text-[10px]">
+            <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
-                <th className="py-3.5 px-4 font-bold">Order Ref</th>
-                <th className="py-3.5 px-4 font-bold">Client Items</th>
-                <th className="py-3.5 px-4 font-bold">Date Placed</th>
-                <th className="py-3.5 px-4 font-bold">Total (INR)</th>
-                <th className="py-3.5 px-4 font-bold">Payment</th>
-                <th className="py-3.5 px-4 font-bold">Status</th>
-                <th className="py-3.5 px-4 font-bold text-right">Inspect</th>
+                <th className="p-4">Order # / Placed</th>
+                <th className="p-4">Customer</th>
+                <th className="p-4">Items</th>
+                <th className="p-4">Total Amount</th>
+                <th className="p-4">Payment</th>
+                <th className="p-4">Dispatch Stage</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ivory-200">
-              {orders.map(order => (
-                  <tr key={order.id} className="hover:bg-ivory-50/60 transition-colors">
-                    {/* Order Ref */}
-                    <td className="py-4 px-4 font-mono font-bold text-charcoal-950">
-                      #{order.orderNumber}
-                    </td>
-
-                    {/* Items */}
-                    <td className="py-4 px-4">
-                      <p className="font-serif text-xs font-bold text-charcoal-950 line-clamp-1">
-                        {order.items[0]?.name}
-                        {order.items.length > 1 && ` +${order.items.length - 1} more`}
-                      </p>
-                      <p className="text-[10px] text-charcoal-500">
-                        {order.items.reduce((s, i) => s + i.quantity, 0)} total pieces
-                      </p>
-                    </td>
-
-                    {/* Date */}
-                    <td className="py-4 px-4 text-charcoal-700">
-                      {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </td>
-
-                    {/* Total */}
-                    <td className="py-4 px-4 font-sans font-bold tabular-nums text-charcoal-950">
-                      ₹{order.grandTotal.toLocaleString('en-IN')}
-                    </td>
-
-                    {/* Payment */}
-                    <td className="py-4 px-4">
-                      <span className="text-[11px] font-semibold text-charcoal-800">
-                        {order.paymentMethod?.name || (order.paymentMethod?.id === 'cod' ? 'Cash on Delivery' : 'PhonePe Secure')}
+            <tbody>
+              {data.items.map(o => {
+                const nextOptions = transitions[o.status] ?? [];
+                return (
+                  <tr key={o.id} className="border-t hover:bg-ivory-50/50 transition-colors">
+                    <td className="p-4 font-mono">
+                      <span className="font-bold text-charcoal-950">{o.orderNumber}</span>
+                      <br />
+                      <span className="text-[10px] text-charcoal-400">
+                        {new Date(o.createdAt).toLocaleDateString('en-IN')}
                       </span>
                     </td>
-
-                    {/* Status with Quick Transition Selector */}
-                    <td className="py-4 px-4">
+                    <td className="p-4">
+                      <p className="font-medium text-charcoal-900">
+                        {o.customer.firstName || o.customer.lastName
+                          ? `${o.customer.firstName ?? ''} ${o.customer.lastName ?? ''}`.trim()
+                          : 'Customer'}
+                      </p>
+                      <p className="font-mono text-[10px] text-charcoal-500">{o.customer.email}</p>
+                    </td>
+                    <td className="p-4">
+                      {o.items.reduce((sum, item) => sum + item.quantity, 0)} units
+                    </td>
+                    <td className="p-4 font-sans font-semibold tabular-nums text-charcoal-950">
+                      ₹{(o.totalPaise / 100).toLocaleString('en-IN')}
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-block rounded-md bg-ivory-100 px-2 py-0.5 text-[10px] font-bold text-charcoal-800">
+                        {o.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="p-4">
                       <select
-                        value={order.status}
-                        onChange={e => handleStatusChange(order.id, e.target.value as OrderStatus)}
-                        className={`appearance-none rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer ${
-                          order.status === 'delivered'
-                            ? 'border-emerald-600/30 text-emerald-800 bg-emerald-50'
-                            : order.status === 'cancelled'
-                            ? 'border-rose-600/30 text-rose-800 bg-rose-50'
-                            : 'border-gold-500/40 text-gold-800 bg-gold-50'
-                        }`}
+                        disabled={updating === o.id || nextOptions.length === 0}
+                        value=""
+                        onChange={e => {
+                          if (e.target.value) void change(o.id, e.target.value as AdminOrderTransition);
+                        }}
+                        className="rounded-lg border border-ivory-300 bg-white p-1 text-[11px] font-semibold text-charcoal-900 outline-none disabled:opacity-50"
                       >
-                        <option value="confirmed">Confirmed</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="out_for_delivery">Out for Delivery</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
+                        <option value="">{o.status}</option>
+                        {nextOptions.map(next => (
+                          <option key={next} value={next}>
+                            → {next}
+                          </option>
+                        ))}
                       </select>
                     </td>
-
-                    {/* Actions */}
-                    <td className="py-4 px-4 text-right">
+                    <td className="p-4 text-right">
                       <Link
-                        to={`/admin/orders/${order.id}`}
-                        className="inline-flex items-center gap-1 p-2 text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-lg transition-colors"
-                        title="View Full Order Dossier"
+                        to={`/admin/orders/${o.id}`}
+                        className="font-bold text-gold-800 hover:text-charcoal-950 transition-colors"
                       >
-                        <Eye className="h-4 w-4" />
+                        View Ticket
                       </Link>
                     </td>
                   </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+
+          {!data.items.length && (
+            <p className="p-8 text-center text-sm text-charcoal-500">No orders found.</p>
+          )}
+
+          <div className="flex items-center justify-between border-t border-ivory-200 p-4 text-xs text-charcoal-600">
+            <span>{data.total} total orders</span>
+            <div className="space-x-2">
+              <button
+                type="button"
+                disabled={data.page === 1}
+                onClick={() => void load(search, data.page - 1)}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-[11px] text-charcoal-400">
+                Page {data.page} of {Math.max(data.totalPages, 1)}
+              </span>
+              <button
+                type="button"
+                disabled={data.page >= data.totalPages}
+                onClick={() => void load(search, data.page + 1)}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

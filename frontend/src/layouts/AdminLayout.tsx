@@ -6,16 +6,18 @@ import {
   ShoppingBag,
   Users,
   Boxes,
-  Settings,
   Menu,
   X,
-  Bell,
   LogOut,
   ArrowUpRight,
   ShieldCheck,
   Sparkles,
   ChevronRight,
   User,
+  Tags,
+  ListTree,
+  History,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../features/auth/store/authStore.js';
 import { useToast } from '../app/providers.js';
@@ -30,10 +32,15 @@ interface NavItem {
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard, exact: true },
   { label: 'Shirts & Products', href: '/admin/products', icon: Shirt },
+  { label: 'Categories', href: '/admin/categories', icon: ListTree },
+  { label: 'Variants', href: '/admin/variants', icon: Tags },
   { label: 'Tailored Orders', href: '/admin/orders', icon: ShoppingBag },
   { label: 'Patrons & Clients', href: '/admin/customers', icon: Users },
   { label: 'Inventory Matrix', href: '/admin/inventory', icon: Boxes },
-  { label: 'Atelier Settings', href: '/admin/settings', icon: Settings },
+  { label: 'Stock Movements', href: '/admin/inventory/movements', icon: History },
+  { label: 'Reservations', href: '/admin/inventory/reservations', icon: ClipboardCheck },
+  { label: 'Coupons', href: '/admin/coupons', icon: Tags },
+  { label: 'Audit Logs', href: '/admin/audit-logs', icon: History },
 ];
 
 export function AdminLayout() {
@@ -42,7 +49,6 @@ export function AdminLayout() {
   const { user, logout } = useAuthStore();
   const { addToast } = useToast();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -256,53 +262,8 @@ export function AdminLayout() {
             </div>
           </div>
 
-          {/* Right: Notifications and quick profile */}
+          {/* Quick profile */}
           <div className="flex items-center gap-3">
-
-            {/* Notifications Placeholder */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 text-charcoal-700 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
-                aria-label="Notifications"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-gold-600" />
-              </button>
-
-              {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-ivory-300 bg-white p-4 shadow-[0_20px_50px_rgba(26,26,26,0.12)] z-50 animate-scale-in">
-                  <div className="flex items-center justify-between border-b border-ivory-200 pb-3 mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-charcoal-950">
-                      Atelier Alerts (Demo)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setNotificationsOpen(false)}
-                      className="text-charcoal-400 hover:text-charcoal-950 text-xs"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                  <div className="space-y-2.5 text-xs">
-                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
-                      <p className="font-bold text-charcoal-950">Low Stock Warning</p>
-                      <p className="text-[11px] text-charcoal-600 mt-0.5">
-                        Pure Linen Safari Shirt (Size 40) is down to 2 units.
-                      </p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-ivory-50 border border-ivory-200">
-                      <p className="font-bold text-gold-800">New Tailored Order</p>
-                      <p className="text-[11px] text-charcoal-600 mt-0.5">
-                        Order #ORD-849103 placed for Egyptian Giza Twill.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Admin Avatar */}
             <div className="h-8 w-8 rounded-full bg-gold-100 border border-gold-400/60 flex items-center justify-center text-xs font-bold text-gold-900">
               {user?.firstName?.charAt(0) || 'A'}

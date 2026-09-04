@@ -31,14 +31,8 @@ export const AVAILABLE_PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'phonepe',
     name: 'PhonePe Secure Payment',
-    description:
-      'Pay securely via UPI (Google Pay, PhonePe, Paytm), Credit/Debit Card, or NetBanking',
+    description: 'Pay securely using UPI through PhonePe.',
     badge: 'Recommended',
-  },
-  {
-    id: 'cod',
-    name: 'Cash on Delivery (COD)',
-    description: 'Pay in cash or UPI QR scan upon doorstep delivery',
   },
 ];
 

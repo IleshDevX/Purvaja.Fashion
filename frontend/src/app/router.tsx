@@ -52,6 +52,9 @@ const CheckoutFailurePage = lazy(() =>
     default: m.CheckoutFailurePage,
   })),
 );
+const DemoPaymentPage = lazy(() =>
+  import('../pages/checkout/DemoPaymentPage.js').then(m => ({ default: m.DemoPaymentPage })),
+);
 
 // Auth Pages
 const LoginPage = lazy(() =>
@@ -65,6 +68,9 @@ const ForgotPasswordPage = lazy(() =>
 );
 const ResetPasswordPage = lazy(() =>
   import('../pages/auth/ResetPasswordPage.js').then(m => ({ default: m.ResetPasswordPage })),
+);
+const VerifyEmailPage = lazy(() =>
+  import('../pages/auth/VerifyEmailPage.js').then(m => ({ default: m.VerifyEmailPage })),
 );
 // Admin Pages
 const AdminDashboardPage = lazy(() =>
@@ -88,12 +94,16 @@ const AdminOrderDetailsPage = lazy(() =>
 const AdminCustomersPage = lazy(() =>
   import('../pages/admin/AdminCustomersPage.js').then(m => ({ default: m.AdminCustomersPage })),
 );
+const AdminCustomerDetailPage = lazy(() => import('../pages/admin/AdminCustomerDetailPage.js').then(m => ({ default: m.AdminCustomerDetailPage })));
 const AdminInventoryPage = lazy(() =>
   import('../pages/admin/AdminInventoryPage.js').then(m => ({ default: m.AdminInventoryPage })),
 );
-const AdminSettingsPage = lazy(() =>
-  import('../pages/admin/AdminSettingsPage.js').then(m => ({ default: m.AdminSettingsPage })),
-);
+const AdminCategoriesPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminCategoriesPage })));
+const AdminVariantsPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminVariantsPage })));
+const AdminMovementsPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminMovementsPage })));
+const AdminReservationsPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminReservationsPage })));
+const AdminCouponsPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminCouponsPage })));
+const AdminAuditLogsPage = lazy(() => import('../pages/admin/AdminOperationsPages.js').then(m => ({ default: m.AdminAuditLogsPage })));
 
 // Admin Layout
 const AdminLayout = lazy(() =>
@@ -195,6 +205,10 @@ export const router = createBrowserRouter([
         path: 'failure',
         element: withSuspense(<CheckoutFailurePage />),
       },
+      {
+        path: 'payment',
+        element: withSuspense(<DemoPaymentPage />),
+      },
     ],
   },
 
@@ -222,6 +236,10 @@ export const router = createBrowserRouter([
       {
         path: 'reset-password',
         element: <GuestRoute>{withSuspense(<ResetPasswordPage />)}</GuestRoute>,
+      },
+      {
+        path: 'verify-email',
+        element: withSuspense(<VerifyEmailPage />),
       },
     ],
   },
@@ -263,13 +281,16 @@ export const router = createBrowserRouter([
         path: 'customers',
         element: withSuspense(<AdminCustomersPage />),
       },
+      { path: 'customers/:customerId', element: withSuspense(<AdminCustomerDetailPage />) },
+      { path: 'categories', element: withSuspense(<AdminCategoriesPage />) },
+      { path: 'variants', element: withSuspense(<AdminVariantsPage />) },
+      { path: 'inventory/movements', element: withSuspense(<AdminMovementsPage />) },
+      { path: 'inventory/reservations', element: withSuspense(<AdminReservationsPage />) },
+      { path: 'coupons', element: withSuspense(<AdminCouponsPage />) },
+      { path: 'audit-logs', element: withSuspense(<AdminAuditLogsPage />) },
       {
         path: 'inventory',
         element: withSuspense(<AdminInventoryPage />),
-      },
-      {
-        path: 'settings',
-        element: withSuspense(<AdminSettingsPage />),
       },
     ],
   },

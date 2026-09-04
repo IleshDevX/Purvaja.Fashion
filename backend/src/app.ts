@@ -1,3 +1,4 @@
+import compression from 'compression';
 import express, { Express } from 'express';
 import { applySecurityMiddleware } from './middleware/security.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
@@ -9,6 +10,9 @@ export function createApp(): Express {
 
   // Security and request parsing
   applySecurityMiddleware(app);
+
+  // Compress text responses after security headers have been applied.
+  app.use(compression());
 
   // Routes
   app.use(routes);

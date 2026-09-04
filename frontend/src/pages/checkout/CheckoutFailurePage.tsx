@@ -20,8 +20,7 @@ export function CheckoutFailurePage() {
         </div>
 
         <p className="text-body text-charcoal-600 leading-relaxed text-left p-4 bg-ivory-50 border border-ivory-200 text-caption">
-          No funds were debited from your card or account. You can re-attempt using UPI, NetBanking,
-          an alternate card, or choose Cash on Delivery (COD) at checkout.
+          The UPI payment was not completed. No order has been confirmed, and your bag remains available for a new checkout attempt.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-4">

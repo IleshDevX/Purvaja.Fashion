@@ -1,0 +1,21 @@
+import { Router } from 'express';
+import { addCartItem, cancelOrder, checkout, clearCart, createAddress, demoResult, getCart, getOrder, initiatePayment, listAddresses, listOrders, paymentStatus, removeCartItem, updateCartItem } from '../controllers/commerce.controller.js';
+import { requireAuth, requireCsrf } from '../middleware/auth.middleware.js';
+
+const router = Router();
+router.use(['/cart', '/addresses', '/checkout', '/payments', '/orders'], requireAuth);
+router.get('/cart', getCart);
+router.post('/cart/items', requireCsrf, addCartItem);
+router.patch('/cart/items/:itemId', requireCsrf, updateCartItem);
+router.delete('/cart/items/:itemId', requireCsrf, removeCartItem);
+router.delete('/cart', requireCsrf, clearCart);
+router.get('/addresses', listAddresses);
+router.post('/addresses', requireCsrf, createAddress);
+router.post('/checkout', requireCsrf, checkout);
+router.post('/payments/:paymentId/initiate', requireCsrf, initiatePayment);
+router.get('/payments/:paymentId/status', paymentStatus);
+router.post('/payments/:paymentId/demo-result', requireCsrf, demoResult);
+router.get('/orders', listOrders);
+router.get('/orders/:orderId', getOrder);
+router.post('/orders/:orderId/cancel', requireCsrf, cancelOrder);
+export default router;

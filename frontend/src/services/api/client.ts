@@ -50,6 +50,24 @@ export function unwrapApiData<T>(payload: unknown): T {
   return payload as T;
 }
 
+let inMemoryCsrfToken: string | null = null;
+
+export function setCsrfToken(token: string | null): void {
+  inMemoryCsrfToken = token;
+}
+
+export function getCsrfToken(): string | null {
+  if (inMemoryCsrfToken) return inMemoryCsrfToken;
+  if (typeof document !== 'undefined') {
+    const fromCookie = document.cookie
+      .split('; ')
+      .find(value => value.startsWith('pf_csrf='))
+      ?.split('=')[1];
+    if (fromCookie) return decodeURIComponent(fromCookie);
+  }
+  return null;
+}
+
 export function createApiClient(): AxiosInstance {
   const instance = axios.create({
     baseURL: config.apiUrl,
@@ -61,14 +79,38 @@ export function createApiClient(): AxiosInstance {
   });
 
   instance.interceptors.request.use(
-    (requestConfig: InternalAxiosRequestConfig) => {
+    async (requestConfig: InternalAxiosRequestConfig) => {
+      if (!['get', 'head', 'options'].includes(requestConfig.method?.toLowerCase() ?? 'get')) {
+        let token = getCsrfToken();
+        if (!token && typeof window !== 'undefined') {
+          try {
+            const csrfRes = await axios.get<{ success?: boolean; data?: { csrfToken?: string } }>(
+              `${config.apiUrl}/auth/csrf`,
+              { withCredentials: true },
+            );
+            token = csrfRes.data?.data?.csrfToken ?? null;
+            if (token) setCsrfToken(token);
+          } catch {
+            // Proceed without token if CSRF endpoint fails
+          }
+        }
+        if (token) {
+          requestConfig.headers.set('X-CSRF-Token', token);
+        }
+      }
       return requestConfig;
     },
     (error: unknown) => Promise.reject(error),
   );
 
   instance.interceptors.response.use(
-    response => response,
+    response => {
+      const responseCsrf = (response.data as { data?: { csrfToken?: string } })?.data?.csrfToken;
+      if (responseCsrf) {
+        setCsrfToken(responseCsrf);
+      }
+      return response;
+    },
     (error: AxiosError<{ success?: boolean; error?: ApiErrorResponse }>) => {
       if (error.response?.data?.error) {
         const { message, code, details } = error.response.data.error;

@@ -8,11 +8,34 @@ admin API paths below are frontend compatibility requirements, not existing
 backend behavior. Future responses must retain the frontend envelope:
 `{ success: true, data: ... }` or `{ success: false, error: { code, message, details? } }`.
 
-## Implemented Endpoint
+## Implemented Endpoints
 
 | Method | Current path | Auth / role | Request | Response | Current implementation | Target status | Frontend consumer |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/health`, `/api/v1/health` | No | None | Health status, timestamp, uptime, environment | Express health controller | KEEP | Operations only |
+| GET | `/api/v1/products` | No | `page`, `limit`, `search`, catalog filters, `sort` | `{ items, page, limit, pageSize, total, totalPages }` | Prisma/PostgreSQL catalog query | IMPLEMENTED | `productService.list` |
+| GET | `/api/v1/products/:slugOrId` | No | UUID or URL-safe slug | `{ product, relatedProducts }` | Prisma/PostgreSQL catalog query | IMPLEMENTED | `productService.getBySlugOrId` |
+| GET | `/api/v1/products/:productId/reviews` | No | UUID or URL-safe slug; `page`, `limit`, `sort` | `{ items, page, limit, pageSize, total, totalPages }` | Published reviews only | IMPLEMENTED | `productService.getReviews` |
+
+## Public Catalog API
+
+`GET /api/v1/products` reads only active products from PostgreSQL through Prisma. Pagination defaults to page `1` and limit `24`; the maximum limit is `100`. Supported filters are comma-separated `category`, `fit`, `fabric`, `size`, `color`, `sleeve`, `collar`, and `pattern`, plus `minPrice`, `maxPrice`, `minRating`, `inStock`, `deals`, and `newArrivals`. Supported sort values are `featured`, `newest`, `price-asc`, `price-desc`, `rating`, and `discount`. Search matches name, description, brand, SKU, and category.
+
+`GET /api/v1/products/:slugOrId` accepts a UUID or URL-safe product slug and returns the product, images, variants, category summaries, stock state, and up to four same-category related products. It returns `404 PRODUCT_NOT_FOUND` for a valid but unknown identifier and `400 VALIDATION_ERROR` for malformed input.
+
+`GET /api/v1/products/:productId/reviews` accepts the same identifier form, returns only `PUBLISHED` reviews, and supports `page`, `limit` (maximum `100`), and `sort` (`newest`, `oldest`, `rating-high`, `rating-low`). Reviewer email and user records are never selected; the public response uses the privacy-safe label `Verified customer`.
+
+All catalog endpoints are public, use the shared `{ success, data }` envelope, validate query parameters, and use the shared standardized error envelope. They do not expose Prisma errors, authentication data, user records, sessions, or tokens.
+
+## Custom Authentication
+
+Implemented endpoints are `POST /api/v1/auth/register`, `POST /login`, `POST /logout`, `GET /me`, `PATCH /me`, `POST /verify-email`, `POST /forgot-password`, `POST /reset-password`, and `GET /csrf`. Registration and login establish a server-side PostgreSQL session whose random browser secret is stored only in a Secure-in-production, HttpOnly, SameSite=Lax cookie. PostgreSQL stores only its SHA-256 hash, expiration, and revocation state.
+
+Passwords are normalized and hashed with Argon2id. Email verification and password reset links contain high-entropy single-use secrets; only their SHA-256 hashes are stored. Resend runs exclusively through the backend email service. If email delivery is unavailable, registration completes safely but reports `emailSent: false`; verification can be retried by a future resend endpoint. Forgot-password always returns the same response, whether or not an account exists.
+
+`PATCH /me` and `POST /logout` require the double-submit CSRF token: the frontend reads the non-HttpOnly `pf_csrf` cookie and sends it as `X-CSRF-Token`, while the session cookie remains HttpOnly. All sensitive auth endpoints have a stricter in-memory rate limit. `requireAuth` and `requireRole(...)` load the user and role from the server-side session; frontend role values are never trusted. Unverified users may browse and access their profile; a future checkout phase must require verified email before order placement.
+
+`POST /api/v1/auth/resend-verification` accepts `{ email }`, always returns the same generic success response for valid input, and is rate-limited to three requests per IP per hour. It sends a new verification email only for active, unverified accounts. The backend sends the email before atomically consuming prior active registration verification tokens and recording the new hashed, 24-hour token; failed delivery leaves existing valid tokens intact.
 
 ## Required Customer Endpoints
 

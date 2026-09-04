@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   SlidersHorizontal,
@@ -85,75 +85,10 @@ export function ShopPage({
     newArrivals: onlyNewArrivals || undefined,
     deals: onlyDeals || undefined,
     sort: sortBy,
+    // Preserve the existing non-paginated shop view while the API enforces a bounded maximum.
+    limit: 100,
   });
-
-  const filteredShirts = useMemo(() => {
-    let result = [...products];
-
-    // Search query filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        s =>
-          s.name.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q) ||
-          s.fabric.toLowerCase().includes(q) ||
-          s.fit.toLowerCase().includes(q) ||
-          s.collar.toLowerCase().includes(q),
-      );
-    }
-
-    // Fits
-    if (selectedFits.length > 0) {
-      result = result.filter(s => selectedFits.includes(s.fit));
-    }
-
-    // Fabrics
-    if (selectedFabrics.length > 0) {
-      result = result.filter(s => selectedFabrics.includes(s.fabric));
-    }
-
-    // Sizes
-    if (selectedSizes.length > 0) {
-      result = result.filter(s => s.sizes.some(size => selectedSizes.includes(size)));
-    }
-
-    // Flags
-    if (onlyInStock) {
-      result = result.filter(s => s.variants.some(v => v.inStock && v.stockCount > 0));
-    }
-    if (onlyNewArrivals) {
-      result = result.filter(s => s.isNewArrival);
-    }
-    if (onlyDeals) {
-      result = result.filter(s => s.isDeal);
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case 'price-asc':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case 'discount':
-        result.sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0));
-        break;
-      case 'newest':
-        result.sort((a, b) => (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0));
-        break;
-      case 'featured':
-      default:
-        result.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
-        break;
-    }
-
-    return result;
-  }, [products, searchQuery, selectedFits, selectedFabrics, selectedSizes, onlyInStock, onlyNewArrivals, onlyDeals, sortBy]);
+  const filteredShirts = products;
 
   const toggleFit = (fit: ShirtFit) => {
     setSelectedFits(prev => (prev.includes(fit) ? prev.filter(f => f !== fit) : [...prev, fit]));

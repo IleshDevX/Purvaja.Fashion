@@ -19,7 +19,8 @@ export const productService = {
 
   async getReviews(productId: string): Promise<ProductReview[]> {
     const response = await apiClient.get(`/products/${encodeURIComponent(productId)}/reviews`);
-    return unwrapApiData<ProductReview[]>(response.data);
+    const data = unwrapApiData<ProductReview[] | { items: ProductReview[] }>(response.data);
+    return Array.isArray(data) ? data : data.items;
   },
 
   async createReview(productId: string, review: Pick<ProductReview, 'rating' | 'title' | 'comment'>): Promise<ProductReview> {

@@ -28,7 +28,6 @@ export function CheckoutPage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const items = useCartStore(s => s.items);
-  const clearCart = useCartStore(s => s.clearCart);
   const { user } = useAuthStore();
 
   const {
@@ -116,10 +115,8 @@ export function CheckoutPage() {
     }
 
     const res = await processPayment(items);
-    if (res.success && res.orderId) {
-      clearCart();
-      addToast('Order confirmed successfully!', 'success');
-      navigate(`/checkout/success?orderId=${encodeURIComponent(res.orderId)}`);
+    if (res.success && res.paymentId && res.redirectUrl) {
+      navigate(res.redirectUrl.replace(window.location.origin, ''));
     } else {
       addToast(res.error || 'Payment declined by gateway.', 'error');
       navigate('/checkout/failure');

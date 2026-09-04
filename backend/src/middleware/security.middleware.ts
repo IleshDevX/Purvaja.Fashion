@@ -1,4 +1,5 @@
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
@@ -14,7 +15,7 @@ export function applySecurityMiddleware(app: Express): void {
       origin: env.CORS_ORIGIN,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
     }),
   );
 
@@ -33,6 +34,7 @@ export function applySecurityMiddleware(app: Express): void {
     },
   });
   app.use('/api', limiter);
+  app.use(cookieParser());
 
   // JSON Body Parser with reasonable size limits
   app.use(express.json({ limit: '1mb' }));

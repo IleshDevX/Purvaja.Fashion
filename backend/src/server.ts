@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import type { Server } from 'node:http';
 import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
+import { cacheService } from './services/cache.service.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 
@@ -10,6 +11,7 @@ let isShuttingDown = false;
 export async function startServer(): Promise<Server> {
   logger.info({ environment: env.NODE_ENV }, 'Starting application.');
   await connectDatabase();
+  await cacheService.connect();
 
   return await new Promise<Server>((resolve, reject) => {
     const server = app.listen(env.PORT, () => {
@@ -38,6 +40,7 @@ export async function stopServer(server: Server, signal: string): Promise<void> 
     });
   });
   await disconnectDatabase();
+  await cacheService.disconnect();
 }
 
 async function run(): Promise<void> {
@@ -56,6 +59,7 @@ async function run(): Promise<void> {
     process.once('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
     logger.error({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Application startup failed.');
+    await cacheService.disconnect();
     await disconnectDatabase();
     process.exitCode = 1;
   }

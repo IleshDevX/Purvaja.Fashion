@@ -9,6 +9,7 @@ import {
 } from '../types/checkout.js';
 import type { CheckoutSession } from '../../../services/api/contracts.js';
 import { orderService } from '../../orders/services/orderService.js';
+import { apiClient } from '../../../services/api/client.js';
 
 interface CheckoutState {
   shippingAddress: ShippingAddress | null;
@@ -28,7 +29,7 @@ interface CheckoutState {
   setCurrentStep: (step: CheckoutStep) => void;
   processPayment: (
     items: CartItem[],
-  ) => Promise<{ success: boolean; orderId?: string; error?: string }>;
+  ) => Promise<{ success: boolean; orderId?: string; paymentId?: string; redirectUrl?: string; error?: string }>;
   resetCheckout: () => void;
 }
 
@@ -64,7 +65,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
       return { success: false, error: 'Payment is already being processed.' };
     }
 
-    const { shippingAddress, deliveryOptionId, paymentMethodId, coupon } = get();
+    const { shippingAddress, deliveryOptionId, coupon } = get();
 
     if (!shippingAddress) {
       return { success: false, error: 'Shipping address is missing.' };
@@ -76,27 +77,25 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
     set({ isProcessing: true, paymentStatus: 'processing' });
 
     try {
+      // The browser may hold display state, but Express owns the checkout cart.
+      await apiClient.delete('/cart');
+      for (const item of items) await apiClient.post('/cart/items', { variantId: item.variantId, quantity: item.quantity });
       const checkout = await orderService.checkout({
-        lines: items.map(item => ({
-          productId: item.shirtId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-        shippingAddress,
+        shippingAddress: { recipientName: `${shippingAddress.firstName} ${shippingAddress.lastName}`.trim(), phone: shippingAddress.phone, line1: shippingAddress.addressLine1, line2: shippingAddress.addressLine2, city: shippingAddress.city, state: shippingAddress.state, postalCode: shippingAddress.postalCode, country: 'IN' },
         deliveryOptionId,
-        paymentMethodId,
         couponCode: coupon?.code,
+        idempotencyKey: crypto.randomUUID(),
       });
-      if (!checkout.orderId) {
+      if (!checkout.orderId || !checkout.paymentId) {
         throw new Error('Checkout response was invalid.');
       }
 
       set({
         isProcessing: false,
-        paymentStatus: 'success',
+        paymentStatus: 'processing',
         lastCheckout: checkout,
       });
-      return { success: true, orderId: checkout.orderId };
+      return { success: true, orderId: checkout.orderId, paymentId: checkout.paymentId, redirectUrl: checkout.redirectUrl };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Payment could not be processed.';
       set({ isProcessing: false, paymentStatus: 'failure' });

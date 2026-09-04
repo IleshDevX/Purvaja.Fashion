@@ -79,6 +79,9 @@ export async function seedDatabase(): Promise<void> {
         });
       }
     }
+  }, {
+    maxWait: 20000,
+    timeout: 120000,
   });
 
   const [products, variants, slugs, skus] = await Promise.all([
