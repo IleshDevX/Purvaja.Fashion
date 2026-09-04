@@ -14,9 +14,12 @@
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck",
     "db:migrate": "pnpm --filter @ecommerce/prototype-b-backend db:migrate",
+    "db:migrate:deploy": "pnpm --filter @ecommerce/prototype-b-backend db:migrate:deploy",
     "db:seed": "pnpm --filter @ecommerce/prototype-b-backend db:seed",
     "db:generate": "pnpm --filter @ecommerce/prototype-b-backend db:generate",
     "db:validate": "pnpm --filter @ecommerce/prototype-b-backend db:validate",
+    "validate:config": "pnpm --filter @ecommerce/prototype-b-backend validate:config",
+    "start": "pnpm --filter @ecommerce/prototype-b-backend start",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

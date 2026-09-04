@@ -14,8 +14,8 @@ export async function startServer(): Promise<Server> {
   await cacheService.connect();
 
   return await new Promise<Server>((resolve, reject) => {
-    const server = app.listen(env.PORT, () => {
-      logger.info({ port: env.PORT }, 'HTTP server is accepting requests.');
+    const server = app.listen(env.PORT, env.HOST, () => {
+      logger.info({ port: env.PORT, host: env.HOST }, 'HTTP server is accepting requests.');
       resolve(server);
     });
     server.once('error', reject);
@@ -29,6 +29,12 @@ export async function stopServer(server: Server, signal: string): Promise<void> 
   isShuttingDown = true;
 
   logger.info(`${signal} received: closing HTTP server gracefully.`);
+  const shutdownTimeout = setTimeout(() => {
+    logger.warn('Forcefully terminating process after graceful shutdown timeout.');
+    process.exit(1);
+  }, 10_000);
+  shutdownTimeout.unref();
+
   await new Promise<void>((resolve, reject) => {
     server.close(error => {
       if (error) {
@@ -41,6 +47,7 @@ export async function stopServer(server: Server, signal: string): Promise<void> 
   });
   await disconnectDatabase();
   await cacheService.disconnect();
+  clearTimeout(shutdownTimeout);
 }
 
 async function run(): Promise<void> {

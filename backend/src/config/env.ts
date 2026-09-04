@@ -1,11 +1,15 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { validateProductionConfig } from '../scripts/validate-config.js';
 
 dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(5001),
+  HOST: z.string().default('0.0.0.0'),
+  TRUST_PROXY: z.string().default('loopback'),
+  COOKIE_DOMAIN: z.string().optional(),
   CORS_ORIGIN: z.string().default('http://localhost:5174'),
   DATABASE_URL: z.string().optional(),
   DIRECT_URL: z.string().optional(),
@@ -38,8 +42,11 @@ if (env.PAYMENT_PROVIDER === 'phonepe') {
     .filter(key => !env[key as keyof typeof env]);
   if (missing.length > 0) throw new Error(`PAYMENT_PROVIDER=phonepe requires: ${missing.join(', ')}`);
 }
-if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDER === 'demo') {
-  throw new Error('PAYMENT_PROVIDER=demo is not permitted in production.');
+if (env.NODE_ENV === 'production') {
+  const validation = validateProductionConfig(process.env);
+  if (!validation.isValid) {
+    throw new Error(`Production environment configuration invalid: ${validation.errors.join('; ')}`);
+  }
 }
 
 export function getDatabaseUrl(): string {
@@ -54,6 +61,16 @@ export function getDatabaseUrl(): string {
 
   if (!result.success) {
     throw new Error(`Invalid DATABASE_URL: ${result.error.issues[0]?.message ?? 'value is required.'}`);
+  }
+
+  if (env.NODE_ENV === 'production') {
+    if (result.data.toLowerCase().includes('sslmode=no-verify')) {
+      throw new Error('Insecure sslmode=no-verify is prohibited in production.');
+    }
+    const hasSecureSsl = /sslmode=(require|verify-ca|verify-full)/i.test(result.data);
+    if (!hasSecureSsl) {
+      throw new Error('Insecure database connection: Production DATABASE_URL must enforce TLS with sslmode=require, sslmode=verify-ca, or sslmode=verify-full.');
+    }
   }
 
   return result.data;

@@ -1,0 +1,162 @@
+# ==============================================================================
+# GitHub Actions Template: Hostinger Production Deployment Workflow
+# ==============================================================================
+# INSTRUCTIONS FOR ENABLING:
+# 1. Rename this file from 'deploy-hostinger.yml.template' to 'deploy-hostinger.yml'
+# 2. Add the required repository secrets in GitHub:
+#    Settings -> Secrets and variables -> Actions -> Repository secrets:
+#    - HOSTINGER_SSH_HOST: IP address or domain of your Hostinger VPS
+#    - HOSTINGER_SSH_PORT: SSH port (default is 22)
+#    - HOSTINGER_SSH_USER: SSH username (e.g. deploy or root)
+#    - HOSTINGER_SSH_KEY: Private SSH key corresponding to authorized_keys on server
+#    - HOSTINGER_SSH_KNOWN_HOSTS: Stored server host key fingerprint to prevent MITM attacks.
+#      Generate using: ssh-keyscan -p <PORT> <HOST>
+# 3. Ensure target directory on Hostinger VPS exists with correct permissions:
+#    e.g., sudo mkdir -p /var/www/purvaja && sudo chown -R $USER:$USER /var/www/purvaja
+# ==============================================================================
+
+name: Deploy to Hostinger Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deployment:
+        description: 'Type "DEPLOY" to confirm production release'
+        required: true
+        default: 'NO'
+  # Uncomment to enable automatic deployment on release tag or main push:
+  # push:
+  #   tags:
+  #     - 'v*.*.*'
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate-and-build:
+    name: Build and Verify Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Deployment Confirmation
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm_deployment }}" != "DEPLOY" ]; then
+            echo "Deployment cancelled: confirmation input was not 'DEPLOY'"
+            exit 1
+          fi
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Production Prisma Schema
+        run: pnpm db:validate
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Typecheck Application
+        run: pnpm typecheck
+
+      - name: Build Monorepo Bundles
+        run: pnpm build
+        env:
+          VITE_API_URL: /api/v1
+          VITE_APP_NAME: Purvaja Fashion - Atelier
+
+      - name: Stage Production Deployment Bundle
+        run: |
+          mkdir -p release-bundle/frontend release-bundle/backend
+          cp -r frontend/dist release-bundle/frontend/dist
+          cp -r backend/dist release-bundle/backend/dist
+          cp -r backend/prisma release-bundle/backend/prisma
+          cp backend/package.json release-bundle/backend/package.json
+          cp backend/ecosystem.config.cjs release-bundle/backend/ecosystem.config.cjs
+          cp package.json release-bundle/package.json
+          cp pnpm-lock.yaml release-bundle/pnpm-lock.yaml
+          cp pnpm-workspace.yaml release-bundle/pnpm-workspace.yaml
+          cp ecosystem.config.cjs release-bundle/ecosystem.config.cjs
+
+      - name: Archive Production Release Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: release-bundle/
+          retention-days: 2
+
+  deploy-to-vps:
+    name: Deploy to Hostinger VPS
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Release Bundle Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release-bundle
+
+      - name: Setup SSH Key Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOSTINGER_SSH_KEY }}
+
+      - name: Configure Verified SSH Known Hosts
+        env:
+          KNOWN_HOSTS: ${{ secrets.HOSTINGER_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$KNOWN_HOSTS" ]; then
+            echo "$KNOWN_HOSTS" >> ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+          else
+            echo "ERROR: HOSTINGER_SSH_KNOWN_HOSTS secret is missing. Host key verification is required to prevent MITM attacks."
+            exit 1
+          fi
+
+      - name: Deploy to Hostinger VPS via Verified Rsync & SSH
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          PORT: ${{ secrets.HOSTINGER_SSH_PORT || '22' }}
+          TARGET_DIR: /var/www/purvaja
+        run: |
+          echo "Syncing staged release bundle to target host..."
+          rsync -avz -e "ssh -p $PORT" ./release-bundle/ $USER@$HOST:$TARGET_DIR/
+
+          echo "Running remote deployment and migration tasks on Hostinger VPS..."
+          ssh -p $PORT $USER@$HOST << 'EOF'
+            set -e
+            cd /var/www/purvaja
+
+            echo "Installing production dependencies with frozen lockfile..."
+            pnpm install --prod --frozen-lockfile
+
+            echo "Validating production configuration..."
+            pnpm validate:config
+
+            echo "Applying database schema migrations safely (prisma migrate deploy)..."
+            pnpm db:migrate:deploy
+
+            echo "Reloading backend application via PM2 with zero downtime..."
+            pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
+
+            echo "Verifying backend healthcheck probe..."
+            curl -f http://127.0.0.1:5001/healthz || exit 1
+
+            echo "Deployment successfully executed!"
+          EOF

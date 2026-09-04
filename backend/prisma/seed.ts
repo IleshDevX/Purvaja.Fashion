@@ -30,6 +30,10 @@ function productData(product: (typeof PRODUCT_SEED)[number]) {
 }
 
 export async function seedDatabase(): Promise<void> {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
+    throw new Error('PRODUCTION SAFEGUARD: Database seeding is strictly prohibited in production (NODE_ENV=production).');
+  }
+
   const prisma = getPrismaClient();
   await prisma.$transaction(async tx => {
     const category = await tx.category.upsert({

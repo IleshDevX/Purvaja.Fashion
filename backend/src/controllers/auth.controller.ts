@@ -6,8 +6,20 @@ import { body, forgotSchema, loginSchema, registerSchema, resetSchema, tokenSche
 
 const auth = new AuthService();
 // Customer APIs beyond /auth use the same server-side session cookie.
-const baseCookie: CookieOptions = { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax', path: '/' };
-const csrfCookie: CookieOptions = { httpOnly: false, secure: env.NODE_ENV === 'production', sameSite: 'lax', path: '/' };
+const baseCookie: CookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+};
+const csrfCookie: CookieOptions = {
+  httpOnly: false,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+};
 function establishSession(res: Parameters<RequestHandler>[1], token: string): string { const csrfToken = createSecret(); res.cookie(SESSION_COOKIE, token, { ...baseCookie, maxAge: 30 * 24 * 60 * 60 * 1000 }); res.cookie(CSRF_COOKIE, csrfToken, { ...csrfCookie, maxAge: 30 * 24 * 60 * 60 * 1000 }); return csrfToken; }
 
 export const register: RequestHandler = async (req, res, next) => { try { const input = body(registerSchema, req.body); const result = await auth.register(input); const csrfToken = establishSession(res, await auth.createSession(result.user.id)); res.status(201).json({ success: true, data: { user: result.user, emailSent: result.emailSent, csrfToken } }); } catch (error) { next(error); } };

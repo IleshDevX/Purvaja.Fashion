@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getPrismaClient } from '../config/database.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors.js';
 import { paymentProvider } from './payment-provider.service.js';
@@ -107,5 +108,5 @@ export class CommerceService {
   async orders(userId: string) { return this.prisma.order.findMany({ where: { userId }, include: orderInclude, orderBy: { createdAt: 'desc' } }); }
   async order(userId: string, orderId: string) { const order = await this.prisma.order.findFirst({ where: { id: orderId, userId }, include: orderInclude }); if (!order) throw new NotFoundError('Order was not found.', 'ORDER_NOT_FOUND'); return order; }
   async cancel(userId: string, orderId: string) { const order = await this.order(userId, orderId); const payment = order.payments[0]; if (!payment || !['PENDING', 'INITIATED'].includes(payment.status)) throw new ConflictError('This order cannot be cancelled.', 'ORDER_NOT_CANCELLABLE'); return this.complete(userId, payment.id, 'CANCELLED'); }
-  private paymentSession(paymentId: string, paymentStatus: string, orderId: string) { return { paymentId, orderId, paymentStatus, redirectUrl: paymentStatus === 'INITIATED' ? `${process.env.FRONTEND_URL ?? 'http://localhost:5174'}/checkout/payment?paymentId=${paymentId}` : undefined }; }
+  private paymentSession(paymentId: string, paymentStatus: string, orderId: string) { return { paymentId, orderId, paymentStatus, redirectUrl: paymentStatus === 'INITIATED' ? `${env.FRONTEND_URL}/checkout/payment?paymentId=${paymentId}` : undefined }; }
 }

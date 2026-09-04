@@ -14,5 +14,22 @@ export const logger = pino({
           },
         }
       : undefined,
-  redact: ['req.headers.authorization', 'req.headers.cookie', 'password', 'token', 'secret'],
+  redact: [
+    'req.headers.authorization',
+    'req.headers.cookie',
+    'req.headers["x-csrf-token"]',
+    'password',
+    'passwordHash',
+    'token',
+    'tokenHash',
+    'secret',
+    'sessionToken',
+    'csrfToken',
+    'DATABASE_URL',
+    'DIRECT_URL',
+    'SESSION_SECRET',
+    'RESEND_API_KEY',
+    'PHONEPE_CLIENT_SECRET',
+    'PHONEPE_MERCHANT_ID',
+  ],
 });

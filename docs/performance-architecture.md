@@ -6,7 +6,7 @@
 - Product list/detail responses are intentionally not cached: they contain live variant stock and availability, which must not become stale.
 - Published public review pages may be cached for 60 seconds when `REDIS_URL` is configured. Review responses contain no private customer data.
 - Redis is optional. If it is absent or unhealthy, requests use PostgreSQL without failing or serving fabricated data.
-- API text responses use HTTP compression. HTTPS termination, CDN/static asset caching, and image optimization belong at the DigitalOcean proxy/CDN layer.
+- API text responses use HTTP compression. HTTPS termination, CDN/static asset caching, and image optimization belong at the reverse proxy (e.g. Nginx, LiteSpeed, Cloudflare, or Hostinger edge) layer.
 
 ## Redis Configuration
 
