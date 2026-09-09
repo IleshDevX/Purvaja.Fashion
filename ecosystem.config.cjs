@@ -17,6 +17,8 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 5001,
         HOST: '127.0.0.1',
+        // RATE_LIMIT_REDIS_URL must be supplied by the process environment;
+        // startup validation rejects this clustered deployment without it.
       },
     },
   ],

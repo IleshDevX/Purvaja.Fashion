@@ -51,10 +51,10 @@ export function AdminInventoryPage() {
   };
 
   const handleStockAdjust = async (variantId: string, currentStock: number, delta: number) => {
-    const target = Math.max(0, currentStock + delta);
+    if (currentStock + delta < 0) return;
     try {
-      await adminService.updateVariantStock(variantId, target);
-      addToast(`Updated stock level to ${target} units.`, 'success');
+      await adminService.adjustVariantStock(variantId, delta);
+      addToast(`Stock adjusted by ${delta} units.`, 'success');
       void loadInventory(filter, searchQuery, page);
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Unable to update stock.', 'error');
@@ -119,7 +119,7 @@ export function AdminInventoryPage() {
         </div>
       </div>
 
-      {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
+      {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
 
       {/* Inventory Matrix Table */}
       <div className="rounded-2xl border border-ivory-300 bg-white overflow-x-auto shadow-[0_4px_20px_rgba(26,26,26,0.02)]">

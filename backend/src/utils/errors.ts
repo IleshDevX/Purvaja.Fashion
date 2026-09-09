@@ -30,6 +30,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class BadRequestError extends AppError {
+  constructor(message = 'Bad request', code = 'BAD_REQUEST', details?: unknown) {
+    super(message, 400, code, details);
+  }
+}
+
 export class ConflictError extends AppError {
   constructor(message = 'Conflict', code = 'CONFLICT') { super(message, 409, code); }
 }
@@ -43,5 +49,17 @@ export class UnauthorizedError extends AppError {
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden action', code = 'FORBIDDEN') {
     super(message, 403, code);
+  }
+}
+
+export class BadGatewayError extends AppError {
+  constructor(message = 'Bad gateway error from upstream provider', code = 'BAD_GATEWAY') {
+    super(message, 502, code);
+  }
+}
+
+export class GatewayTimeoutError extends AppError {
+  constructor(message = 'Gateway timed out while contacting payment provider', code = 'GATEWAY_TIMEOUT') {
+    super(message, 504, code);
   }
 }

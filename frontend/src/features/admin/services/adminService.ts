@@ -16,6 +16,7 @@ import type {
   AdminProductVariant,
   AdminShippingAddress,
   AdminVariant,
+  AdminVariantInput,
   AuditLog,
   InventoryItem,
   InventoryMovement,
@@ -132,9 +133,9 @@ export const adminService = {
     };
   },
 
-  async listProducts(search = '', page = 1): Promise<AdminPage<AdminProduct>> {
+  async listProducts(search = '', page = 1, limit = 25): Promise<AdminPage<AdminProduct>> {
     const raw = read<AdminPage<BackendProduct>>(
-      await apiClient.get(`/admin/products${query(page, 25, search)}`),
+      await apiClient.get(`/admin/products${query(page, limit, search)}`),
     );
     return mapProductPage(raw);
   },
@@ -147,21 +148,13 @@ export const adminService = {
   },
 
   async createProduct(value: AdminProductInput): Promise<AdminProduct> {
-    const payload = {
-      ...value,
-      categoryIds: value.categoryIds && value.categoryIds.length > 0 ? value.categoryIds : undefined,
-    };
-    const raw = read<BackendProduct>(await apiClient.post('/admin/products', payload));
+    const raw = read<BackendProduct>(await apiClient.post('/admin/products', value));
     return mapProduct(raw);
   },
 
   async updateProduct(id: string, value: Partial<AdminProductInput>): Promise<AdminProduct> {
-    const payload = {
-      ...value,
-      categoryIds: value.categoryIds && value.categoryIds.length > 0 ? value.categoryIds : undefined,
-    };
     const raw = read<BackendProduct>(
-      await apiClient.patch(`/admin/products/${encodeURIComponent(id)}`, payload),
+      await apiClient.patch(`/admin/products/${encodeURIComponent(id)}`, value),
     );
     return mapProduct(raw);
   },
@@ -216,6 +209,11 @@ export const adminService = {
       await apiClient.patch(`/admin/inventory/${encodeURIComponent(variantId)}`, { stock }),
     );
   },
+  async adjustVariantStock(variantId: string, quantity: number): Promise<unknown> {
+    return read(await apiClient.post('/admin/inventory/adjustments', {
+      variantId, quantity, type: 'ADJUSTMENT', reason: 'Inventory control quantity adjustment',
+    }));
+  },
 
   async listCategories(): Promise<AdminCategory[]> {
     return read<AdminCategory[]>(await apiClient.get('/admin/categories'));
@@ -239,6 +237,16 @@ export const adminService = {
   async listVariants(search = '', page = 1): Promise<AdminPage<AdminVariant>> {
     return read<AdminPage<AdminVariant>>(
       await apiClient.get(`/admin/variants${query(page, 25, search)}`),
+    );
+  },
+
+  async createVariant(value: AdminVariantInput): Promise<AdminVariant> {
+    return read<AdminVariant>(await apiClient.post('/admin/variants', value));
+  },
+
+  async updateVariant(id: string, value: Partial<AdminVariantInput>): Promise<AdminVariant> {
+    return read<AdminVariant>(
+      await apiClient.patch(`/admin/variants/${encodeURIComponent(id)}`, value),
     );
   },
 

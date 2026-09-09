@@ -1,12 +1,65 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Save } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { adminService } from '../../features/admin/services/adminService.js';
-import type { AdminCategory, AdminCoupon, AdminPage, AdminVariant, AuditLog, InventoryMovement, InventoryReservation } from '../../features/admin/types/admin.js';
+import type { AdminCategory, AdminCoupon, AdminPage, AdminProduct, AdminVariant, AdminVariantInput, AuditLog, InventoryMovement, InventoryReservation } from '../../features/admin/types/admin.js';
 
-const date = (value: string | null) => value ? new Date(value).toLocaleString('en-IN') : '—';
-const PageState = ({ children }: { children: React.ReactNode }) => <div className="rounded-2xl border border-ivory-300 bg-white p-8 text-center text-sm text-charcoal-600">{children}</div>;
-const Header = ({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) => <div className="flex flex-col gap-3 border-b border-ivory-300 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.22em] text-gold-800">{eyebrow}</p><h1 className="mt-1 font-serif text-3xl text-charcoal-950">{title}</h1></div>{children}</div>;
-function Pager<T>({ value, onPage }: { value: AdminPage<T>; onPage: (page: number) => void }) { return <div className="flex items-center justify-between text-xs text-charcoal-600"><span>{value.total} records</span><div className="flex items-center gap-2"><button type="button" disabled={value.page === 1} onClick={() => onPage(value.page - 1)} className="rounded-lg border border-ivory-300 p-1 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button><span>Page {value.page} of {Math.max(value.totalPages, 1)}</span><button type="button" disabled={value.page >= value.totalPages} onClick={() => onPage(value.page + 1)} className="rounded-lg border border-ivory-300 p-1 disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button></div></div>; }
+const date = (value: string | null) => (value ? new Date(value).toLocaleString('en-IN') : '—');
+
+const PageState = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-2xl border border-ivory-300 bg-white p-8 text-center text-sm text-charcoal-600">
+    {children}
+  </div>
+);
+
+const Header = ({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children?: React.ReactNode;
+}) => (
+  <div className="flex flex-col gap-3 border-b border-ivory-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[.22em] text-gold-800">{eyebrow}</p>
+      <h1 className="mt-1 font-serif text-3xl text-charcoal-950">{title}</h1>
+    </div>
+    {children}
+  </div>
+);
+
+function Pager<T>({ value, onPage }: { value: AdminPage<T>; onPage: (page: number) => void }) {
+  return (
+    <div className="flex items-center justify-between text-xs text-charcoal-600">
+      <span>{value.total} records</span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Previous page"
+          disabled={value.page === 1}
+          onClick={() => onPage(value.page - 1)}
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-ivory-300 p-1 disabled:opacity-40 hover:bg-ivory-50 transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span>
+          Page {value.page} of {Math.max(value.totalPages, 1)}
+        </span>
+        <button
+          type="button"
+          aria-label="Next page"
+          disabled={value.page >= value.totalPages}
+          onClick={() => onPage(value.page + 1)}
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-ivory-300 p-1 disabled:opacity-40 hover:bg-ivory-50 transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function AdminCategoriesPage() {
   const [items, setItems] = useState<AdminCategory[]>([]);
@@ -29,7 +82,8 @@ export function AdminCategoriesPage() {
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const element = e.currentTarget;
+    const form = new FormData(element);
     const value = {
       name: String(form.get('name')).trim(),
       slug: String(form.get('slug')).trim(),
@@ -41,7 +95,7 @@ export function AdminCategoriesPage() {
       if (editing?.id) await adminService.updateCategory(editing.id, value);
       else await adminService.createCategory(value);
       setEditing(null);
-      e.currentTarget.reset();
+      element.reset();
       await load();
     } catch {
       setError('Category could not be saved. Check the name and slug.');
@@ -82,7 +136,7 @@ export function AdminCategoriesPage() {
           </div>
         </form>
       )}
-      <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-ivory-300 bg-white">
         <table className="w-full text-left text-xs">
           <thead className="bg-ivory-50 text-charcoal-500">
             <tr>
@@ -115,16 +169,28 @@ export function AdminCategoriesPage() {
 }
 
 export function AdminVariantsPage() {
+  const [params] = useSearchParams();
   const [data, setData] = useState<AdminPage<AdminVariant> | null>(null);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<AdminVariant | null>(null);
+  const [formOpen, setFormOpen] = useState(Boolean(params.get('productId')));
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState<AdminVariantInput>({
+    productId: params.get('productId') ?? '', sku:'', size:'', colorName:'', colorHex:'#000000',
+    priceOverridePaise:null, stockQuantity:0, lowStockThreshold:5, status:'ACTIVE',
+  });
 
   const load = useCallback(async (query = '', page = 1) => {
     try {
       setError('');
-      setData(await adminService.listVariants(query, page));
-    } catch {
-      setError('Unable to load variants.');
+      const [variants, productPage] = await Promise.all([
+        adminService.listVariants(query,page), adminService.listProducts('',1,100),
+      ]);
+      setData(variants); setProducts(productPage.items);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to load variants.');
     }
   }, []);
 
@@ -132,27 +198,58 @@ export function AdminVariantsPage() {
     void load();
   }, [load]);
 
+  const openCreate = () => {
+    setEditing(null); setFormOpen(true);
+    setForm({productId:params.get('productId')??products[0]?.id??'',sku:'',size:'',colorName:'',colorHex:'#000000',priceOverridePaise:null,stockQuantity:0,lowStockThreshold:5,status:'ACTIVE'});
+  };
+  const openEdit = (variant: AdminVariant) => {
+    setEditing(variant); setFormOpen(true);
+    setForm({sku:variant.sku,size:variant.size,colorName:variant.colorName,colorHex:variant.colorHex,priceOverridePaise:variant.priceOverridePaise,stockQuantity:variant.stockQuantity,lowStockThreshold:variant.lowStockThreshold,status:variant.status==='DISCONTINUED'?'DISCONTINUED':'ACTIVE'});
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setError('');
+    try {
+      setBusy(true);
+      if(editing) await adminService.updateVariant(editing.id,form);
+      else await adminService.createVariant(form);
+      setFormOpen(false); setEditing(null); await load(search,1);
+    } catch(cause) { setError(cause instanceof Error?cause.message:'Variant could not be saved.'); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div className="space-y-6">
       <Header eyebrow="SKU catalogue" title="Variants">
         <div className="flex gap-2">
+          <button type="button" onClick={openCreate} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white"><Plus className="mr-1 inline h-4 w-4" />Add variant</button>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="SKU, colour or product"
             className="rounded-lg border p-2 text-xs"
           />
-          <button onClick={() => void load(search, 1)} className="rounded-lg border p-2">
+          <button type="button" aria-label="Refresh variants" onClick={() => void load(search, 1)} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border p-2">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
       </Header>
-      {error ? (
-        <PageState>{error}</PageState>
-      ) : !data ? (
-        <PageState>Loading variants…</PageState>
+      {error && <PageState><p>{error}</p><button type="button" onClick={() => void load(search,1)} className="mt-3 font-bold text-gold-800">Retry</button></PageState>}
+      {formOpen && <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-ivory-300 bg-white p-5 sm:grid-cols-3">
+        {!editing && <select aria-label="Product" required value={form.productId} onChange={e=>setForm({...form,productId:e.target.value})}><option value="">Select product</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>}
+        <input aria-label="SKU" required minLength={3} value={form.sku} onChange={e=>setForm({...form,sku:e.target.value})} placeholder="SKU" />
+        <input aria-label="Size" required value={form.size} onChange={e=>setForm({...form,size:e.target.value})} placeholder="Size" />
+        <input aria-label="Colour name" required value={form.colorName} onChange={e=>setForm({...form,colorName:e.target.value})} placeholder="Colour name" />
+        <label className="flex items-center gap-2 text-xs">Colour <input aria-label="Colour" type="color" value={form.colorHex} onChange={e=>setForm({...form,colorHex:e.target.value})} /></label>
+        <label className="text-xs">Price override (INR)<input className="block w-full" min="0" step="0.01" type="number" value={form.priceOverridePaise==null?'':form.priceOverridePaise/100} onChange={e=>setForm({...form,priceOverridePaise:e.target.value===''?null:Math.round(Number(e.target.value)*100)})} /></label>
+        <label className="text-xs">Stock<input className="block w-full" required min="0" type="number" value={form.stockQuantity??0} onChange={e=>setForm({...form,stockQuantity:Number(e.target.value)})} /></label>
+        <label className="text-xs">Low-stock threshold<input className="block w-full" required min="0" type="number" value={form.lowStockThreshold??0} onChange={e=>setForm({...form,lowStockThreshold:Number(e.target.value)})} /></label>
+        <select aria-label="Status" value={form.status} onChange={e=>setForm({...form,status:e.target.value as AdminVariantInput['status']})}><option value="ACTIVE">Active</option><option value="DISCONTINUED">Discontinued</option></select>
+        <div className="flex gap-2"><button disabled={busy} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white"><Save className="mr-1 inline h-3 w-3" />{busy?'Saving…':'Save'}</button><button type="button" onClick={()=>setFormOpen(false)} className="text-xs">Cancel</button></div>
+      </form>}
+      {!data ? (
+        !error && <PageState>Loading variants…</PageState>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-ivory-300 bg-white">
           <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
@@ -161,6 +258,7 @@ export function AdminVariantsPage() {
                 <th className="p-4">Size / colour</th>
                 <th className="p-4">Stock</th>
                 <th className="p-4">Status</th>
+                <th className="p-4" />
               </tr>
             </thead>
             <tbody>
@@ -173,6 +271,7 @@ export function AdminVariantsPage() {
                   </td>
                   <td className="p-4">{v.stockQuantity}</td>
                   <td className="p-4">{v.status}</td>
+                  <td className="p-4 text-right"><button type="button" onClick={()=>openEdit(v)} className="font-bold text-gold-800">Edit</button></td>
                 </tr>
               ))}
             </tbody>
@@ -247,7 +346,7 @@ export function AdminCouponsPage() {
         </form>
       )}
       {error && <PageState>{error}</PageState>}
-      <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-ivory-300 bg-white">
         <table className="w-full text-left text-xs">
           <thead className="bg-ivory-50 text-charcoal-500">
             <tr>

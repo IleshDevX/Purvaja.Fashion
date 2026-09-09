@@ -145,5 +145,52 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Accessible Skip Link */
+  .skip-link {
+    position: absolute;
+    top: -9999px;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.75rem 1.25rem;
+    background-color: var(--atl-text-primary, #1A1A1A);
+    color: var(--atl-text-inverse, #FFFFFF);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    transition: top 0.2s ease-in-out;
+  }
+
+  .skip-link:focus {
+    top: 1rem;
+    outline: 2px solid var(--atl-accent, #B58934);
+    outline-offset: 2px;
+  }
+}
+
+/* Enhanced keyboard navigation focus styles */
+:focus-visible {
+  outline: 2px solid var(--atl-accent, #B58934);
+  outline-offset: 2px;
+}
+
+/* Accessible Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-marquee,
+  .animate-product-scroll {
+    animation: none !important;
+    overflow-x: auto !important;
+  }
 }
 

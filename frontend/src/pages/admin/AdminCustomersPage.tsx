@@ -54,12 +54,13 @@ export function AdminCustomersPage() {
         />
       </div>
       {error ? (
-        <div className="rounded-xl bg-white p-6 text-sm">{error}</div>
+        <div role="alert" className="rounded-xl bg-white p-6 text-sm">{error}</div>
       ) : !result ? (
         <div className="rounded-xl bg-white p-6 text-sm">Loading customers…</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white">
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
                 <th className="p-4">Customer</th>
@@ -97,6 +98,7 @@ export function AdminCustomersPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {!result.items.length && (
             <p className="p-8 text-center text-sm text-charcoal-500">
               No customers match this search.

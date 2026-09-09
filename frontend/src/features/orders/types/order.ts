@@ -10,10 +10,21 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled'
   | 'payment_failed'
-  | 'returned'
-  | 'refunded';
+  | 'return_requested'
+  | 'returned';
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+
+export interface PaymentRefund {
+  id: string;
+  amountPaise: number;
+  amount: number;
+  status: 'requested' | 'pending' | 'succeeded' | 'failed';
+  mode: 'demo' | 'live' | 'unknown';
+  reason: 'order_cancelled' | 'return' | 'late_capture' | 'legacy';
+  requestedAt: string;
+  processedAt?: string;
+}
 
 export interface OrderItem {
   id: string;
@@ -27,7 +38,9 @@ export interface OrderItem {
     hex: string;
   };
   quantity: number;
+  unitPricePaise: number;
   unitPrice: number;
+  lineTotalPaise: number;
   lineTotal: number;
 }
 
@@ -47,15 +60,22 @@ export interface Order {
   createdAt: string;
   status: OrderStatus;
   items: OrderItem[];
+  subtotalPaise: number;
   subtotal: number;
+  productSavingsPaise: number;
   productSavings: number;
+  couponDiscountPaise: number;
   couponDiscount: number;
+  deliveryFeePaise: number;
   deliveryFee: number;
+  grandTotalPaise: number;
   grandTotal: number;
   shippingAddress: ShippingAddress;
   deliveryOption: DeliveryOption;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  availableActions: { canCancel: boolean; canReturn: boolean };
+  refunds?: PaymentRefund[];
   trackingNumber?: string;
   courierName?: string;
   estimatedDelivery?: string;
@@ -70,4 +90,6 @@ export interface OrderFilterOptions {
   status?: OrderStatus | 'all';
   searchQuery?: string;
   sortBy?: 'newest' | 'oldest' | 'total_high' | 'total_low';
+  page?: number;
+  limit?: number;
 }

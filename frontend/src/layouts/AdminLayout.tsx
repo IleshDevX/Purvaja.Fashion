@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../features/auth/store/authStore.js';
 import { useToast } from '../app/providers.js';
+import { Dialog } from '../components/ui/Dialog.js';
 
 interface NavItem {
   label: string;
@@ -54,8 +55,11 @@ export function AdminLayout() {
     setMobileDrawerOpen(false);
   }, [location.pathname]);
 
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async () => {
+    if (!await logout()) {
+      addToast('Sign out could not be confirmed. Please try again.', 'error');
+      return;
+    }
     addToast('Signed out of Atelier Admin Portal.', 'info');
     navigate('/auth/login');
   };
@@ -65,6 +69,9 @@ export function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-ivory-100 text-charcoal-900 flex flex-col lg:flex-row antialiased selection:bg-gold-500 selection:text-charcoal-950 font-sans">
+      <a href="#admin-main-content" className="skip-link">
+        Skip to main content
+      </a>
       {/* ── DESKTOP FIXED SIDEBAR ── */}
       <aside className="hidden lg:flex w-72 flex-col justify-between border-r border-ivory-300 bg-white p-6 shrink-0 h-screen sticky top-0 z-40 shadow-[0_4px_24px_rgba(26,26,26,0.03)]">
         <div className="space-y-8">
@@ -161,15 +168,9 @@ export function AdminLayout() {
       </aside>
 
       {/* ── MOBILE DRAWER OVERLAY ── */}
-      {mobileDrawerOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-charcoal-950/60 backdrop-blur-xs lg:hidden animate-fade-in"
-          onClick={() => setMobileDrawerOpen(false)}
-        >
-          <div
-            className="w-4/5 max-w-xs h-full bg-white p-6 flex flex-col justify-between border-r border-ivory-300 shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
+      <Dialog open={mobileDrawerOpen} onClose={() => setMobileDrawerOpen(false)} label="Admin Navigation Drawer"
+        overlayClassName="fixed inset-0 z-50 bg-charcoal-950/60 backdrop-blur-xs lg:hidden animate-fade-in"
+        panelClassName="w-4/5 max-w-xs h-full bg-white p-6 flex flex-col justify-between border-r border-ivory-300 shadow-2xl">
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-ivory-200">
                 <div className="flex items-center gap-2.5">
@@ -181,7 +182,8 @@ export function AdminLayout() {
                 <button
                   type="button"
                   onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1 text-charcoal-500 hover:text-charcoal-950"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-charcoal-500 hover:text-charcoal-950"
+                  aria-label="Close navigation menu"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -229,9 +231,7 @@ export function AdminLayout() {
                 <LogOut className="h-4 w-4" /> Sign Out
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </Dialog>
 
       {/* ── MAIN CONTENT AREA ── */}
       <div className="flex-1 flex flex-col min-w-0 bg-ivory-100">
@@ -242,8 +242,9 @@ export function AdminLayout() {
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="p-2 text-charcoal-700 hover:text-charcoal-950 lg:hidden rounded-lg hover:bg-ivory-100"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-charcoal-700 hover:text-charcoal-950 lg:hidden rounded-lg hover:bg-ivory-100"
               aria-label="Open navigation menu"
+              aria-expanded={mobileDrawerOpen}
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -272,7 +273,7 @@ export function AdminLayout() {
         </header>
 
         {/* Page Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-[1600px] w-full mx-auto">
+        <main id="admin-main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-10 max-w-[1600px] w-full mx-auto outline-none">
           <Outlet />
         </main>
       </div>

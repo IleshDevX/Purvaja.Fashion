@@ -51,6 +51,19 @@ export function unwrapApiData<T>(payload: unknown): T {
 }
 
 let inMemoryCsrfToken: string | null = null;
+let apiSession = 0;
+type SessionRequest = InternalAxiosRequestConfig & { _session?: number; _retryCsrf?: boolean };
+
+export function advanceApiSession(): void {
+  apiSession++;
+  setCsrfToken(null);
+}
+
+function assertCurrentSession(request?: SessionRequest): void {
+  if (request?._session !== undefined && request._session !== apiSession) {
+    throw new ApiError('Your session changed. Please try again.', 'SESSION_CHANGED');
+  }
+}
 
 export function setCsrfToken(token: string | null): void {
   inMemoryCsrfToken = token;
@@ -68,6 +81,13 @@ export function getCsrfToken(): string | null {
   return null;
 }
 
+type SessionExpiredHandler = () => void;
+let sessionExpiredHandler: SessionExpiredHandler | null = null;
+
+export function onSessionExpired(handler: SessionExpiredHandler): void {
+  sessionExpiredHandler = handler;
+}
+
 export function createApiClient(): AxiosInstance {
   const instance = axios.create({
     baseURL: config.apiUrl,
@@ -80,6 +100,9 @@ export function createApiClient(): AxiosInstance {
 
   instance.interceptors.request.use(
     async (requestConfig: InternalAxiosRequestConfig) => {
+      const request = requestConfig as SessionRequest;
+      assertCurrentSession(request);
+      request._session ??= apiSession;
       if (!['get', 'head', 'options'].includes(requestConfig.method?.toLowerCase() ?? 'get')) {
         let token = getCsrfToken();
         if (!token && typeof window !== 'undefined') {
@@ -89,6 +112,7 @@ export function createApiClient(): AxiosInstance {
               { withCredentials: true },
             );
             token = csrfRes.data?.data?.csrfToken ?? null;
+            assertCurrentSession(request);
             if (token) setCsrfToken(token);
           } catch {
             // Proceed without token if CSRF endpoint fails
@@ -98,6 +122,7 @@ export function createApiClient(): AxiosInstance {
           requestConfig.headers.set('X-CSRF-Token', token);
         }
       }
+      assertCurrentSession(request);
       return requestConfig;
     },
     (error: unknown) => Promise.reject(error),
@@ -105,13 +130,55 @@ export function createApiClient(): AxiosInstance {
 
   instance.interceptors.response.use(
     response => {
+      assertCurrentSession(response.config as SessionRequest);
       const responseCsrf = (response.data as { data?: { csrfToken?: string } })?.data?.csrfToken;
       if (responseCsrf) {
         setCsrfToken(responseCsrf);
       }
       return response;
     },
-    (error: AxiosError<{ success?: boolean; error?: ApiErrorResponse }>) => {
+    async (error: AxiosError<{ success?: boolean; error?: ApiErrorResponse }>) => {
+      if (error instanceof ApiError) return Promise.reject(error);
+      const originalRequest = error.config as SessionRequest | undefined;
+      assertCurrentSession(originalRequest);
+      const errorCode = error.response?.data?.error?.code;
+
+      // Automatically retry once if CSRF token expired or became invalid
+      if (
+        error.response?.status === 403 &&
+        errorCode === 'CSRF_INVALID' &&
+        originalRequest &&
+        !originalRequest._retryCsrf &&
+        typeof window !== 'undefined'
+      ) {
+        originalRequest._retryCsrf = true;
+        try {
+          const csrfRes = await axios.get<{ success?: boolean; data?: { csrfToken?: string } }>(
+            `${config.apiUrl}/auth/csrf`,
+            { withCredentials: true },
+          );
+          const newToken = csrfRes.data?.data?.csrfToken ?? null;
+          assertCurrentSession(originalRequest);
+          if (newToken) {
+            setCsrfToken(newToken);
+            originalRequest.headers.set('X-CSRF-Token', newToken);
+            return instance(originalRequest);
+          }
+        } catch {
+          // Fall through to reject
+        }
+      }
+
+      // Handle 401 Unauthorized -> trigger session expiration handler
+      assertCurrentSession(originalRequest);
+      if (error.response?.status === 401) {
+        const url = originalRequest?.url || '';
+        const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/login') || url.includes('/auth/csrf');
+        if (!isAuthCheck && sessionExpiredHandler) {
+          sessionExpiredHandler();
+        }
+      }
+
       if (error.response?.data?.error) {
         const { message, code, details } = error.response.data.error;
         return Promise.reject(new ApiError(message, code, error.response.status, details));
@@ -119,7 +186,10 @@ export function createApiClient(): AxiosInstance {
 
       if (error.request) {
         return Promise.reject(
-          new ApiError('Network error: No response received from server', 'NETWORK_ERROR'),
+          new ApiError(
+            'Network error: Unable to connect to the server. Please check your connection.',
+            'NETWORK_ERROR',
+          ),
         );
       }
 

@@ -69,13 +69,14 @@ export function AdminOrdersPage() {
         />
       </div>
 
-      {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
+      {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
 
       {!data ? (
         <div className="rounded-xl bg-white p-6 text-sm text-charcoal-500">Loading orders…</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white shadow-2xs">
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
                 <th className="p-4">Order # / Placed</th>
@@ -148,6 +149,7 @@ export function AdminOrdersPage() {
               })}
             </tbody>
           </table>
+          </div>
 
           {!data.items.length && (
             <p className="p-8 text-center text-sm text-charcoal-500">No orders found.</p>

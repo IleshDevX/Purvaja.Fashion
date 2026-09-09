@@ -11,4 +11,7 @@ router.get('/inventory',controller.inventory); router.get('/inventory/movements'
 router.patch('/inventory/:id',requireCsrf,controller.setStock);
 router.get('/orders',controller.orders); router.get('/orders/:id',controller.orderDetail); router.patch('/orders/:id/status',requireCsrf,controller.updateOrder);
 router.get('/customers',controller.customers); router.get('/customers/:id',controller.customerDetail); router.get('/coupons',controller.coupons); router.post('/coupons',requireCsrf,controller.createCoupon); router.patch('/coupons/:id',requireCsrf,controller.updateCoupon); router.get('/audit-logs',controller.auditLogs);
+router.post('/payments/:id/reconcile', requireCsrf, controller.reconcilePayment);
+router.post('/refunds/:id/process', requireCsrf, controller.processRefund);
+router.get('/metrics', controller.operationalMetrics);
 export default router;

@@ -8,5 +8,12 @@ export const loginSchema = z.object({ email, password: z.string().min(1).max(128
 export const forgotSchema = z.object({ email });
 export const resetSchema = z.object({ token: z.string().min(32).max(256), password, confirmPassword: z.string() }).refine(value => value.password === value.confirmPassword, { message: 'Passwords do not match.', path: ['confirmPassword'] });
 export const tokenSchema = z.object({ token: z.string().min(32).max(256) });
-export const updateMeSchema = z.object({ firstName: z.string().trim().min(1).max(100).optional(), lastName: z.string().trim().min(1).max(100).optional(), email: email.optional() }).refine(value => Object.keys(value).length > 0, 'No changes supplied.');
+export const updateMeSchema = z.object({
+  firstName: z.string().trim().min(1).max(100).optional(),
+  lastName: z.string().trim().min(1).max(100).optional(),
+  email: email.optional(),
+  phone: z.string().trim().min(7).max(32).nullable().optional(),
+  preferredFit: z.enum(['Slim', 'Regular', 'Relaxed']).nullable().optional(),
+  preferredCollar: z.enum(['Spread Collar', 'Button-Down Collar', 'Mandarin Collar', 'Cuban Collar', 'Cutaway Collar']).nullable().optional(),
+}).refine(value => Object.keys(value).length > 0, 'No changes supplied.');
 export function body<T extends z.ZodTypeAny>(schema: T, input: unknown): z.output<T> { const result = schema.safeParse(input); if (!result.success) throw new ValidationError('Invalid request body', result.error.flatten()); return result.data; }

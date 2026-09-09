@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { useAuthStore } from '../features/auth/store/authStore.js';
 
 interface WishlistState {
   savedItemIds: string[];
@@ -43,6 +44,17 @@ export const useWishlistStore = create<WishlistState>()(persist((set, get) => ({
   getItemCount: () => get().savedItemIds.length,
 }), {
   name: 'purvaja-wishlist-v2',
+  version: 1,
+  migrate: () => ({ savedItemIds: [] }),
   storage: createJSONStorage(() => localStorage),
-  partialize: state => ({ savedItemIds: state.savedItemIds }),
+  partialize: state => ({ savedItemIds: useAuthStore.getState().status === 'guest' ? state.savedItemIds : [] }),
 }));
+
+useAuthStore.subscribe((state, previous) => {
+  if (previous.user && (state.user?.id !== previous.user.id || state.status !== 'authenticated')) {
+    useWishlistStore.getState().clearWishlist();
+  } else if (state.status === 'authenticated' && previous.status !== 'authenticated') {
+    // Rewrite persisted guest state so account-owned selections are memory-only.
+    useWishlistStore.setState({ savedItemIds: useWishlistStore.getState().savedItemIds });
+  }
+});

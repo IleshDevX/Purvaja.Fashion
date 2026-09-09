@@ -3,10 +3,19 @@ import type { ProductReview } from '../../../services/api/contracts.js';
 import type { ProductListParams } from '../../../services/api/contracts.js';
 import { productService } from '../services/productService.js';
 
-export function useProductsQuery(params: ProductListParams = {}) {
+export function useProductsQuery(params: ProductListParams = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['products', params],
     queryFn: () => productService.list(params),
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useProductsPaginatedQuery(params: ProductListParams = {}, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['products-paginated', params],
+    queryFn: () => productService.listPaginated(params),
+    enabled: options?.enabled ?? true,
   });
 }
 

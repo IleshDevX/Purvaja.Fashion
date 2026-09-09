@@ -46,7 +46,7 @@ describe('custom authentication', () => {
   it('consumes verification and reset tokens and revokes existing sessions on reset', async () => {
     const prisma = getPrismaClient();
     const verification = `verify-${randomUUID()}-${randomUUID()}`;
-    await prisma.emailVerificationToken.create({ data: { userId, tokenHash: hash(verification), expiresAt: new Date(Date.now() + 60000), purpose: 'REGISTRATION' } });
+    await prisma.emailVerificationToken.create({ data: { userId, tokenHash: hash(verification), expiresAt: new Date(Date.now() + 60000), purpose: 'REGISTRATION', targetEmail: email } });
     expect((await request(app).post('/api/v1/auth/verify-email').send({ token: verification })).status).toBe(200);
     expect((await request(app).post('/api/v1/auth/verify-email').send({ token: verification })).status).toBe(404);
     const reset = `reset-${randomUUID()}-${randomUUID()}`;

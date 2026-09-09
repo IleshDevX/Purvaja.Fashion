@@ -21,6 +21,7 @@ import {
   canTrackOrder,
 } from '../../features/orders/utils/orderStatus.js';
 import { useToast } from '../../app/providers.js';
+import { Dialog } from '../../components/ui/Dialog.js';
 
 export function OrderListPage() {
   const { addToast } = useToast();
@@ -300,17 +301,20 @@ export function OrderListPage() {
 
         {/* Cancel Modal */}
         {cancelModalOrder && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-ivory-100 w-full max-w-md p-6 shadow-overlay border border-ivory-300 relative animate-scale-in space-y-4">
+          <Dialog open onClose={() => setCancelModalOrder(null)} labelledBy="cancel-modal-title"
+            overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            panelClassName="bg-ivory-100 w-full max-w-md p-6 shadow-overlay border border-ivory-300 relative animate-scale-in space-y-4 rounded-2xl">
               <button
+                type="button"
                 onClick={() => setCancelModalOrder(null)}
-                className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-900"
+                aria-label="Close cancellation modal"
+                className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-charcoal-400 hover:text-charcoal-900 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2 text-error">
                 <AlertTriangle className="w-5 h-5" />
-                <h3 className="font-serif text-heading-lg text-charcoal-900">Cancel Order</h3>
+                <h3 id="cancel-modal-title" className="font-serif text-heading-lg text-charcoal-900">Cancel Order</h3>
               </div>
               <p className="text-body-sm text-charcoal-600">
                 Are you sure you want to cancel Order{' '}
@@ -324,7 +328,7 @@ export function OrderListPage() {
                   id="cancel-reason"
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
-                  className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none"
+                  className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none rounded-xl"
                 >
                   <option value="Ordered wrong size or color">Ordered wrong size or color</option>
                   <option value="Found alternative piece">Found alternative piece</option>
@@ -334,33 +338,37 @@ export function OrderListPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={() => setCancelModalOrder(null)}
-                  className="flex-1 py-2.5 border border-ivory-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900"
+                  className="flex-1 py-2.5 min-h-[44px] border border-ivory-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 rounded-xl"
                 >
                   Keep Order
                 </button>
                 <button
+                  type="button"
                   onClick={handleCancelOrderConfirm}
-                  className="flex-1 py-2.5 bg-error text-white text-body-sm font-semibold hover:bg-error/90"
+                  className="flex-1 py-2.5 min-h-[44px] bg-error text-white text-body-sm font-semibold hover:bg-error/90 rounded-xl"
                 >
                   Confirm Cancel
                 </button>
               </div>
-            </div>
-          </div>
+          </Dialog>
         )}
 
         {/* Return Modal */}
         {returnModalOrder && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-ivory-100 w-full max-w-md p-6 shadow-overlay border border-ivory-300 relative animate-scale-in space-y-4">
+          <Dialog open onClose={() => setReturnModalOrder(null)} labelledBy="return-modal-title"
+            overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            panelClassName="bg-ivory-100 w-full max-w-md p-6 shadow-overlay border border-ivory-300 relative animate-scale-in space-y-4 rounded-2xl">
               <button
+                type="button"
                 onClick={() => setReturnModalOrder(null)}
-                className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-900"
+                aria-label="Close return modal"
+                className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-charcoal-400 hover:text-charcoal-900 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 className="font-serif text-heading-lg text-charcoal-900">Request Return / Swap</h3>
+              <h3 id="return-modal-title" className="font-serif text-heading-lg text-charcoal-900">Request Return / Swap</h3>
               <p className="text-body-sm text-charcoal-600">
                 Order <strong className="text-charcoal-900">#{returnModalOrder.orderNumber}</strong> · 7-Day Guarantee
               </p>
@@ -372,7 +380,7 @@ export function OrderListPage() {
                   id="return-reason"
                   value={returnReason}
                   onChange={e => setReturnReason(e.target.value)}
-                  className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none"
+                  className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none rounded-xl"
                 >
                   <option value="Size fit issue — need exchange">Size fit issue — need exchange</option>
                   <option value="Fabric color differs slightly from screen">Fabric color differs slightly</option>
@@ -382,20 +390,21 @@ export function OrderListPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={() => setReturnModalOrder(null)}
-                  className="flex-1 py-2.5 border border-ivory-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900"
+                  className="flex-1 py-2.5 min-h-[44px] border border-ivory-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleReturnOrderConfirm}
-                  className="flex-1 py-2.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold hover:bg-charcoal-800"
+                  className="flex-1 py-2.5 min-h-[44px] bg-charcoal-900 text-ivory-100 text-body-sm font-semibold hover:bg-charcoal-800 rounded-xl"
                 >
                   Schedule Return
                 </button>
               </div>
-            </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </div>

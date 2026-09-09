@@ -1,6 +1,7 @@
 import { createClient, type RedisClientType } from 'redis';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+import { metrics } from '../utils/metrics.js';
 
 type Cacheable = Record<string, unknown> | unknown[];
 
@@ -11,6 +12,10 @@ type Cacheable = Record<string, unknown> | unknown[];
 export class CacheService {
   private client: RedisClientType | undefined;
 
+  get isConnected(): boolean {
+    return Boolean(this.client?.isReady);
+  }
+
   async connect(): Promise<void> {
     if (!env.REDIS_URL || this.client?.isReady) return;
 
@@ -18,7 +23,7 @@ export class CacheService {
       url: env.REDIS_URL,
       socket: {
         connectTimeout: 2_000,
-        reconnectStrategy: false,
+        reconnectStrategy: retries => (retries > 5 ? new Error('Redis max retries reached') : Math.min(retries * 100, 2_000)),
       },
     });
     client.on('error', error => {
@@ -59,11 +64,16 @@ export class CacheService {
   }
 
   private async get<T extends Cacheable>(key: string): Promise<T | undefined> {
-    if (!this.client?.isReady) return undefined;
+    if (!this.client?.isReady) {
+      metrics.recordRedisOp('fallback');
+      return undefined;
+    }
     try {
       const value = await this.client.get(key);
+      metrics.recordRedisOp(value === null ? 'miss' : 'hit');
       return value === null ? undefined : JSON.parse(value) as T;
     } catch (error) {
+      metrics.recordRedisOp('error');
       logger.warn({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Redis cache read failed.');
       return undefined;
     }
@@ -74,7 +84,31 @@ export class CacheService {
     try {
       await this.client.set(key, JSON.stringify(value), { EX: ttlSeconds });
     } catch (error) {
+      metrics.recordRedisOp('error');
       logger.warn({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Redis cache write failed.');
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    if (!this.client?.isReady) return;
+    try {
+      await this.client.del(key);
+    } catch (error) {
+      metrics.recordRedisOp('error');
+      logger.warn({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Redis cache delete failed.');
+    }
+  }
+
+  async deletePattern(pattern: string): Promise<void> {
+    if (!this.client?.isReady) return;
+    try {
+      for await (const keyOrKeys of this.client.scanIterator({ MATCH: pattern })) {
+        const batch = Array.isArray(keyOrKeys) ? (keyOrKeys as string[]) : [keyOrKeys as string];
+        await Promise.all(batch.map(k => this.client!.del(k)));
+      }
+    } catch (error) {
+      metrics.recordRedisOp('error');
+      logger.warn({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Redis cache deletePattern failed.');
     }
   }
 }

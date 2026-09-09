@@ -63,8 +63,7 @@ describe('CacheService', () => {
     expect(mockClient.disconnect).toHaveBeenCalled();
   });
 
-  it('runs live integration with a real Redis server when REDIS_URL is reachable', async () => {
-    if (!env.REDIS_URL) return;
+  it.skipIf(!env.REDIS_URL)('runs live integration with a real Redis server when REDIS_URL is reachable', async () => {
 
     const cache = new CacheService();
     await cache.connect();
@@ -82,4 +81,3 @@ describe('CacheService', () => {
     await cache.disconnect();
   });
 });
-

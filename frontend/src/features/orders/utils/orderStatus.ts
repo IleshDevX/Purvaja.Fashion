@@ -49,15 +49,15 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, StatusMeta> = {
     variant: 'error',
     description: 'Payment authorization could not be completed.',
   },
+  return_requested: {
+    label: 'Return Requested',
+    variant: 'warning',
+    description: 'The return request is awaiting review.',
+  },
   returned: {
     label: 'Returned',
     variant: 'neutral',
     description: 'Return request processed and items returned.',
-  },
-  refunded: {
-    label: 'Refunded',
-    variant: 'neutral',
-    description: 'Refund amount credited back to original payment method.',
   },
 };
 
@@ -70,15 +70,11 @@ export const STANDARD_MILESTONE_STATUSES: OrderStatus[] = [
 ];
 
 export function canCancelOrder(order: Order): boolean {
-  const cancellableStatuses: OrderStatus[] = ['pending', 'confirmed', 'processing'];
-  return cancellableStatuses.includes(order.status);
+  return order.availableActions.canCancel;
 }
 
 export function canReturnOrder(order: Order): boolean {
-  if (order.status !== 'delivered' || order.returnReason) {
-    return false;
-  }
-  return true;
+  return order.availableActions.canReturn;
 }
 
 export function canTrackOrder(order: Order): boolean {

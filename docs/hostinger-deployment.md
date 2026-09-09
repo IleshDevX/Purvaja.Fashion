@@ -40,7 +40,7 @@ The Purvaja Fashion E-Commerce application uses a decoupled monorepo architectur
 - **Data Tier (`backend/prisma/`)**: PostgreSQL relational database managed via Prisma ORM with `@prisma/adapter-pg` connection pooling.
 - **Cache Tier (Optional)**: Redis for caching public published customer reviews. PostgreSQL remains the permanent source of truth; if Redis is unavailable, the application gracefully falls back to PostgreSQL without degraded capabilities.
 - **Email Tier**: Resend transactional email initiated solely through the backend API.
-- **Payment Tier**: UPI-only payment architecture with provider abstraction. (Phase 10 preserves the demo UPI provider for testing; real PhonePe integration is blocked until Phase 12).
+- **Payment Tier**: UPI-only payment architecture with provider abstraction. Demo payment remains limited to local/staging use; real PhonePe integration is deferred until merchant credentials and the provider contract are available.
 
 ---
 
@@ -175,7 +175,7 @@ EMAIL_FROM=noreply@example.com
 REDIS_URL=redis://127.0.0.1:6379
 
 # Payment Configuration (UPI / PhonePe)
-# In Phase 10, 'demo' is rejected in production. Real PhonePe credentials configured in Phase 12.
+# Demo is rejected in production. Configure real PhonePe only after merchant certification.
 PAYMENT_PROVIDER=phonepe
 PHONEPE_MERCHANT_ID=
 PHONEPE_CLIENT_ID=
@@ -435,9 +435,9 @@ Transactional emails (email verification, password reset, order confirmations) a
 > **PHASE 10 PAYMENT SAFETY POLICY & PRODUCTION GATING**:
 > - **DO NOT enable real PhonePe payments in Phase 10.**
 > - The demo UPI payment provider (`PAYMENT_PROVIDER=demo`) is **strictly blocked** when `NODE_ENV=production`.
-> - Phase 12 will handle official PhonePe sandbox credentials, contract verification, request signing, and webhook validation.
+> - A future merchant-integration release must handle official PhonePe credentials, contract verification, request signing, and webhook validation.
 > - No simulated or invented PhonePe credentials may be used in production.
-> - **IMPORTANT IMPLICATION**: Because demo payments are blocked in production and real PhonePe credentials are intentionally deferred to Phase 12, **live production launch is intentionally and safely gated until Phase 12 is completed**. The application is pre-deployment hardened and fully staging-ready, but cannot be launched to live customers until Phase 12.
+> - **IMPORTANT IMPLICATION**: Because demo payments are blocked in production and real PhonePe credentials are unavailable, **live production launch remains gated**. Hosted staging, recovery, monitoring, email, container, and provider evidence must also pass before launch.
 
 ---
 
@@ -558,14 +558,14 @@ Complete every check before cutting DNS over to production:
 - [ ] `TRUST_PROXY` is configured appropriately (`1` or `loopback`).
 - [ ] `DATABASE_URL` connects with `sslmode=require` and a high-entropy password.
 - [ ] `DIRECT_URL` is configured for non-pooled migration operations.
-- [ ] `pnpm validate:config` completes with `PASSED: Environment is production-ready`.
+- [ ] `pnpm validate:config` completes with configuration contract validation passed.
 - [ ] `pnpm db:migrate:deploy` applies all pending migrations without error.
 - [ ] Production database has **NOT** been seeded with demo fixtures (`pnpm db:seed` blocked).
 - [ ] `SESSION_SECRET` is at least 32 cryptographically random characters.
 - [ ] `CORS_ORIGIN` matches exact production domains without wildcards.
 - [ ] `FRONTEND_URL` is set to canonical production HTTPS URL.
 - [ ] Resend sender domain is verified with SPF, DKIM, and DMARC.
-- [ ] `PAYMENT_PROVIDER` is NOT set to `demo` (real PhonePe configured in Phase 12).
+- [ ] `PAYMENT_PROVIDER` is not `demo`; the merchant integration has separate live evidence.
 - [ ] Pre-deployment database backup taken and verified via `pg_dump`.
 - [ ] Initial admin user password rotated from default development credentials.
 - [ ] HTTPS certificates active with automated renewal confirmed.

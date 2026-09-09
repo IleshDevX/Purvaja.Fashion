@@ -19,6 +19,7 @@ export interface DeliveryOption {
   name: string;
   description: string;
   estimatedDelivery: string;
+  pricePaise: number;
   price: number;
   freeThreshold?: number;
 }
@@ -36,17 +37,25 @@ export interface CouponDiscount {
   code: string;
   percentOff?: number;
   fixedOff?: number;
+  discountPaise?: number;
   description: string;
 }
 
 export interface OrderPricing {
+  subtotalPaise: number;
   subtotal: number;
+  productSavingsPaise: number;
   productSavings: number;
+  couponDiscountPaise: number;
   couponDiscount: number;
+  deliveryFeePaise: number;
   deliveryFee: number;
+  grandTotalPaise: number;
   grandTotal: number;
+  freeShippingThresholdPaise: number;
   freeShippingThreshold: number;
   isFreeShipping: boolean;
+  remainingForFreeShippingPaise: number;
   remainingForFreeShipping: number;
 }
 

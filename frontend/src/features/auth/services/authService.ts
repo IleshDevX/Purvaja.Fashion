@@ -4,6 +4,7 @@ import {
   RegisterCredentials,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  ProfileUpdate,
 } from '../types/auth.js';
 import { apiClient } from '../../../services/api/client.js';
 import { unwrapApiData } from '../../../services/api/client.js';
@@ -41,7 +42,7 @@ export const authService = {
     await apiClient.post('/auth/reset-password', request);
   },
 
-  async updateProfile(updated: Pick<User, 'firstName' | 'lastName' | 'email'>): Promise<User> {
+  async updateProfile(updated: ProfileUpdate): Promise<User> {
     const response = await apiClient.patch('/auth/me', updated);
     return responseUser(unwrapApiData(response.data));
   },

@@ -4,6 +4,7 @@ import productRoutes from './product.routes.js';
 import authRoutes from './auth.routes.js';
 import commerceRoutes from './commerce.routes.js';
 import adminRoutes from './admin.routes.js';
+import newsletterRoutes from './newsletter.routes.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/api/v1/products', productRoutes);
 router.use('/api/v1/auth', authRoutes);
 router.use('/api/v1', commerceRoutes);
 router.use('/api/v1/admin', adminRoutes);
+router.use('/api/v1/newsletter', newsletterRoutes);
 
 export default router;

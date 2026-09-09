@@ -5,18 +5,23 @@ interface ClientErrorPayload {
   url: string;
 }
 
+export function scrubTelemetryText(value: string | undefined): string | undefined {
+  return value?.replace(/[?#][^\s)"']*/g, '[REDACTED]');
+}
+
 export function reportClientError(error: Error, componentStack?: string): void {
   const endpoint = import.meta.env.VITE_ERROR_REPORTING_URL;
   if (!endpoint) {
-    if (import.meta.env.DEV) console.error('Unhandled client error:', error, componentStack);
+    if (import.meta.env.DEV) console.error('Unhandled client error:', scrubTelemetryText(error.message), scrubTelemetryText(componentStack));
     return;
   }
 
   const payload: ClientErrorPayload = {
-    message: error.message,
-    stack: error.stack,
-    componentStack,
-    url: window.location.href,
+    message: scrubTelemetryText(error.message) ?? 'Unhandled client error',
+    stack: scrubTelemetryText(error.stack),
+    componentStack: scrubTelemetryText(componentStack),
+    // Authentication links carry bearer secrets in query/fragment values.
+    url: window.location.origin + window.location.pathname,
   };
   const body = JSON.stringify(payload);
 

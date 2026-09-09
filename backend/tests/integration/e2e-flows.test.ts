@@ -24,6 +24,7 @@ describe('Phase 8 E2E Critical Business Flows', () => {
 
     afterAll(async () => {
       if (customerUserId) {
+        await prisma.checkoutIdempotency.deleteMany({ where: { userId: customerUserId } });
         await prisma.inventoryReservation.deleteMany({ where: { order: { userId: customerUserId } } });
         await prisma.payment.deleteMany({ where: { order: { userId: customerUserId } } });
         await prisma.orderItem.deleteMany({ where: { order: { userId: customerUserId } } });
@@ -128,11 +129,18 @@ describe('Phase 8 E2E Critical Business Flows', () => {
     it('7. Verifies order is confirmed and appears in customer order history', async () => {
       const res = await customerAgent.get('/api/v1/orders');
       expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ page: 1, limit: 20, total: expect.any(Number), totalPages: expect.any(Number) });
       const userOrders = res.body.data.items;
       const order = userOrders.find((o: { id: string }) => o.id === createdOrderId);
       expect(order).toBeDefined();
       expect(order.status).toBe('CONFIRMED');
       expect(order.paymentStatus).toBe('SUCCESS');
+      expect(order.availableActions).toEqual({ canCancel: false, canReturn: false });
+
+      const filtered = await customerAgent.get(`/api/v1/orders?status=CONFIRMED&search=${encodeURIComponent(order.orderNumber)}&sort=total-high&limit=1`);
+      expect(filtered.status).toBe(200);
+      expect(filtered.body.data.items).toHaveLength(1);
+      expect(filtered.body.data.items[0].id).toBe(createdOrderId);
     });
   });
 

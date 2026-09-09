@@ -37,7 +37,7 @@ export function AdminDashboardPage() {
       .catch(() => setError('Dashboard data could not be loaded.'));
   }, []);
 
-  if (error) return <div className="rounded-2xl bg-white p-8 text-sm text-rose-800">{error}</div>;
+  if (error) return <div role="alert" className="rounded-2xl bg-white p-8 text-sm text-rose-800">{error}</div>;
   if (!metrics)
     return (
       <div className="rounded-2xl bg-white p-8 text-sm text-charcoal-500">
@@ -111,7 +111,8 @@ export function AdminDashboardPage() {
           </Link>
         </div>
         {metrics.recentOrders.length ? (
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
                 <th className="p-4">Order #</th>
@@ -165,6 +166,7 @@ export function AdminDashboardPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="p-6 text-sm text-charcoal-500">No orders have been created.</p>
         )}

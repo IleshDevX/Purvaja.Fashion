@@ -24,6 +24,8 @@ export interface ShirtColor {
 
 export interface ShirtVariant {
   id: string;
+  pricePaise: number;
+  price?: number;
   color: ShirtColor;
   size: ShirtSize;
   sku: string;
@@ -37,7 +39,9 @@ export interface Shirt {
   name: string;
   tagline: string;
   description: string;
+  pricePaise: number;
   price: number;
+  compareAtPricePaise?: number;
   compareAtPrice?: number;
   discountPercent?: number;
   images: string[];
@@ -52,6 +56,9 @@ export interface Shirt {
   careInstructions: string[];
   rating: number;
   reviewCount: number;
+  editorialRating?: number;
+  editorialReviewCount: number;
+  ratingSource: 'customer' | 'editorial' | 'none';
   isFeatured?: boolean;
   isNewArrival?: boolean;
   isDeal?: boolean;

@@ -7,11 +7,11 @@ import { AuthBootstrap } from '../features/auth/components/AuthBootstrap.js';
 export function App() {
   return (
     <ErrorBoundary>
-      <AppProviders>
-        <AuthBootstrap>
+      <AuthBootstrap>
+        <AppProviders>
           <RouterProvider router={router} />
-        </AuthBootstrap>
-      </AppProviders>
+        </AppProviders>
+      </AuthBootstrap>
     </ErrorBoundary>
   );
 }

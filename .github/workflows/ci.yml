@@ -42,14 +42,17 @@ jobs:
 
     env:
       NODE_ENV: test
+      TEST_DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
       PORT: 5001
       DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
       DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
       REDIS_URL: redis://localhost:6379
+      RATE_LIMIT_REDIS_URL: redis://localhost:6379/1
       SESSION_SECRET: ci-test-session-secret-32-chars-minimum-quality-gate
       FRONTEND_URL: http://localhost:5174
-      CORS_ORIGIN: http://localhost:5174
+      CORS_ORIGIN: http://localhost:5174,http://localhost:4174
       EMAIL_FROM: noreply@purvaja.fashion
+      INITIAL_ADMIN_EMAIL: ci-admin@example.invalid
       VITE_API_URL: http://localhost:5001/api/v1
       VITE_APP_NAME: Purvaja Fashion - Atelier CI
 
@@ -71,7 +74,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate Prisma schema
+      - name: Create restricted disposable test role
+        # Bootstrap uses the disposable CI service only; later steps use a
+        # database-owning role with no cluster administration privileges.
+        run: node backend/tests/bootstrap-ci.mjs
+
+      - name: Validate Prisma schema with restricted test credentials
         run: pnpm db:validate
 
       - name: Generate Prisma client
@@ -79,6 +87,11 @@ jobs:
 
       - name: Deploy Prisma migrations to fresh CI database
         run: pnpm db:migrate
+
+      - name: Verify migration replay and schema agreement
+        run: |
+          pnpm db:migrate:deploy
+          pnpm --filter @ecommerce/prototype-b-backend exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: Seed deterministic test fixtures (50 products / 300 variants)
         run: pnpm db:seed
@@ -95,8 +108,17 @@ jobs:
       - name: Run backend test suite with coverage
         run: pnpm --filter @ecommerce/prototype-b-backend test:coverage
 
+      - name: Verify shared request quotas against disposable Redis
+        run: pnpm --filter @ecommerce/prototype-b-backend exec vitest run tests/unit/rate-limit-store.live.test.ts
+
       - name: Run frontend test suite with coverage
         run: pnpm --filter @ecommerce/prototype-b test:coverage
+
+      - name: Install Chromium for authenticated browser acceptance
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify authenticated session isolation and persistence in Chromium
+        run: pnpm test:e2e
 
       - name: Verify clean git tree (no unstaged artifacts, drift, or untracked files)
         run: |

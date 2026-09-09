@@ -147,7 +147,7 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
               </div>
 
               {/* Sophisticated Luxury Serif Title with Smooth Transition */}
-              <h1 key={`title-${slide.id}`} className="space-y-0 font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] tracking-tight text-charcoal-950 animate-fade-in">
+              <h1 key={`title-${slide.id}`} className="space-y-0 font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] tracking-tight text-charcoal-950 break-words animate-fade-in">
                 <span className="block overflow-hidden">{slide.line1}</span>
                 <span className="block overflow-hidden">{slide.line2}</span>
                 <span className="block overflow-hidden italic text-gold-700">{slide.line3}</span>
@@ -179,8 +179,8 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
                   </Link>
                 </div>
 
-                {/* 4 Interactive Slide Progress Pills */}
-                <div className="flex items-center gap-2 pt-1 xs:pt-0">
+                {/* 4 Interactive Slide Progress Pills with Accessible Hit Targets */}
+                <div className="flex items-center gap-1 pt-1 xs:pt-0" role="tablist" aria-label="Hero carousel slide navigation">
                   {HERO_SLIDES.map((s, idx) => {
                     const isActive = currentSlide === idx;
                     return (
@@ -189,12 +189,17 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
                         type="button"
                         onClick={() => setCurrentSlide(idx)}
                         aria-label={`Go to slide ${idx + 1}`}
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          isActive
-                            ? 'w-8 bg-charcoal-950'
-                            : 'w-2 bg-charcoal-900/20 hover:bg-charcoal-900/40'
-                        }`}
-                      />
+                        aria-current={isActive ? 'true' : undefined}
+                        className="flex h-11 items-center justify-center px-1.5 focus-visible:outline-offset-2"
+                      >
+                        <span
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            isActive
+                              ? 'w-8 bg-charcoal-950'
+                              : 'w-2.5 bg-charcoal-900/20 hover:bg-charcoal-900/40'
+                          }`}
+                        />
+                      </button>
                     );
                   })}
                 </div>
@@ -251,18 +256,18 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
                   aria-label="Previous slide"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95"
                   aria-label="Next slide"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 </button>
               </div>
 

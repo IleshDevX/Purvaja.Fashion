@@ -4,6 +4,12 @@ import { Outlet, Link } from 'react-router-dom';
 export function AuthLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="flex min-h-screen antialiased">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-charcoal-950 focus:px-4 focus:py-3 focus:text-white"
+      >
+        Skip to main content
+      </a>
       {/* Left — Fashion Imagery */}
       <div className="hidden lg:flex lg:w-1/2 bg-charcoal-900 relative overflow-hidden items-end p-12">
         <div
@@ -24,7 +30,7 @@ export function AuthLayout({ children }: { children?: ReactNode }) {
       </div>
 
       {/* Right — Form */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-ivory-100 p-6 sm:p-10">
+      <main id="main-content" className="flex-1 flex flex-col items-center justify-center bg-ivory-100 p-6 sm:p-10">
         {/* Mobile Logo */}
         <div className="lg:hidden mb-8">
           <Link to="/" className="font-serif text-2xl text-charcoal-900">PURVAJA</Link>
@@ -37,7 +43,7 @@ export function AuthLayout({ children }: { children?: ReactNode }) {
             ← Return to Storefront
           </Link>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

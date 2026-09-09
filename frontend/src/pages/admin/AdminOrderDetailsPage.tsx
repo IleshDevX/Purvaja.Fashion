@@ -238,10 +238,12 @@ export function AdminOrderDetailsPage() {
 
             {validTransitions.length > 0 ? (
               <>
+                <label htmlFor="admin-order-status-select" className="sr-only">Select new dispatch status</label>
                 <select
+                  id="admin-order-status-select"
                   value={selectedStatus}
                   onChange={e => setSelectedStatus(e.target.value as AdminOrderTransition)}
-                  className="w-full rounded-xl bg-white border border-ivory-300 px-3 py-2.5 text-xs font-bold text-charcoal-950 outline-none cursor-pointer"
+                  className="w-full rounded-xl bg-white border border-ivory-300 px-3 py-2.5 text-xs font-bold text-charcoal-950 outline-none cursor-pointer min-h-[44px]"
                 >
                   {validTransitions.map(next => (
                     <option key={next} value={next}>
@@ -254,7 +256,7 @@ export function AdminOrderDetailsPage() {
                   type="button"
                   disabled={updating || !selectedStatus}
                   onClick={handleUpdateStatus}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-charcoal-950 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-gold-500 hover:text-charcoal-950 transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-charcoal-950 py-2.5 min-h-[44px] text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-gold-500 hover:text-charcoal-950 transition-colors disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span>{updating ? 'Applying…' : 'Apply Status Transition'}</span>

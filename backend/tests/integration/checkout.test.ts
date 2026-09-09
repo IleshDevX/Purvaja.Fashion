@@ -18,7 +18,7 @@ beforeAll(async () => {
   agent = request.agent(app); const login = await agent.post('/api/v1/auth/login').send({ email, password: 'SecurePassword123' });
   csrf = (login.headers['set-cookie'] as unknown as string[]).find(value => value.startsWith(`${CSRF_COOKIE}=`))!.split(';')[0]!.split('=')[1]!;
 });
-afterAll(async () => { if (userId) { await prisma.inventoryReservation.deleteMany({ where: { order: { userId } } }); await prisma.payment.deleteMany({ where: { order: { userId } } }); await prisma.orderItem.deleteMany({ where: { order: { userId } } }); await prisma.order.deleteMany({ where: { userId } }); await prisma.cart.deleteMany({ where: { userId } }); await prisma.session.deleteMany({ where: { userId } }); await prisma.user.delete({ where: { id: userId } }); } });
+afterAll(async () => { if (userId) { await prisma.checkoutIdempotency.deleteMany({ where: { userId } }); await prisma.inventoryReservation.deleteMany({ where: { order: { userId } } }); await prisma.payment.deleteMany({ where: { order: { userId } } }); await prisma.orderItem.deleteMany({ where: { order: { userId } } }); await prisma.order.deleteMany({ where: { userId } }); await prisma.cart.deleteMany({ where: { userId } }); await prisma.session.deleteMany({ where: { userId } }); await prisma.user.delete({ where: { id: userId } }); } });
 
 describe('UPI checkout', () => {
   it('rejects unauthenticated and empty-cart checkout requests', async () => {

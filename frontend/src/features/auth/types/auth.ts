@@ -3,8 +3,16 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
+  preferredFit?: 'Slim' | 'Regular' | 'Relaxed' | null;
+  preferredCollar?: 'Spread Collar' | 'Button-Down Collar' | 'Mandarin Collar' | 'Cuban Collar' | 'Cutaway Collar' | null;
+  pendingEmail?: string | null;
+  status?: 'active' | 'suspended' | 'deleted';
+  emailVerified?: boolean;
   role: 'customer' | 'admin';
 }
+
+export type ProfileUpdate = Partial<Pick<User, 'firstName' | 'lastName' | 'email' | 'phone' | 'preferredFit' | 'preferredCollar'>>;
 
 export type AuthStatus = 'guest' | 'authenticated' | 'loading';
 
@@ -39,12 +47,14 @@ export interface AuthState {
   isInitializing: boolean;
   isLoading: boolean;
   error: string | null;
+  fieldErrors?: Record<string, string[]> | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   register: (credentials: RegisterCredentials) => Promise<boolean>;
   forgotPassword: (request: ForgotPasswordRequest) => Promise<boolean>;
   resetPassword: (request: ResetPasswordRequest) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   clearError: () => void;
-  updateProfile: (updated: Pick<User, 'firstName' | 'lastName' | 'email'>) => Promise<boolean>;
+  updateProfile: (updated: ProfileUpdate) => Promise<boolean>;
   initialize: () => Promise<void>;
+  handleSessionExpired: () => void;
 }
