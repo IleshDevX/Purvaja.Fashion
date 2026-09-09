@@ -12,12 +12,12 @@ export function AdminProductDetailsPage() {
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    void adminService
-      .getProduct(productId)
-      .then(setProduct)
-      .catch(() => setError('Product was not found or could not be loaded.'));
-  }, [productId]);
+  const load = () => {
+    setError(''); setProduct(null);
+    void adminService.getProduct(productId).then(setProduct)
+      .catch(cause => setError(cause instanceof Error ? cause.message : 'Product was not found or could not be loaded.'));
+  };
+  useEffect(load, [productId]);
 
   const handleStatusChange = async (newStatus: AdminProduct['status']) => {
     if (!product) return;
@@ -38,6 +38,7 @@ export function AdminProductDetailsPage() {
       <div className="rounded-2xl bg-white border border-ivory-300 p-8 text-center max-w-md mx-auto space-y-4">
         <Package className="h-10 w-10 text-charcoal-400 mx-auto" />
         <h2 className="font-serif text-xl font-light text-charcoal-950">{error}</h2>
+        <button type="button" onClick={load} className="text-xs font-bold text-gold-800">Retry</button>
         <Link to="/admin/products" className="inline-block text-xs font-bold text-gold-800">
           ← Return to Products
         </Link>
@@ -153,11 +154,12 @@ export function AdminProductDetailsPage() {
           <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white shadow-2xs">
             <div className="flex items-center justify-between border-b border-ivory-200 p-5">
               <h2 className="font-serif text-lg font-bold text-charcoal-950">SKU Variants Matrix</h2>
-              <Link to="/admin/variants" className="text-xs font-bold text-gold-800 hover:underline">
+              <Link to={`/admin/variants?productId=${encodeURIComponent(product.id)}`} className="text-xs font-bold text-gold-800 hover:underline">
                 Manage Variants →
               </Link>
             </div>
-            <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
               <thead className="bg-ivory-50 text-charcoal-500">
                 <tr>
                   <th className="p-4">SKU</th>
@@ -201,6 +203,7 @@ export function AdminProductDetailsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

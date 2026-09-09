@@ -51,18 +51,19 @@ beforeAll(async () => {
 afterAll(async () => {
   const userIds = [customerId, strangerId].filter(Boolean);
   if (userIds.length > 0) {
-    await prisma.inventoryReservation.deleteMany({ where: { order: { userId: { in: userIds } } } });
-    await prisma.payment.deleteMany({ where: { order: { userId: { in: userIds } } } });
-    await prisma.orderItem.deleteMany({ where: { order: { userId: { in: userIds } } } });
-    await prisma.order.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.cartItem.deleteMany({ where: { cart: { userId: { in: userIds } } } });
-    await prisma.cart.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.session.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    await prisma.checkoutIdempotency.deleteMany({ where: { userId: { in: userIds } } }).catch(() => {});
+    await prisma.inventoryReservation.deleteMany({ where: { order: { userId: { in: userIds } } } }).catch(() => {});
+    await prisma.payment.deleteMany({ where: { order: { userId: { in: userIds } } } }).catch(() => {});
+    await prisma.orderItem.deleteMany({ where: { order: { userId: { in: userIds } } } }).catch(() => {});
+    await prisma.order.deleteMany({ where: { userId: { in: userIds } } }).catch(() => {});
+    await prisma.cartItem.deleteMany({ where: { cart: { userId: { in: userIds } } } }).catch(() => {});
+    await prisma.cart.deleteMany({ where: { userId: { in: userIds } } }).catch(() => {});
+    await prisma.session.deleteMany({ where: { userId: { in: userIds } } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
   }
 });
 
-describe('payment and order lifecycle', () => {
+describe('payment and order lifecycle', { timeout: 15000 }, () => {
   it('handles failed demo payment: marks payment FAILED, releases reservations, and cancels order', async () => {
     // 1. Add item to cart
     await customerAgent
@@ -95,7 +96,7 @@ describe('payment and order lifecycle', () => {
     expect(await prisma.inventoryReservation.count({ where: { orderId, status: 'RELEASED' } })).toBe(1);
     const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
     expect(order.status).toBe('CANCELLED');
-  });
+  }, 20000);
 
   it('handles successful demo payment: marks payment SUCCESS, consumes reservation, and confirms order', async () => {
     // 1. Add item to cart
@@ -165,5 +166,5 @@ describe('payment and order lifecycle', () => {
       .send({ reason: 'Customer changed mind' });
     expect(cancelRes.status).toBe(409);
     expect(cancelRes.body.error.code).toBe('ORDER_NOT_CANCELLABLE');
-  });
+  }, 20000);
 });

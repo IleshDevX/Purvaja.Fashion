@@ -6,7 +6,15 @@ build/
 .env.*
 !.env.example
 coverage/
+playwright-report/
+test-results/
 *.log
 .idea/
 .vscode/
 backend/src/generated/
+*.sql
+!backend/prisma/migrations/**/migration.sql
+*.dump
+*.bak
+*.tar.gz
+backups/

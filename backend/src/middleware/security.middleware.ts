@@ -1,9 +1,24 @@
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
-import rateLimit from 'express-rate-limit';
+import { createLimiter } from './rate-limit.middleware.js';
 import helmet from 'helmet';
 import { env } from '../config/env.js';
+
+import { ForbiddenError } from '../utils/errors.js';
+
+function isDevOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      origin === env.FRONTEND_URL
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function applySecurityMiddleware(app: Express): void {
   // Security HTTP Headers
@@ -11,9 +26,19 @@ export function applySecurityMiddleware(app: Express): void {
 
   // CORS Configuration
   const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean);
+  if (allowedOrigins.includes('*')) {
+    throw new Error('CORS_ORIGIN cannot use wildcard * with credentialed authentication.');
+  }
+
   app.use(
     cors({
-      origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+      origin: (requestOrigin, callback) => {
+        if (!requestOrigin) return callback(null, true);
+        if (allowedOrigins.includes(requestOrigin) || (['development', 'test'].includes(env.NODE_ENV) && isDevOrigin(requestOrigin))) {
+          return callback(null, true);
+        }
+        return callback(new ForbiddenError('Not allowed by CORS', 'CORS_NOT_ALLOWED'));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'Idempotency-Key'],
@@ -21,18 +46,12 @@ export function applySecurityMiddleware(app: Express): void {
   );
 
   // Rate Limiting
-  const limiter = rateLimit({
+  const limiter = createLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: env.NODE_ENV === 'test' ? 1000 : 100, // Limit per IP
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      success: false,
-      error: {
-        code: 'RATE_LIMIT_EXCEEDED',
-        message: 'Too many requests, please try again later.',
-      },
-    },
+    prodMax: 100,
+    allowTestLimitOverride: false,
+    code: 'RATE_LIMIT_EXCEEDED',
+    message: 'Too many requests, please try again later.',
   });
   app.use('/api', limiter);
   app.use(cookieParser());

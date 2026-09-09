@@ -19,6 +19,8 @@ export const catalogProductSelect = {
   careInstructions: true,
   rating: true,
   reviewCount: true,
+  editorialRating: true,
+  editorialReviewCount: true,
   isFeatured: true,
   isNewArrival: true,
   isDeal: true,
@@ -26,7 +28,7 @@ export const catalogProductSelect = {
   images: { select: { url: true }, orderBy: { sortOrder: 'asc' } },
   categories: { select: { category: { select: { id: true, name: true, slug: true } } } },
   variants: {
-    select: { id: true, sku: true, size: true, colorName: true, colorHex: true, stockQuantity: true, status: true },
+    select: { id: true, sku: true, size: true, colorName: true, colorHex: true, stockQuantity: true, status: true, priceOverridePaise: true },
     orderBy: [{ colorName: 'asc' }, { size: 'asc' }],
   },
 } satisfies Prisma.ProductSelect;
@@ -40,8 +42,8 @@ function equalsAny(values: string[] | undefined): Prisma.StringFilter | undefine
 function buildWhere(query: ProductListQuery): Prisma.ProductWhereInput {
   const and: Prisma.ProductWhereInput[] = [{ status: ProductStatus.ACTIVE }];
   const price: Prisma.IntFilter = {};
-  if (query.minPrice !== undefined) price.gte = Math.round(query.minPrice * 100);
-  if (query.maxPrice !== undefined) price.lte = Math.round(query.maxPrice * 100);
+  if (query.minPricePaise !== undefined) price.gte = query.minPricePaise;
+  if (query.maxPricePaise !== undefined) price.lte = query.maxPricePaise;
   if (Object.keys(price).length) and.push({ basePricePaise: price });
   if (query.minRating !== undefined) and.push({ rating: { gte: query.minRating } });
   if (query.fit?.length) and.push({ fit: equalsAny(query.fit) });
@@ -57,6 +59,9 @@ function buildWhere(query: ProductListQuery): Prisma.ProductWhereInput {
   if (query.size?.length) and.push({ variants: { some: { size: { in: query.size }, status: VariantStatus.ACTIVE } } });
   if (query.color?.length) {
     and.push({ variants: { some: { status: VariantStatus.ACTIVE, OR: [{ colorName: { in: query.color } }, { colorHex: { in: query.color } }] } } });
+  }
+  if (query.ids?.length) {
+    and.push({ id: { in: query.ids } });
   }
   if (query.inStock !== undefined) {
     const availableVariant = { status: VariantStatus.ACTIVE, stockQuantity: { gt: 0 } };

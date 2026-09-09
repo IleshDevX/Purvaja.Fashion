@@ -85,6 +85,8 @@ jobs:
           cp -r backend/dist release-bundle/backend/dist
           cp -r backend/prisma release-bundle/backend/prisma
           cp backend/package.json release-bundle/backend/package.json
+          cp backend/prisma.config.ts release-bundle/backend/prisma.config.ts
+          cp frontend/package.json release-bundle/frontend/package.json
           cp backend/ecosystem.config.cjs release-bundle/backend/ecosystem.config.cjs
           cp package.json release-bundle/package.json
           cp pnpm-lock.yaml release-bundle/pnpm-lock.yaml
@@ -133,15 +135,21 @@ jobs:
           HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           USER: ${{ secrets.HOSTINGER_SSH_USER }}
           PORT: ${{ secrets.HOSTINGER_SSH_PORT || '22' }}
-          TARGET_DIR: /var/www/purvaja
+          RELEASE_ROOT: /var/www/purvaja/releases
+          RELEASE_ID: ${{ github.sha }}
         run: |
-          echo "Syncing staged release bundle to target host..."
-          rsync -avz -e "ssh -p $PORT" ./release-bundle/ $USER@$HOST:$TARGET_DIR/
+          echo "Syncing immutable release bundle to target host..."
+          ssh -p "$PORT" "$USER@$HOST" "mkdir -p '$RELEASE_ROOT/$RELEASE_ID'"
+          rsync -avz --delete -e "ssh -p $PORT" ./release-bundle/ "$USER@$HOST:$RELEASE_ROOT/$RELEASE_ID/"
 
           echo "Running remote deployment and migration tasks on Hostinger VPS..."
-          ssh -p $PORT $USER@$HOST << 'EOF'
-            set -e
-            cd /var/www/purvaja
+          ssh -p "$PORT" "$USER@$HOST" RELEASE_ID="$RELEASE_ID" 'bash -se' << 'EOF'
+            set -Eeuo pipefail
+            ROOT=/var/www/purvaja
+            RELEASE="$ROOT/releases/$RELEASE_ID"
+            CURRENT="$ROOT/current"
+            PREVIOUS="$(readlink -f "$CURRENT" 2>/dev/null || true)"
+            cd "$RELEASE"
 
             echo "Installing production dependencies with frozen lockfile..."
             pnpm install --prod --frozen-lockfile
@@ -149,14 +157,46 @@ jobs:
             echo "Validating production configuration..."
             pnpm validate:config
 
+            echo "Creating and validating a pre-migration database backup..."
+            RELEASE_ID="$RELEASE_ID" BACKUP_DIRECTORY="$ROOT/backups" pnpm backup:create
+
             echo "Applying database schema migrations safely (prisma migrate deploy)..."
             pnpm db:migrate:deploy
+
+            echo "Checking post-deployment database state consistency..."
+            pnpm check:consistency
+
+            echo "Atomically activating immutable release $RELEASE_ID..."
+            ln -sfn "$RELEASE" "$ROOT/current.next"
+            mv -Tf "$ROOT/current.next" "$CURRENT"
+            cd "$CURRENT"
 
             echo "Reloading backend application via PM2 with zero downtime..."
             pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
 
-            echo "Verifying backend healthcheck probe..."
-            curl -f http://127.0.0.1:5001/healthz || exit 1
+            echo "Verifying backend liveness probe (/healthz)..."
+            if ! curl --fail --silent --show-error --max-time 5 http://127.0.0.1:5001/healthz; then
+              echo "FATAL: Liveness probe failed. Restoring previous application release."
+              if [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ]; then
+                ln -sfn "$PREVIOUS" "$ROOT/current.next"
+                mv -Tf "$ROOT/current.next" "$CURRENT"
+                cd "$CURRENT"
+                pm2 reload ecosystem.config.cjs --env production
+              fi
+              exit 1
+            fi
 
-            echo "Deployment successfully executed!"
+            echo "Verifying backend readiness probe (/readyz - DB, migrations, Redis)..."
+            if ! curl --fail --silent --show-error --max-time 5 http://127.0.0.1:5001/readyz; then
+              echo "FATAL: Readiness probe failed. Restoring previous application release."
+              if [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ]; then
+                ln -sfn "$PREVIOUS" "$ROOT/current.next"
+                mv -Tf "$ROOT/current.next" "$CURRENT"
+                cd "$CURRENT"
+                pm2 reload ecosystem.config.cjs --env production
+              fi
+              exit 1
+            fi
+
+            echo "Deployment and readiness verification successfully passed!"
           EOF

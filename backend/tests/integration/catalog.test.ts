@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { app } from '../../src/app.js';
 import { disconnectDatabase, getPrismaClient } from '../../src/config/database.js';
 
-type Product = { id: string; slug: string; price: number; rating: number; sizes: string[]; colors: Array<{ name: string }>; fit: string };
+type Product = { id: string; slug: string; price: number; pricePaise: number; rating: number; sizes: string[]; colors: Array<{ name: string }>; fit: string };
 const testUserIds: string[] = [];
 
 afterAll(async () => {
@@ -29,7 +29,7 @@ describe('public catalog API', () => {
     const product = initial.body.data.items[0] as Product;
     const params = new URLSearchParams({
       page: '1', limit: '10', category: 'shirts', size: product.sizes[0]!, color: product.colors[0]!.name,
-      fit: product.fit, minPrice: '0', maxPrice: String(product.price), minRating: '0', search: product.name.split(' ')[0]!, sort: 'price-asc',
+      fit: product.fit, minPricePaise: '0', maxPricePaise: String(product.pricePaise), minRating: '0', search: product.name.split(' ')[0]!, sort: 'price-asc',
     });
     const response = await request(app).get(`/api/v1/products?${params}`);
     expect(response.status).toBe(200);
@@ -44,7 +44,7 @@ describe('public catalog API', () => {
   it('rejects invalid bounded-pagination and price inputs', async () => {
     const [limit, range] = await Promise.all([
       request(app).get('/api/v1/products?limit=101'),
-      request(app).get('/api/v1/products?minPrice=1000&maxPrice=100'),
+      request(app).get('/api/v1/products?minPricePaise=100000&maxPricePaise=10000'),
     ]);
     expect(limit.status).toBe(400);
     expect(range.status).toBe(400);

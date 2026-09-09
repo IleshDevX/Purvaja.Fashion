@@ -1,83 +1,113 @@
-# Backend API Migration Map
+# Backend API Reference & Migration Map
 
-## Phase 0 Baseline
+## Overview
 
-The current backend is an Express and TypeScript health-check scaffold. Its only
-implemented endpoint is versioned health status. All customer, checkout, and
-admin API paths below are frontend compatibility requirements, not existing
-backend behavior. Future responses must retain the frontend envelope:
-`{ success: true, data: ... }` or `{ success: false, error: { code, message, details? } }`.
+The Purvaja Fashion E-Commerce platform utilizes an Express & TypeScript backend with PostgreSQL (Prisma ORM), Redis caching (with graceful PostgreSQL fallback), Argon2id authentication, atomic inventory locking with stock reservation timeouts, PhonePe PG UPI integration (with local simulation), and Resend transactional emails.
 
-## Implemented Endpoints
+All API endpoints follow the standardized response envelope:
+- **Success:** `{ success: true, data: ... }`
+- **Error:** `{ success: false, error: { code: string, message: string, details?: unknown } }`
 
-| Method | Current path | Auth / role | Request | Response | Current implementation | Target status | Frontend consumer |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| GET | `/health`, `/api/v1/health` | No | None | Health status, timestamp, uptime, environment | Express health controller | KEEP | Operations only |
-| GET | `/api/v1/products` | No | `page`, `limit`, `search`, catalog filters, `sort` | `{ items, page, limit, pageSize, total, totalPages }` | Prisma/PostgreSQL catalog query | IMPLEMENTED | `productService.list` |
-| GET | `/api/v1/products/:slugOrId` | No | UUID or URL-safe slug | `{ product, relatedProducts }` | Prisma/PostgreSQL catalog query | IMPLEMENTED | `productService.getBySlugOrId` |
-| GET | `/api/v1/products/:productId/reviews` | No | UUID or URL-safe slug; `page`, `limit`, `sort` | `{ items, page, limit, pageSize, total, totalPages }` | Published reviews only | IMPLEMENTED | `productService.getReviews` |
+---
 
-## Public Catalog API
+## Complete Implemented Endpoints
 
-`GET /api/v1/products` reads only active products from PostgreSQL through Prisma. Pagination defaults to page `1` and limit `24`; the maximum limit is `100`. Supported filters are comma-separated `category`, `fit`, `fabric`, `size`, `color`, `sleeve`, `collar`, and `pattern`, plus `minPrice`, `maxPrice`, `minRating`, `inStock`, `deals`, and `newArrivals`. Supported sort values are `featured`, `newest`, `price-asc`, `price-desc`, `rating`, and `discount`. Search matches name, description, brand, SKU, and category.
+### 1. System & Health
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| GET | `/health`, `/api/v1/health` | Public | System status, database latency, Redis connection status, uptime |
 
-`GET /api/v1/products/:slugOrId` accepts a UUID or URL-safe product slug and returns the product, images, variants, category summaries, stock state, and up to four same-category related products. It returns `404 PRODUCT_NOT_FOUND` for a valid but unknown identifier and `400 VALIDATION_ERROR` for malformed input.
+### 2. Authentication & Sessions (`/api/v1/auth`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/auth/register` | Public | Register customer account (Argon2id, email verification trigger) |
+| POST | `/api/v1/auth/login` | Public | Authenticate and issue secure HttpOnly session cookie |
+| POST | `/api/v1/auth/logout` | Customer/Admin | Revoke session and clear session cookie (Requires CSRF) |
+| GET | `/api/v1/auth/me` | Customer/Admin | Fetch current authenticated user profile |
+| PATCH | `/api/v1/auth/me` | Customer/Admin | Persist names, phone, fit/collar preferences; email changes remain verification-bound (Requires CSRF) |
+| POST | `/api/v1/auth/verify-email` | Public | Verify email address using SHA-256 token |
+| POST | `/api/v1/auth/resend-verification` | Public | Rate-limited resend of verification email (max 3/hr) |
+| POST | `/api/v1/auth/forgot-password` | Public | Generate and send password reset link |
+| POST | `/api/v1/auth/reset-password` | Public | Reset password using one-time token and revoke sessions |
+| GET | `/api/v1/auth/csrf` | Public | Issue CSRF double-submit token (`pf_csrf` cookie) |
 
-`GET /api/v1/products/:productId/reviews` accepts the same identifier form, returns only `PUBLISHED` reviews, and supports `page`, `limit` (maximum `100`), and `sort` (`newest`, `oldest`, `rating-high`, `rating-low`). Reviewer email and user records are never selected; the public response uses the privacy-safe label `Verified customer`.
+### Newsletter consent (`/api/v1/newsletter`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/newsletter/subscriptions` | Public, rate limited | Idempotently store normalized consent; returns `PENDING_PROVIDER` and does not claim delivery while no provider is configured |
 
-All catalog endpoints are public, use the shared `{ success, data }` envelope, validate query parameters, and use the shared standardized error envelope. They do not expose Prisma errors, authentication data, user records, sessions, or tokens.
+### 3. Customer Addresses (`/api/v1/addresses`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/addresses` | Customer | List all saved customer shipping addresses |
+| POST | `/api/v1/addresses` | Customer | Add new shipping address (optionally set default) |
+| PATCH | `/api/v1/addresses/:addressId` | Customer | Update existing address fields / default status |
+| DELETE | `/api/v1/addresses/:addressId` | Customer | Delete an address owned by the customer |
 
-## Custom Authentication
+### 4. Public Catalog (`/api/v1/products`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/products` | Public | Paginated product listing with filters (`category`, `fit`, `fabric`, `size`, `color`, `sleeve`, `collar`, `pattern`, `minPricePaise`, `maxPricePaise`, `minRating`, `inStock`, `deals`, `newArrivals`, `ids`) and search |
+| GET | `/api/v1/products/:slugOrId` | Public | Product details by UUID or slug with variants and related items |
+| GET | `/api/v1/products/:productId/reviews` | Public | Paginated published product reviews |
+| POST | `/api/v1/products/:productId/reviews` | Customer | Submit a 1-5 star review (Requires completed purchase) |
 
-Implemented endpoints are `POST /api/v1/auth/register`, `POST /login`, `POST /logout`, `GET /me`, `PATCH /me`, `POST /verify-email`, `POST /forgot-password`, `POST /reset-password`, and `GET /csrf`. Registration and login establish a server-side PostgreSQL session whose random browser secret is stored only in a Secure-in-production, HttpOnly, SameSite=Lax cookie. PostgreSQL stores only its SHA-256 hash, expiration, and revocation state.
+### 5. Cart Management (`/api/v1/cart`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/cart` | Customer | Retrieve customer server-side cart with computed pricing |
+| POST | `/api/v1/cart/items` | Customer | Add variant to cart with inventory validation |
+| PATCH | `/api/v1/cart/items/:id` | Customer | Update cart item quantity |
+| DELETE | `/api/v1/cart/items/:id` | Customer | Remove item from cart |
+| DELETE | `/api/v1/cart` | Customer | Clear entire cart |
 
-Passwords are normalized and hashed with Argon2id. Email verification and password reset links contain high-entropy single-use secrets; only their SHA-256 hashes are stored. Resend runs exclusively through the backend email service. If email delivery is unavailable, registration completes safely but reports `emailSent: false`; verification can be retried by a future resend endpoint. Forgot-password always returns the same response, whether or not an account exists.
+### 6. Coupons & Discounts (`/api/v1/coupons`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/coupons/validate` | Customer | Validate coupon code, minimum spend, expiry, and per-user usage limits |
 
-`PATCH /me` and `POST /logout` require the double-submit CSRF token: the frontend reads the non-HttpOnly `pf_csrf` cookie and sends it as `X-CSRF-Token`, while the session cookie remains HttpOnly. All sensitive auth endpoints have a stricter in-memory rate limit. `requireAuth` and `requireRole(...)` load the user and role from the server-side session; frontend role values are never trusted. Unverified users may browse and access their profile; a future checkout phase must require verified email before order placement.
+### 7. Orders & Checkout (`/api/v1`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/checkout` | Customer | Idempotently create an order, reserve inventory and calculate server pricing from exact paise values |
+| GET | `/api/v1/orders` | Customer | Paginated customer-owned orders with validated `page`, `limit`, `status`, `search` and `sort` semantics |
+| GET | `/api/v1/orders/:orderId` | Customer Owner | Order invoice details, tracking milestones, item lines |
+| POST | `/api/v1/orders/:orderId/cancel` | Customer Owner | Cancel when the server-provided `availableActions.canCancel` is true; restore inventory and create the appropriate refund record |
+| POST | `/api/v1/orders/:orderId/returns` | Customer Owner | Request item quantities for return when `availableActions.canReturn` is true |
 
-`POST /api/v1/auth/resend-verification` accepts `{ email }`, always returns the same generic success response for valid input, and is rate-limited to three requests per IP per hour. It sends a new verification email only for active, unverified accounts. The backend sends the email before atomically consuming prior active registration verification tokens and recording the new hashed, 24-hour token; failed delivery leaves existing valid tokens intact.
+### 8. Payments (`/api/v1/payments`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/payments/:paymentId/demo-result` | Customer Owner | Apply a simulated success/failure result (DEV/TEST demo mode only) |
+| POST | `/api/v1/payments/:paymentId/initiate` | Customer Owner | Idempotently claim or resume the durable payment-initiation workflow |
+| GET | `/api/v1/payments/:paymentId/status` | Customer Owner | Return the authoritative order/payment state |
+| POST | `/api/v1/payments/phonepe/callback` | Public (Signed) | PhonePe server-to-server webhook callback with X-VERIFY checksum validation |
 
-## Required Customer Endpoints
-
-| Method | Target path | Auth / role | Request or query | Response | Target status | Frontend consumer |
-| --- | --- | --- | --- | --- | --- | --- |
-| POST | `/api/v1/auth/register` | No | Registration credentials | Authenticated user | REBUILD | `authService.register` |
-| POST | `/api/v1/auth/login` | No | Login credentials | Authenticated user and session cookie | REBUILD | `authService.login` |
-| POST | `/api/v1/auth/logout` | Customer | None | Empty success response | REBUILD | `authService.logout` |
-| GET | `/api/v1/auth/me` | Customer | None | Current user | REBUILD | `authService.getCurrentUser` |
-| PATCH | `/api/v1/auth/me` | Customer | Profile fields | Updated user | REBUILD | `authService.updateProfile` |
-| POST | `/api/v1/auth/forgot-password` | No | Email | Empty success response | REBUILD | `authService.forgotPassword` |
-| POST | `/api/v1/auth/reset-password` | No | Reset token and password | Empty success response | REBUILD | `authService.resetPassword` |
-| GET | `/api/v1/products` | No | Search, filters, sort, limit | Product list or paginated items | REBUILD | `productService.list` |
-| GET | `/api/v1/products/:slugOrId` | No | Product slug or UUID | Product with related products | REBUILD | `productService.getBySlugOrId` |
-| GET | `/api/v1/products/:productId/reviews` | No | Product ID | Reviews | REBUILD | `productService.getReviews` |
-| POST | `/api/v1/products/:productId/reviews` | Customer | Rating, title, comment | Created review | REBUILD | `productService.createReview` |
-| POST | `/api/v1/orders/checkout` | Customer | Lines, address, delivery, payment, coupon | Order ID, payment state, optional redirect | REBUILD | `orderService.checkout` |
-| GET | `/api/v1/orders/my-orders` | Customer | Order filters | Customer orders | REBUILD | `orderService.list` |
-| GET | `/api/v1/orders/:orderId` | Customer owner | None | Order | REBUILD | `orderService.getById` |
-| GET | `/api/v1/orders/:orderId/status` | Customer owner | None | Order and payment status | REBUILD | `orderService.getPaymentStatus` |
-| POST | `/api/v1/orders/:orderId/cancel` | Customer owner | Cancellation reason | Updated order | REBUILD | `orderService.cancel` |
-| POST | `/api/v1/orders/:orderId/returns` | Customer owner | Return reason | Updated order | REBUILD | `orderService.requestReturn` |
-
-## Required Admin Endpoints
-
-| Method | Target path | Auth / role | Request or query | Response | Target status | Frontend consumer |
-| --- | --- | --- | --- | --- | --- | --- |
-| GET | `/api/v1/admin/analytics/metrics` | Admin | None | Dashboard metrics | REBUILD | `adminService.getDashboardMetrics` |
-| GET | `/api/v1/admin/analytics/sales` | Admin | `timeframe` | Sales points | REBUILD | `adminService.getSalesChartData` |
-| GET | `/api/v1/admin/analytics/top-products` | Admin | None | Product sales ranking | REBUILD | `adminService.getTopProducts` |
-| GET | `/api/v1/admin/customers` | Admin | `search` | Customers | REBUILD | `adminService.getCustomers` |
-| GET | `/api/v1/admin/inventory` | Admin | `filter` | Variant inventory | REBUILD | `adminService.getInventory` |
-| PATCH | `/api/v1/admin/inventory/:variantId` | Admin | Stock count | Updated inventory item | REBUILD | `adminService.updateVariantStock` |
-| GET / PUT | `/api/v1/admin/settings` | Admin | Store settings for PUT | Settings | REBUILD | `adminService.getSettings`, `updateSettings` |
-| GET / POST | `/api/v1/admin/products` | Admin | Product filter or product form | Product list or created product | REBUILD | `adminService.listProducts`, `createProduct` |
-| PUT / DELETE | `/api/v1/admin/products/:id` | Admin | Product form for PUT | Updated product or empty success | REBUILD | `adminService.updateProduct`, `deleteProduct` |
-| GET | `/api/v1/admin/orders` | Admin | None | Orders | REBUILD | `adminService.listOrders` |
-| GET / PATCH | `/api/v1/admin/orders/:id` | Admin | Status for PATCH | Order | REBUILD | `adminService.getOrder`, `updateOrderStatus` |
-
-## Compatibility Rules
-
-- The backend calculates price, discounts, delivery, stock, and payment state; clients send only requested input.
-- Cart and wishlist currently persist locally in the frontend. Their server synchronization is a future API decision, not a Phase 0 implementation.
-- No current `/payments`, `/cart`, `/cart_items`, `/ratings`, or `/users` endpoint exists. These are `UNKNOWN` until a Phase 1 contract decision; do not add unconsumed routes.
-- PhonePe callbacks must be a separate signed, idempotent backend-only route and must never be invoked by the browser as a trusted payment result.
+### 9. Administration (`/api/v1/admin`)
+| Method | Path | Auth / Role | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/admin/dashboard` | Admin | Real-time sales, order counts, revenue, and inventory alerts |
+| GET | `/api/v1/admin/products` | Admin | Paginated admin product list with inventory counts |
+| GET | `/api/v1/admin/products/:id` | Admin | Product detail with variants and categories |
+| POST | `/api/v1/admin/products` | Admin | Create product with categories, images, and base attributes |
+| PATCH | `/api/v1/admin/products/:id` | Admin | Update product information and category associations |
+| GET | `/api/v1/admin/categories` | Admin | List all product categories |
+| POST | `/api/v1/admin/categories` | Admin | Create product category |
+| PATCH | `/api/v1/admin/categories/:id` | Admin | Update product category |
+| GET | `/api/v1/admin/variants` | Admin | Paginated SKU variant management |
+| POST | `/api/v1/admin/variants` | Admin | Create SKU variant with size, color, and stock |
+| PATCH | `/api/v1/admin/variants/:id` | Admin | Update SKU variant |
+| GET | `/api/v1/admin/inventory` | Admin | Stock matrix (in-stock, low-stock, out-of-stock) |
+| POST | `/api/v1/admin/inventory/adjust` | Admin | Atomic manual stock adjustment with movement audit log |
+| POST | `/api/v1/admin/inventory/set-stock/:id` | Admin | Force set variant stock count with correction audit |
+| GET | `/api/v1/admin/inventory/movements` | Admin | Paginated inventory ledger history (audited) |
+| GET | `/api/v1/admin/inventory/reservations` | Admin | Active and expired checkout inventory reservations |
+| GET | `/api/v1/admin/orders` | Admin | Paginated customer orders with search and status |
+| GET | `/api/v1/admin/orders/:id` | Admin | Order inspection with payments, items, and customer info |
+| PATCH | `/api/v1/admin/orders/:id/status` | Admin | Update order status (`PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `RETURNED`) with automatic stock restoration on cancellation/return |
+| GET | `/api/v1/admin/customers` | Admin | Paginated customer list with order counts |
+| GET | `/api/v1/admin/customers/:id` | Admin | Customer details with recent order history |
+| GET | `/api/v1/admin/coupons` | Admin | List discount coupons |
+| POST | `/api/v1/admin/coupons` | Admin | Create promotional discount coupon |
+| PATCH | `/api/v1/admin/coupons/:id` | Admin | Update coupon validity, max uses, or discount rates |
+| GET | `/api/v1/admin/audit-logs` | Admin | System audit trail tracking all administrative actions |

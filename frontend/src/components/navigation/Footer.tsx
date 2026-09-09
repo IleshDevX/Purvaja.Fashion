@@ -1,18 +1,32 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Globe, Instagram, Linkedin, Twitter, Check } from 'lucide-react';
+import { newsletterService } from '../../services/api/newsletterService.js';
 
 export function Footer() {
   const [subscribed, setSubscribed] = useState(false);
   const [email, setEmail] = useState('');
   const [legalMessage, setLegalMessage] = useState('');
+  const [subscriptionState, setSubscriptionState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [subscriptionMessage, setSubscriptionMessage] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim() || subscriptionState === 'saving') return;
+    setSubscriptionState('saving');
+    setSubscriptionMessage('');
+    try {
+      const result = await newsletterService.subscribe(email.trim());
       setSubscribed(true);
       setEmail('');
-      setTimeout(() => setSubscribed(false), 4000);
+      setSubscriptionState('saved');
+      setSubscriptionMessage(result.deliveryEnabled
+        ? 'Your newsletter subscription is active.'
+        : 'Your preference is saved. Email delivery will begin when the newsletter provider is enabled.');
+    } catch (error) {
+      setSubscribed(false);
+      setSubscriptionState('error');
+      setSubscriptionMessage(error instanceof Error ? error.message : 'Subscription could not be saved. Please try again.');
     }
   };
 
@@ -62,18 +76,20 @@ export function Footer() {
                   placeholder="Your email address"
                   className="w-full rounded-full border border-white/15 bg-white/[0.06] py-3 pl-4 sm:pl-5 pr-14 text-xs text-white placeholder:text-white/40 focus:border-gold-400 focus:bg-white/[0.09] focus:outline-none transition-all duration-300"
                   required
+                  disabled={subscriptionState === 'saving'}
                 />
                 <button
                   type="submit"
-                  aria-label="Subscribe"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-gold-400 hover:text-charcoal-950 transition-all duration-300 active:scale-95"
+                  aria-label="Subscribe to newsletter"
+                  disabled={subscriptionState === 'saving'}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-gold-400 hover:text-charcoal-950 transition-all duration-300 active:scale-95"
                 >
                   {subscribed ? <Check className="h-4 w-4 text-gold-300" /> : <ArrowUpRight className="h-4 w-4" />}
                 </button>
               </form>
-              {subscribed && (
-                <p className="mt-2 text-[11px] font-medium text-gold-400 animate-fade-in">
-                  Thank you for subscribing to Purvaja Atelier.
+              {subscriptionMessage && (
+                <p role="status" className={`mt-2 text-[11px] font-medium animate-fade-in ${subscriptionState === 'error' ? 'text-rose-300' : 'text-gold-400'}`}>
+                  {subscriptionMessage}
                 </p>
               )}
             </div>
@@ -157,7 +173,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={label}
-                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-ivory-200/80 transition-all duration-300 hover:border-gold-400 hover:bg-gold-400 hover:text-charcoal-950 hover:scale-105"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-ivory-200/80 transition-all duration-300 hover:border-gold-400 hover:bg-gold-400 hover:text-charcoal-950 hover:scale-105"
               >
                 <Icon className="h-4 w-4" />
               </a>
@@ -167,8 +183,8 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-ivory-200/50">
-          <p>© {new Date().getFullYear()} Purvaja Fashion Atelier. All rights reserved.</p>
-          <div className="flex items-center gap-6">
+          <p className="text-center sm:text-left">© {new Date().getFullYear()} Purvaja Fashion Atelier. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <button type="button" onClick={() => setLegalMessage('Privacy policy publication is pending before launch.')} className="hover:text-ivory-100 transition-colors">Privacy Policy</button>
             <button type="button" onClick={() => setLegalMessage('Terms of service publication is pending before launch.')} className="hover:text-ivory-100 transition-colors">Terms of Service</button>
             <button type="button" onClick={() => setLegalMessage('Cookie preferences will be available when the consent provider is configured.')} className="hover:text-ivory-100 transition-colors">Cookie Preferences</button>

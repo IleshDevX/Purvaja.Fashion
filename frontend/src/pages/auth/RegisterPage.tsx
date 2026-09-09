@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone, Eye, EyeOff, Check, X } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 import { useToast } from '../../app/providers.js';
@@ -9,7 +9,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
-  const { register, isLoading, error, clearError } = useAuthStore();
+  const { register, isLoading, error, fieldErrors, clearError } = useAuthStore();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -17,13 +17,25 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const hasMinLength = password.length >= 12;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const isPasswordValid = hasMinLength && hasUpper && hasLower && hasNumber;
 
   const redirectTarget = sanitizeInternalRedirect(searchParams.get('redirect'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+
+    if (!isPasswordValid) {
+      addToast('Password must be at least 12 characters and include uppercase, lowercase, and a number.', 'error');
+      return;
+    }
 
     if (password !== confirmPassword) {
       addToast('Passwords do not match.', 'error');
@@ -56,8 +68,19 @@ export function RegisterPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-error/10 border border-error/30 text-caption text-error">
-          {error}
+        <div role="alert" className="p-3 bg-error/10 border border-error/30 text-caption text-error space-y-1">
+          <p className="font-medium">{error}</p>
+          {fieldErrors && Object.entries(fieldErrors).length > 0 && (
+            <ul className="list-disc list-inside text-xs opacity-90 pl-1">
+              {Object.entries(fieldErrors).flatMap(([field, msgs]) =>
+                msgs.map((msg, i) => (
+                  <li key={`${field}-${i}`}>
+                    <span className="capitalize">{field}</span>: {msg}
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
         </div>
       )}
 
@@ -123,30 +146,79 @@ export function RegisterPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="register-password" className="block text-caption text-charcoal-700 font-medium mb-1">Password</label>
-            <input
-              id="register-password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              minLength={8}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 placeholder:text-charcoal-400 outline-none focus:border-charcoal-900"
-            />
+            <div className="relative">
+              <input
+                id="register-password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={12}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full pl-3 pr-10 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 placeholder:text-charcoal-400 outline-none focus:border-charcoal-900"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label htmlFor="register-confirm-password" className="block text-caption text-charcoal-700 font-medium mb-1">Confirm Password</label>
-            <input
-              id="register-confirm-password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              minLength={8}
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 placeholder:text-charcoal-400 outline-none focus:border-charcoal-900"
-            />
+            <div className="relative">
+              <input
+                id="register-confirm-password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={12}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full pl-3 pr-10 py-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 placeholder:text-charcoal-400 outline-none focus:border-charcoal-900"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Real-time Password Requirements Checklist */}
+        <div className="p-3 bg-ivory-100 border border-ivory-200 text-caption rounded-sm space-y-2">
+          <p className="font-medium text-charcoal-700 text-xs">Security Standards:</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <span className={`inline-flex items-center gap-1.5 transition-colors ${hasMinLength ? 'text-emerald-700 font-medium' : 'text-charcoal-400'}`}>
+              {hasMinLength ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-charcoal-300" />}
+              12+ Chars
+            </span>
+            <span className={`inline-flex items-center gap-1.5 transition-colors ${hasUpper ? 'text-emerald-700 font-medium' : 'text-charcoal-400'}`}>
+              {hasUpper ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-charcoal-300" />}
+              Uppercase
+            </span>
+            <span className={`inline-flex items-center gap-1.5 transition-colors ${hasLower ? 'text-emerald-700 font-medium' : 'text-charcoal-400'}`}>
+              {hasLower ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-charcoal-300" />}
+              Lowercase
+            </span>
+            <span className={`inline-flex items-center gap-1.5 transition-colors ${hasNumber ? 'text-emerald-700 font-medium' : 'text-charcoal-400'}`}>
+              {hasNumber ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-charcoal-300" />}
+              Number (0-9)
+            </span>
+          </div>
+          {confirmPassword.length > 0 && (
+            <div className={`text-xs inline-flex items-center gap-1.5 pt-1 border-t border-ivory-200 w-full ${passwordsMatch ? 'text-emerald-700 font-medium' : 'text-error'}`}>
+              {passwordsMatch ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-error" />}
+              {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+            </div>
+          )}
         </div>
 
         <button

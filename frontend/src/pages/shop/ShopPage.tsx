@@ -8,22 +8,32 @@ import {
   Star,
   Heart,
   RotateCcw,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { ShirtFit, ShirtFabric, ShirtSize, ShirtSortOption } from '../../features/products/types/product.js';
-import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
+import { CATALOG_FABRICS, CATALOG_FITS, CATALOG_SIZES, parseCatalogUrlState, serializeCatalogUrlState, type CatalogUrlState } from '../../features/products/utils/catalogUrlState.js';
+import { useProductsPaginatedQuery } from '../../features/products/hooks/useProducts.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useToast } from '../../app/providers.js';
+import { Dialog } from '../../components/ui/Dialog.js';
 
-const FITS: ShirtFit[] = ['Slim', 'Regular', 'Relaxed'];
-const FABRICS: ShirtFabric[] = [
-  '100% Egyptian Cotton',
-  'Pure Linen',
-  'Oxford Cotton',
-  'Cotton Poplin',
-  'Denim',
-  'Linen Blend',
-];
-const SIZES: ShirtSize[] = ['38 (S)', '39 (M)', '40 (M)', '42 (L)', '44 (XL)', '46 (XXL)'];
+const FITS = CATALOG_FITS;
+const FABRICS = CATALOG_FABRICS;
+const SIZES = CATALOG_SIZES;
+
+function paginationItems(totalPages: number, currentPage: number): Array<number | string> {
+  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const visible = [...pages].filter(page => page >= 1 && page <= totalPages).sort((a, b) => a - b);
+  const items: Array<number | string> = [];
+  for (const page of visible) {
+    const previous = items.at(-1);
+    if (typeof previous === 'number' && page - previous > 1) items.push(`ellipsis-${previous}`);
+    items.push(page);
+  }
+  return items;
+}
 
 export function ShopPage({
   defaultNewArrivalsOnly = false,
@@ -37,23 +47,17 @@ export function ShopPage({
   const toggleWishlist = useWishlistStore(s => s.toggleWishlist);
   const isInWishlist = useWishlistStore(s => s.isInWishlist);
 
-  // Filters State
-  const searchQuery = searchParams.get('search') || '';
-  const [selectedFits, setSelectedFits] = useState<ShirtFit[]>([]);
-  const [selectedFabrics, setSelectedFabrics] = useState<ShirtFabric[]>([]);
-  const [selectedSizes, setSelectedSizes] = useState<ShirtSize[]>([]);
-  const [onlyInStock, setOnlyInStock] = useState(false);
-  const [onlyNewArrivals, setOnlyNewArrivals] = useState(defaultNewArrivalsOnly);
-  const [onlyDeals, setOnlyDeals] = useState(defaultDealsOnly);
-  const [sortBy, setSortBy] = useState<ShirtSortOption>('featured');
+  const defaults = { newArrivals: defaultNewArrivalsOnly, deals: defaultDealsOnly };
+  const catalog = parseCatalogUrlState(searchParams, defaults);
+  const { search: searchQuery, fits: selectedFits, fabrics: selectedFabrics, sizes: selectedSizes,
+    inStock: onlyInStock, newArrivals: onlyNewArrivals, deals: onlyDeals, sort: sortBy, page: currentPage } = catalog;
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (defaultNewArrivalsOnly) setOnlyNewArrivals(true);
-    if (defaultDealsOnly) setOnlyDeals(true);
-  }, [defaultNewArrivalsOnly, defaultDealsOnly]);
+  const updateCatalog = (change: Partial<CatalogUrlState>, resetPage=true) => {
+    setSearchParams(serializeCatalogUrlState({...catalog,...change,page:resetPage?1:(change.page??catalog.page)},defaults));
+  };
 
   // Click outside to close sort dropdown
   useEffect(() => {
@@ -76,8 +80,12 @@ export function ShopPage({
   ];
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Featured Curations';
-  const { data: products = [] } = useProductsQuery({
+  const PAGE_LIMIT = 12;
+  const { data: paginationResult, isPending, isError, error: queryError, refetch } = useProductsPaginatedQuery({
+    page: currentPage,
+    limit: PAGE_LIMIT,
     search: searchQuery || undefined,
+    category: catalog.category,
     fit: selectedFits,
     fabric: selectedFabrics,
     size: selectedSizes,
@@ -85,33 +93,36 @@ export function ShopPage({
     newArrivals: onlyNewArrivals || undefined,
     deals: onlyDeals || undefined,
     sort: sortBy,
-    // Preserve the existing non-paginated shop view while the API enforces a bounded maximum.
-    limit: 100,
   });
-  const filteredShirts = products;
+
+  const filteredShirts = paginationResult?.items ?? [];
+  const totalPages = paginationResult?.totalPages ?? 1;
+  const totalCount = paginationResult?.total ?? 0;
+
+  useEffect(() => {
+    if (paginationResult && currentPage > Math.max(1, paginationResult.totalPages)) {
+      setSearchParams(previous => {
+        const routeDefaults={newArrivals:defaultNewArrivalsOnly,deals:defaultDealsOnly};
+        const current=parseCatalogUrlState(previous,routeDefaults);
+        return serializeCatalogUrlState({...current,page:Math.max(1,paginationResult.totalPages)},routeDefaults);
+      });
+    }
+  }, [currentPage, paginationResult, setSearchParams, defaultNewArrivalsOnly, defaultDealsOnly]);
 
   const toggleFit = (fit: ShirtFit) => {
-    setSelectedFits(prev => (prev.includes(fit) ? prev.filter(f => f !== fit) : [...prev, fit]));
+    updateCatalog({fits:selectedFits.includes(fit)?selectedFits.filter(f=>f!==fit):[...selectedFits,fit]});
   };
 
   const toggleFabric = (fabric: ShirtFabric) => {
-    setSelectedFabrics(prev => (prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric]));
+    updateCatalog({fabrics:selectedFabrics.includes(fabric)?selectedFabrics.filter(f=>f!==fabric):[...selectedFabrics,fabric]});
   };
 
   const toggleSize = (size: ShirtSize) => {
-    setSelectedSizes(prev => (prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]));
+    updateCatalog({sizes:selectedSizes.includes(size)?selectedSizes.filter(s=>s!==size):[...selectedSizes,size]});
   };
 
   const clearAllFilters = () => {
-    setSelectedFits([]);
-    setSelectedFabrics([]);
-    setSelectedSizes([]);
-    setOnlyInStock(false);
-    setOnlyNewArrivals(false);
-    setOnlyDeals(false);
-    if (searchQuery) {
-      setSearchParams({});
-    }
+    updateCatalog({search:'',category:undefined,fits:[],fabrics:[],sizes:[],inStock:false,newArrivals:false,deals:false,sort:'featured'});
   };
 
   const hasActiveFilters =
@@ -204,7 +215,7 @@ export function ShopPage({
                 <div className="flex flex-col gap-2">
                   <button
                     type="button"
-                    onClick={() => setOnlyNewArrivals(!onlyNewArrivals)}
+                    onClick={() => updateCatalog({newArrivals:!onlyNewArrivals})}
                     className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all ${
                       onlyNewArrivals
                         ? 'bg-charcoal-950 text-white shadow-sm'
@@ -217,7 +228,7 @@ export function ShopPage({
 
                   <button
                     type="button"
-                    onClick={() => setOnlyDeals(!onlyDeals)}
+                    onClick={() => updateCatalog({deals:!onlyDeals})}
                     className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all ${
                       onlyDeals
                         ? 'bg-charcoal-950 text-white shadow-sm'
@@ -230,7 +241,7 @@ export function ShopPage({
 
                   <button
                     type="button"
-                    onClick={() => setOnlyInStock(!onlyInStock)}
+                    onClick={() => updateCatalog({inStock:!onlyInStock})}
                     className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all ${
                       onlyInStock
                         ? 'bg-charcoal-950 text-white shadow-sm'
@@ -369,7 +380,7 @@ export function ShopPage({
                     {onlyNewArrivals && (
                       <button
                         type="button"
-                        onClick={() => setOnlyNewArrivals(false)}
+                        onClick={() => updateCatalog({newArrivals:false})}
                         className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
                         New <X className="h-3 w-3 text-gold-400" />
@@ -378,7 +389,7 @@ export function ShopPage({
                     {onlyDeals && (
                       <button
                         type="button"
-                        onClick={() => setOnlyDeals(false)}
+                        onClick={() => updateCatalog({deals:false})}
                         className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
                         Deals <X className="h-3 w-3 text-gold-400" />
@@ -387,7 +398,7 @@ export function ShopPage({
                     {onlyInStock && (
                       <button
                         type="button"
-                        onClick={() => setOnlyInStock(false)}
+                        onClick={() => updateCatalog({inStock:false})}
                         className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-charcoal-950 border border-charcoal-800 px-2.5 sm:px-3.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-ivory-100 shadow-xs hover:border-gold-500 hover:text-gold-300 transition-all"
                       >
                         In Stock <X className="h-3 w-3 text-gold-400" />
@@ -431,7 +442,7 @@ export function ShopPage({
                               key={option.value}
                               type="button"
                               onClick={() => {
-                                setSortBy(option.value);
+                                updateCatalog({sort:option.value});
                                 setSortDropdownOpen(false);
                               }}
                               className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 font-serif text-sm transition-all text-left ${
@@ -453,7 +464,14 @@ export function ShopPage({
             </div>
 
             {/* Products Grid / Empty State */}
-            {filteredShirts.length === 0 ? (
+            {isPending ? (
+              <div className="rounded-[24px] border border-ivory-300 bg-white p-16 text-center text-sm text-charcoal-500">Loading collection…</div>
+            ) : isError ? (
+              <div role="alert" className="space-y-4 rounded-[24px] border border-rose-200 bg-white p-16 text-center">
+                <p className="text-sm text-rose-800">{queryError instanceof Error ? queryError.message : 'The collection could not be loaded.'}</p>
+                <button type="button" onClick={() => void refetch()} className="rounded-full bg-charcoal-950 px-6 py-3 text-xs font-bold text-white">Retry</button>
+              </div>
+            ) : filteredShirts.length === 0 ? (
               <div className="py-16 sm:py-20 text-center rounded-[24px] sm:rounded-[26px] border border-ivory-300 bg-white p-6 sm:p-8">
                 <h3 className="font-serif text-xl sm:text-2xl font-light text-charcoal-950 mb-2">No matching pieces</h3>
                 <p className="text-xs sm:text-sm text-charcoal-500 max-w-md mx-auto mb-6">
@@ -563,22 +581,84 @@ export function ShopPage({
                 })}
               </div>
             )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-10 pt-8 border-t border-ivory-300 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-xs font-medium text-charcoal-500">
+                  Showing <span className="font-bold text-charcoal-900">{(currentPage - 1) * PAGE_LIMIT + 1}</span>–
+                  <span className="font-bold text-charcoal-900">{Math.min(currentPage * PAGE_LIMIT, totalCount)}</span> of{' '}
+                  <span className="font-bold text-charcoal-900">{totalCount}</span> artisanal pieces
+                </p>
+
+                <nav aria-label="Catalog pagination" className="flex w-full items-center justify-center gap-1.5 sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateCatalog({page:Math.max(1,currentPage-1)},false);
+                      window.scrollTo({ top: 160, behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === 1}
+                    aria-label="Previous catalog page"
+                    className="inline-flex h-11 min-w-11 items-center justify-center gap-1 px-2 sm:px-3 text-xs font-semibold rounded-lg border border-ivory-300 bg-white text-charcoal-700 hover:bg-ivory-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {paginationItems(totalPages, currentPage).map(item => typeof item === 'number' ? (
+                        <button
+                          key={item}
+                          type="button"
+                          aria-label={`Catalog page ${item}`}
+                          aria-current={currentPage === item ? 'page' : undefined}
+                          onClick={() => {
+                            updateCatalog({page:item},false);
+                            window.scrollTo({ top: 160, behavior: 'smooth' });
+                          }}
+                          className={`${currentPage === item ? 'flex' : 'hidden sm:flex'} h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                            currentPage === item
+                              ? 'bg-charcoal-950 text-white shadow-2xs'
+                              : 'border border-ivory-300 bg-white text-charcoal-700 hover:bg-ivory-100'
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      ) : <span key={item} aria-hidden="true" className="hidden px-1 text-charcoal-400 sm:inline">…</span>)}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateCatalog({page:Math.min(totalPages,currentPage+1)},false);
+                      window.scrollTo({ top: 160, behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === totalPages}
+                    aria-label="Next catalog page"
+                    className="inline-flex h-11 min-w-11 items-center justify-center gap-1 px-2 sm:px-3 text-xs font-semibold rounded-lg border border-ivory-300 bg-white text-charcoal-700 hover:bg-ivory-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
 
         {/* ── MOBILE FILTER DRAWER OVERLAY ── */}
-        {mobileFilterOpen && (
-          <div className="fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm animate-fade-in lg:hidden">
-            <div className="relative ml-auto flex h-full w-full max-w-xs flex-col bg-white p-6 shadow-2xl overflow-y-auto">
+        <Dialog open={mobileFilterOpen} onClose={() => setMobileFilterOpen(false)} labelledBy="mobile-filter-title"
+          overlayClassName="fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm animate-fade-in lg:hidden"
+          panelClassName="relative ml-auto flex h-full w-full max-w-xs flex-col bg-white p-6 shadow-2xl overflow-y-auto">
               <div className="flex items-center justify-between border-b border-ivory-300 pb-4 mb-6">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 text-gold-700" />
-                  <h3 className="font-serif text-lg font-bold text-charcoal-950">Filters</h3>
+                  <h3 id="mobile-filter-title" className="font-serif text-lg font-bold text-charcoal-950">Filters</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMobileFilterOpen(false)}
-                  className="rounded-full p-1.5 text-charcoal-500 hover:bg-ivory-100"
+                  aria-label="Close filters"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-charcoal-500 hover:bg-ivory-100 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -594,7 +674,7 @@ export function ShopPage({
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={() => setOnlyNewArrivals(!onlyNewArrivals)}
+                      onClick={() => updateCatalog({newArrivals:!onlyNewArrivals})}
                       className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold ${
                         onlyNewArrivals ? 'bg-charcoal-950 text-white' : 'border border-ivory-300 bg-ivory-50 text-charcoal-700'
                       }`}
@@ -604,7 +684,7 @@ export function ShopPage({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setOnlyDeals(!onlyDeals)}
+                      onClick={() => updateCatalog({deals:!onlyDeals})}
                       className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold ${
                         onlyDeals ? 'bg-charcoal-950 text-white' : 'border border-ivory-300 bg-ivory-50 text-charcoal-700'
                       }`}
@@ -614,7 +694,7 @@ export function ShopPage({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setOnlyInStock(!onlyInStock)}
+                      onClick={() => updateCatalog({inStock:!onlyInStock})}
                       className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold ${
                         onlyInStock ? 'bg-charcoal-950 text-white' : 'border border-ivory-300 bg-ivory-50 text-charcoal-700'
                       }`}
@@ -717,9 +797,7 @@ export function ShopPage({
                   Apply
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+        </Dialog>
       </div>
     </div>
   );

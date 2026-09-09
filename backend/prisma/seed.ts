@@ -1,5 +1,7 @@
+import argon2 from 'argon2';
 import { getPrismaClient, disconnectDatabase } from '../src/config/database.js';
 import { PRODUCT_SEED } from '../src/seeds/products.seed.js';
+import { getSeedAdminCredentials } from '../src/config/seed-admin.js';
 
 const EXPECTED_PRODUCTS = 50;
 const EXPECTED_VARIANTS = 300;
@@ -20,8 +22,11 @@ function productData(product: (typeof PRODUCT_SEED)[number]) {
     sleeve: product.sleeve,
     pattern: product.pattern,
     careInstructions: product.careInstructions,
-    rating: product.rating,
-    reviewCount: product.reviewCount,
+    // Seed metrics describe the editorial catalogue fixture. Customer review
+    // aggregates use database defaults on create and remain untouched on
+    // reseed because they are derived exclusively from published Review rows.
+    editorialRating: product.rating,
+    editorialReviewCount: product.reviewCount,
     isFeatured: product.isFeatured ?? false,
     isNewArrival: product.isNewArrival ?? false,
     isDeal: product.isDeal ?? false,
@@ -30,11 +35,16 @@ function productData(product: (typeof PRODUCT_SEED)[number]) {
 }
 
 export async function seedDatabase(): Promise<void> {
+  const { email: adminEmail, password: adminPassword } = getSeedAdminCredentials();
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
     throw new Error('PRODUCTION SAFEGUARD: Database seeding is strictly prohibited in production (NODE_ENV=production).');
   }
 
   const prisma = getPrismaClient();
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (existingAdmin && (existingAdmin.role !== 'ADMIN' || existingAdmin.status !== 'ACTIVE')) {
+    throw new Error('Seed administrator email belongs to an existing non-admin or inactive account. Use the explicit account-management workflow.');
+  }
   await prisma.$transaction(async tx => {
     const category = await tx.category.upsert({
       where: { slug: 'shirts' },
@@ -100,6 +110,29 @@ export async function seedDatabase(): Promise<void> {
   process.stdout.write(
     `Seeded ${products} products and ${variants} variants with ${slugs.length} unique slugs and ${skus.length} unique SKUs.\n`,
   );
+
+  const passwordHash = await argon2.hash(adminPassword, {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+  });
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    create: {
+      email: adminEmail,
+      firstName: 'Admin',
+      lastName: 'Purvaja',
+      phone: '+919999999999',
+      passwordHash,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+    },
+    update: {},
+  });
+  process.stdout.write(`Seeded administrator account: ${admin.email}\n`);
 }
 
 seedDatabase()

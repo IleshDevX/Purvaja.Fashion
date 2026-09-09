@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    // The integration suite shares one hosted PostgreSQL pool; serial files avoid exhausting it.
+    // Integration files share disposable fixtures; avoid cross-file races.
     fileParallelism: false,
     setupFiles: ['./tests/setup.ts'],
     coverage: {

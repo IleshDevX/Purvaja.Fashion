@@ -85,9 +85,10 @@ export function OrderDetailsPage() {
                 {statusMeta.label}
               </span>
               <button
+                type="button"
                 onClick={() => window.print()}
-                className="p-2 border border-ivory-300 text-charcoal-600 hover:text-charcoal-900 hover:border-charcoal-900 transition-colors"
-                title="Print Invoice"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center border border-ivory-300 text-charcoal-600 hover:text-charcoal-900 hover:border-charcoal-900 transition-colors rounded-lg"
+                aria-label="Print Invoice"
               >
                 <Printer className="w-4 h-4" />
               </button>
@@ -192,6 +193,24 @@ export function OrderDetailsPage() {
               </span>
             </div>
           </div>
+
+          {(order.refunds?.length ?? 0) > 0 && (
+            <div className="p-4 sm:p-6 bg-ivory-50 border border-ivory-200" aria-label="Refund status">
+              <h3 className="font-serif text-heading text-charcoal-900 mb-3">Refunds</h3>
+              <div className="space-y-3">
+                {order.refunds?.map(refund => (
+                  <div key={refund.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-body-sm">
+                    <span className="text-charcoal-700">
+                      ₹{refund.amount.toLocaleString('en-IN')} · {refund.reason.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-caption text-charcoal-500 uppercase tracking-wider">
+                      {refund.status}{refund.mode === 'demo' ? ' · demo simulation' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tracking CTA */}
           <div className="pt-6 border-t border-ivory-300 flex justify-between items-center">

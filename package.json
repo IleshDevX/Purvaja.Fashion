@@ -11,6 +11,7 @@
     "test": "pnpm --recursive test",
     "test:watch": "pnpm --parallel --filter @ecommerce/prototype-b --filter @ecommerce/prototype-b-backend test:watch",
     "test:coverage": "pnpm --recursive test:coverage",
+    "test:e2e": "playwright test",
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck",
     "db:migrate": "pnpm --filter @ecommerce/prototype-b-backend db:migrate",
@@ -19,11 +20,16 @@
     "db:generate": "pnpm --filter @ecommerce/prototype-b-backend db:generate",
     "db:validate": "pnpm --filter @ecommerce/prototype-b-backend db:validate",
     "validate:config": "pnpm --filter @ecommerce/prototype-b-backend validate:config",
+    "smoke-test": "pnpm --filter @ecommerce/prototype-b-backend smoke-test",
+    "check:consistency": "pnpm --filter @ecommerce/prototype-b-backend check:consistency",
+    "backup:create": "pnpm --filter @ecommerce/prototype-b-backend backup:create",
+    "recovery:drill": "pnpm --filter @ecommerce/prototype-b-backend recovery:drill",
     "start": "pnpm --filter @ecommerce/prototype-b-backend start",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "prettier": "^3.5.0"
   },
   "packageManager": "pnpm@11.22.0",

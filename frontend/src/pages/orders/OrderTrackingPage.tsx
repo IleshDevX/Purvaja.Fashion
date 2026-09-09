@@ -9,24 +9,25 @@ import { useOrderQuery } from '../../features/orders/hooks/useOrders.js';
 
 export function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const { data: order, isPending: loading } = useOrderQuery(orderId);
+  const { data: order, isPending: loading, isError, error, refetch } = useOrderQuery(orderId);
 
   if (loading) {
     return (
       <div className="py-24 text-center">
         <div className="w-8 h-8 border-2 border-charcoal-900 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <span className="text-overline text-charcoal-400">Locating Package</span>
+        <span className="text-overline text-charcoal-400">Loading order status</span>
       </div>
     );
   }
 
-  if (!order) {
+  if (isError || !order) {
     return (
       <div className="py-24 text-center max-w-md mx-auto px-6">
-        <h2 className="font-serif text-display text-charcoal-900 mb-4">Tracking Not Found</h2>
+        <h2 className="font-serif text-display text-charcoal-900 mb-4">Order status unavailable</h2>
         <p className="text-body text-charcoal-500 mb-8">
-          Unable to find tracking records for this reference.
+          {error instanceof Error ? error.message : 'Unable to load this order status.'}
         </p>
+        <button type="button" onClick={() => void refetch()} className="mr-3 px-8 py-3.5 border border-charcoal-900 text-body-sm font-semibold">Retry</button>
         <Link
           to="/account/orders"
           className="inline-flex items-center gap-2 px-8 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold hover:bg-charcoal-800"
@@ -54,20 +55,19 @@ export function OrderTrackingPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-ivory-300">
             <div>
-              <p className="text-overline text-gold-600 mb-1">Live Transit Status</p>
+              <p className="text-overline text-gold-600 mb-1">Order status timeline</p>
               <h1 className="font-serif text-heading-xl text-charcoal-900">
-                Package #{order.trackingNumber || 'TRK-EXP-48201'}
+                {order.trackingNumber ? `Package #${order.trackingNumber}` : `Order #${order.orderNumber}`}
               </h1>
               <p className="text-caption text-charcoal-500 mt-1">
-                Courier Carrier:{' '}
-                <strong className="text-charcoal-800">{order.courierName || 'BlueDart Air Express'}</strong>
+                <strong className="text-charcoal-800">{order.courierName ? `Carrier: ${order.courierName}` : 'Carrier tracking unavailable'}</strong>
               </p>
             </div>
 
             <div className="p-4 bg-ivory-50 border border-ivory-200 text-right">
-              <span className="text-overline text-charcoal-400 block mb-0.5">Estimated Arrival</span>
+              <span className="text-overline text-charcoal-400 block mb-0.5">Estimated arrival</span>
               <span className="font-serif text-heading text-charcoal-900">
-                {order.estimatedDelivery || '3 - 4 Business Days'}
+                {order.estimatedDelivery || 'Not provided'}
               </span>
             </div>
           </div>
@@ -185,16 +185,12 @@ export function OrderTrackingPage() {
               <div>
                 <div className="flex items-center gap-2 text-charcoal-900 font-semibold mb-2">
                   <ShieldCheck className="w-4 h-4 text-gold-600" />
-                  <span>Doorstep Inspection Assistance</span>
+                  <span>Tracking data</span>
                 </div>
                 <p className="text-caption text-charcoal-500">
-                  Our courier partners are authorized to facilitate instant size verification and doorstep
-                  replacement scheduling if required.
+                  This timeline reflects fulfillment statuses recorded by Purvaja. Live carrier scans are unavailable until a shipping provider is connected.
                 </p>
               </div>
-              <p className="text-caption font-semibold text-charcoal-900 mt-2">
-                Support Helpline: +91 98765 43210
-              </p>
             </div>
           </div>
         </div>

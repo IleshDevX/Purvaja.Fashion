@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
 import { useCheckoutStore } from '../../features/checkout/store/checkoutStore.js';
+import { paymentDestination } from '../../features/checkout/utils/paymentNavigation.js';
 import {
   ShippingAddress,
   DeliveryOptionId,
@@ -94,11 +95,11 @@ export function CheckoutPage() {
     setCurrentStep('delivery');
   };
 
-  const handleApplyCouponCode = (e: React.FormEvent) => {
+  const handleApplyCouponCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponInput.trim()) return;
 
-    const res = applyCoupon(couponInput);
+    const res = await applyCoupon(couponInput, pricing.subtotalPaise);
     if (res.success) {
       addToast(res.message, 'success');
       setCouponInput('');
@@ -116,10 +117,18 @@ export function CheckoutPage() {
 
     const res = await processPayment(items);
     if (res.success && res.paymentId && res.redirectUrl) {
-      navigate(res.redirectUrl.replace(window.location.origin, ''));
+      try {
+        const destination = paymentDestination(res.redirectUrl, window.location.origin);
+        if (destination.external) window.location.assign(destination.url);
+        else navigate(destination.url);
+      } catch {
+        addToast('The payment destination is invalid. Please try again.', 'error');
+      }
     } else {
       addToast(res.error || 'Payment declined by gateway.', 'error');
-      navigate('/checkout/failure');
+      if (res.orderId) {
+        navigate(`/checkout/failure?orderId=${encodeURIComponent(res.orderId)}`);
+      }
     }
   };
 
@@ -143,11 +152,13 @@ export function CheckoutPage() {
             return (
               <div key={step.id} className="flex-1 flex items-center">
                 <button
+                  type="button"
                   onClick={() => {
                     if (isCompleted) setCurrentStep(step.id);
                   }}
                   disabled={!isCompleted && !isCurrent}
-                  className={`flex items-center gap-2 sm:gap-3 text-left transition-colors ${
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={`flex items-center gap-2 sm:gap-3 text-left transition-colors min-h-[44px] ${
                     isCurrent
                       ? 'text-charcoal-900 font-semibold'
                       : isCompleted
@@ -406,18 +417,18 @@ export function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setCurrentStep('address')}
-                  className="px-6 py-3.5 border border-charcoal-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 hover:text-charcoal-900 transition-colors"
+                  className="w-full sm:w-auto px-6 py-3.5 border border-charcoal-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 hover:text-charcoal-900 transition-colors rounded-xl min-h-[44px]"
                 >
                   <ArrowLeft className="w-4 h-4 inline mr-1" /> Edit Address
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentStep('payment')}
-                  className="flex-1 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2 rounded-xl min-h-[44px]"
                 >
                   PROCEED TO PAYMENT <ArrowRight className="w-4 h-4" />
                 </button>
@@ -478,11 +489,11 @@ export function CheckoutPage() {
                 ))}
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setCurrentStep('delivery')}
-                  className="px-6 py-3.5 border border-charcoal-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 hover:text-charcoal-900 transition-colors"
+                  className="w-full sm:w-auto px-6 py-3.5 border border-charcoal-400 text-charcoal-700 text-body-sm font-medium hover:border-charcoal-900 hover:text-charcoal-900 transition-colors rounded-xl min-h-[44px]"
                 >
                   <ArrowLeft className="w-4 h-4 inline mr-1" /> Back
                 </button>
@@ -490,7 +501,7 @@ export function CheckoutPage() {
                   type="button"
                   disabled={isProcessing}
                   onClick={handleCompleteOrder}
-                  className="flex-1 py-4 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 shadow-elevated"
+                  className="w-full sm:flex-1 py-4 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 shadow-elevated rounded-xl min-h-[44px]"
                 >
                   {isProcessing
                     ? 'AUTHORIZING PAYMENT...'
@@ -533,22 +544,29 @@ export function CheckoutPage() {
                   <Tag className="w-4 h-4 text-gold-600" />
                   <span>{coupon.code} applied</span>
                 </div>
-                <button onClick={removeCoupon} className="p-1 text-charcoal-500 hover:text-charcoal-900">
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  aria-label="Remove coupon"
+                  className="flex h-8 w-8 items-center justify-center text-charcoal-500 hover:text-charcoal-900 rounded-full"
+                >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
               <form onSubmit={handleApplyCouponCode} className="flex gap-2">
+                <label htmlFor="checkout-summary-coupon" className="sr-only">Promotional coupon code</label>
                 <input
+                  id="checkout-summary-coupon"
                   type="text"
                   value={couponInput}
                   onChange={e => setCouponInput(e.target.value)}
                   placeholder="Code (e.g. SHIRT10)"
-                  className="flex-1 px-3 py-2 bg-ivory-50 border border-ivory-300 text-caption text-charcoal-900 uppercase placeholder:normal-case placeholder:text-charcoal-400 outline-none focus:border-charcoal-900"
+                  className="flex-1 px-3 py-2 bg-ivory-50 border border-ivory-300 text-caption text-charcoal-900 uppercase placeholder:normal-case placeholder:text-charcoal-400 outline-none focus:border-charcoal-900 rounded-xl"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-charcoal-900 text-ivory-100 text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors"
+                  className="px-4 py-2 bg-charcoal-900 text-ivory-100 text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors rounded-xl"
                 >
                   APPLY
                 </button>

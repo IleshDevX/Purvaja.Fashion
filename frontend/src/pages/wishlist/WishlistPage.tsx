@@ -10,33 +10,44 @@ export function WishlistPage() {
   const { addToast } = useToast();
   const { savedItemIds, removeFromWishlist, clearWishlist } = useWishlistStore();
   const addItem = useCartStore(s => s.addItem);
-  const { data: products = [], isPending } = useProductsQuery();
+  const hasSavedItems = savedItemIds.length > 0;
+  const { data: products = [], isPending } = useProductsQuery(
+    { ids: savedItemIds, limit: 100 },
+    { enabled: hasSavedItems }
+  );
 
-  const savedShirts = products.filter(s => savedItemIds.includes(s.id));
+  const savedShirts = hasSavedItems ? products.filter(s => savedItemIds.includes(s.id)) : [];
 
-  if (isPending) return <PageLoadingFallback />;
+  if (hasSavedItems && isPending) return <PageLoadingFallback />;
 
-  const handleMoveToBag = (shirt: (typeof savedShirts)[0]) => {
-    const primaryColor = shirt.colors[0] || { name: 'Standard', hex: '#000000' };
-    const primarySize = shirt.sizes[0] || '39 (M)';
-
-    addItem({
-      shirtId: shirt.id,
-      variantId: shirt.variants.find(
+  const handleMoveToBag = async (shirt: (typeof savedShirts)[0]) => {
+    try {
+      const primaryColor = shirt.colors[0] || { name: 'Standard', hex: '#000000' };
+      const primarySize = shirt.sizes[0] || '39 (M)';
+      const primaryVariant = shirt.variants.find(
         variant => variant.color.name === primaryColor.name && variant.size === primarySize,
-      )?.id ?? '',
-      name: shirt.name,
-      slug: shirt.slug,
-      image: shirt.images[0] || '',
-      price: shirt.price,
-      compareAtPrice: shirt.compareAtPrice,
-      color: primaryColor,
-      size: primarySize,
-      quantity: 1,
-    });
+      );
 
-    removeFromWishlist(shirt.id);
-    addToast(`Moved "${shirt.name}" to your shopping bag.`, 'success');
+      await addItem({
+        shirtId: shirt.id,
+        variantId: primaryVariant?.id ?? '',
+        name: shirt.name,
+        slug: shirt.slug,
+        image: shirt.images[0] || '',
+        pricePaise: primaryVariant?.pricePaise ?? shirt.pricePaise,
+        compareAtPricePaise: shirt.compareAtPricePaise,
+        price: shirt.price,
+        compareAtPrice: shirt.compareAtPrice,
+        color: primaryColor,
+        size: primarySize,
+        quantity: 1,
+      });
+
+      removeFromWishlist(shirt.id);
+      addToast(`Moved "${shirt.name}" to your shopping bag.`, 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Unable to move item to bag.', 'error');
+    }
   };
 
   return (
@@ -49,11 +60,12 @@ export function WishlistPage() {
           </div>
           {savedShirts.length > 0 && (
             <button
+              type="button"
               onClick={() => {
                 clearWishlist();
                 addToast('Wishlist cleared.', 'info');
               }}
-              className="text-caption text-charcoal-400 hover:text-error transition-colors underline underline-offset-4 self-start"
+              className="text-caption text-charcoal-400 hover:text-error transition-colors underline underline-offset-4 self-start py-2"
             >
               Clear All Saved Pieces
             </button>
@@ -71,7 +83,7 @@ export function WishlistPage() {
             </p>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wide hover:bg-charcoal-800 transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wide hover:bg-charcoal-800 transition-colors rounded-xl"
             >
               Explore Collection <ArrowRight className="w-4 h-4" />
             </Link>
@@ -89,14 +101,15 @@ export function WishlistPage() {
                     />
                   </Link>
                   <button
+                    type="button"
                     onClick={() => {
                       removeFromWishlist(shirt.id);
                       addToast(`Removed "${shirt.name}" from wishlist.`, 'info');
                     }}
-                    className="absolute top-2.5 right-2.5 z-10 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 rounded-full flex items-center justify-center text-charcoal-500 hover:text-error shadow-sm transition-colors"
-                    title="Remove"
+                    className="absolute top-2.5 right-2.5 z-10 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center bg-white/90 rounded-full text-charcoal-500 hover:text-error shadow-sm transition-colors"
+                    aria-label={`Remove ${shirt.name} from wishlist`}
                   >
-                    <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -115,8 +128,9 @@ export function WishlistPage() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => handleMoveToBag(shirt)}
-                    className="w-full py-2 sm:py-2.5 bg-charcoal-900 text-ivory-100 text-[11px] sm:text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl shadow-xs"
+                    className="w-full min-h-[44px] py-2 sm:py-2.5 bg-charcoal-900 text-ivory-100 text-[11px] sm:text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl shadow-xs"
                   >
                     <ShoppingBag className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> MOVE TO BAG
                   </button>

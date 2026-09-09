@@ -179,11 +179,13 @@ describe('Production Security & Hardening Suite', () => {
     it('returns structured JSON errors without stack traces for 404 routes', async () => {
       const res = await request(app).get('/api/v1/non-existent-endpoint');
       expect(res.status).toBe(404);
+      expect(res.headers).toHaveProperty('x-request-id');
       expect(res.body).toEqual({
         success: false,
         error: {
           code: 'NOT_FOUND',
           message: expect.any(String),
+          requestId: expect.any(String),
         },
       });
       expect(res.body).not.toHaveProperty('stack');

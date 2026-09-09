@@ -55,12 +55,13 @@ export function AdminProductsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-rose-800">{error}</div>
+        <div role="alert" className="rounded-xl bg-white p-6 text-sm text-rose-800">{error}<button type="button" onClick={() => void load(search)} className="ml-4 font-bold text-gold-800">Retry</button></div>
       ) : !data ? (
         <div className="rounded-xl bg-white p-6 text-sm text-charcoal-500">Loading products…</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white shadow-2xs">
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
                 <th className="p-4">Product Name / Slug</th>
@@ -130,6 +131,7 @@ export function AdminProductsPage() {
               })}
             </tbody>
           </table>
+          </div>
 
           {!data.items.length && (
             <p className="p-8 text-center text-sm text-charcoal-500">No products found.</p>

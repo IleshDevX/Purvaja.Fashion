@@ -72,10 +72,36 @@ export interface AdminProduct {
 export interface AdminProductInput {
   name: string;
   slug: string;
+  tagline?: string | null;
   description: string;
+  brand?: string;
   basePricePaise: number;
+  compareAtPricePaise?: number | null;
+  discountPercent?: number | null;
+  fit?: 'Slim' | 'Regular' | 'Relaxed' | null;
+  fabric?: string | null;
+  collar?: string | null;
+  sleeve?: string | null;
+  pattern?: string | null;
+  careInstructions?: string[];
+  isFeatured?: boolean;
+  isNewArrival?: boolean;
+  isDeal?: boolean;
   status?: AdminProduct['status'];
   categoryIds?: string[];
+  images?: Array<{ url: string; isPrimary: boolean }>;
+}
+
+export interface AdminVariantInput {
+  productId?: string;
+  sku: string;
+  size: string;
+  colorName: string;
+  colorHex: string;
+  priceOverridePaise?: number | null;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  status?: 'ACTIVE' | 'DISCONTINUED';
 }
 
 export interface AdminShippingAddress {

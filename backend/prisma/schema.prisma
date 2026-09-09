@@ -54,6 +54,7 @@ enum OrderStatus {
   CONFIRMED
   PROCESSING
   SHIPPED
+  OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
   RETURN_REQUESTED
@@ -69,6 +70,50 @@ enum PaymentStatus {
   EXPIRED
   REFUNDED
   CANCELLED
+}
+enum PaymentInitiationState {
+  READY
+  LEASED
+  SUCCEEDED
+  UNKNOWN
+  FAILED
+}
+enum PaymentObservationSource {
+  CALLBACK
+  STATUS_POLL
+  RECONCILIATION
+  DEMO
+  EXPIRY
+}
+enum PaymentObservedState {
+  SUCCESS
+  FAILED
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+enum PaymentObservationDisposition {
+  APPLIED
+  DUPLICATE
+  IGNORED
+  LATE_CAPTURE
+}
+enum RefundStatus {
+  REQUESTED
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+enum RefundMode {
+  DEMO
+  LIVE
+  UNKNOWN
+}
+enum RefundReason {
+  ORDER_CANCELLED
+  RETURN
+  LATE_CAPTURE
+  LEGACY
 }
 enum PaymentProvider {
   COD
@@ -88,6 +133,11 @@ enum CouponDiscountType {
   PERCENTAGE
   FIXED
 }
+enum ReturnRequestStatus {
+  REQUESTED
+  COMPLETED
+  REJECTED
+}
 
 model User {
   id                      String                   @id @default(uuid()) @db.Uuid
@@ -96,6 +146,8 @@ model User {
   firstName               String                   @default("") @map("first_name") @db.VarChar(100)
   lastName                String                   @default("") @map("last_name") @db.VarChar(100)
   phone                   String?                  @db.VarChar(32)
+  preferredFit            String?                  @map("preferred_fit") @db.VarChar(80)
+  preferredCollar         String?                  @map("preferred_collar") @db.VarChar(120)
   pendingEmail            String?                  @map("pending_email") @db.VarChar(320)
   role                    UserRole                 @default(CUSTOMER)
   status                  AccountStatus            @default(ACTIVE)
@@ -111,9 +163,24 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   reviews                 Review[]
   sessions                Session[]
+  cartMerges              CartMerge[]
 
   @@index([role, status])
   @@map("users")
+}
+
+model NewsletterSubscription {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email          String   @unique @db.VarChar(320)
+  status         String   @default("PENDING_PROVIDER") @db.VarChar(32)
+  consentSource  String   @map("consent_source") @db.VarChar(80)
+  consentedAt    DateTime @default(now()) @map("consented_at") @db.Timestamptz(6)
+  unsubscribedAt DateTime? @map("unsubscribed_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, consentedAt])
+  @@map("newsletter_subscriptions")
 }
 
 model Session {
@@ -136,12 +203,15 @@ model EmailVerificationToken {
   userId    String    @map("user_id") @db.Uuid
   tokenHash String    @unique @map("token_hash") @db.Char(64)
   purpose   EmailVerificationPurpose @default(REGISTRATION)
+  targetEmail String? @map("target_email") @db.VarChar(320)
+  deliveryPending Boolean @default(false) @map("delivery_pending")
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([userId, purpose, expiresAt])
   @@index([expiresAt])
   @@map("email_verification_tokens")
 }
@@ -150,6 +220,7 @@ model PasswordResetToken {
   id        String    @id @default(uuid()) @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   tokenHash String    @unique @map("token_hash") @db.Char(64)
+  deliveryPending Boolean @default(false) @map("delivery_pending")
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -212,6 +283,8 @@ model Product {
   careInstructions    String[]          @default([]) @map("care_instructions")
   rating              Decimal           @default(0) @db.Decimal(2, 1)
   reviewCount         Int               @default(0) @map("review_count")
+  editorialRating     Decimal?          @map("editorial_rating") @db.Decimal(2, 1)
+  editorialReviewCount Int              @default(0) @map("editorial_review_count")
   isFeatured          Boolean           @default(false) @map("is_featured")
   isNewArrival        Boolean           @default(false) @map("is_new_arrival")
   isDeal              Boolean           @default(false) @map("is_deal")
@@ -225,7 +298,12 @@ model Product {
 
   @@index([status, createdAt])
   @@index([isFeatured, status])
+  @@index([status, isFeatured(sort: Desc), createdAt(sort: Desc)])
+  @@index([updatedAt(sort: Desc), id(sort: Asc)])
   @@index([isNewArrival, status])
+  @@index([isDeal, status])
+  @@index([status, basePricePaise])
+  @@index([status, rating])
   @@map("products")
 }
 
@@ -267,6 +345,7 @@ model ProductVariant {
   @@index([productId])
   @@index([status])
   @@index([stockQuantity], map: "product_variants_stock_quantity_idx")
+  @@index([updatedAt(sort: Desc), id(sort: Asc)])
   @@map("product_variants")
 }
 
@@ -296,6 +375,7 @@ model InventoryMovement {
   variant           ProductVariant        @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   @@index([variantId, createdAt])
+  @@index([createdAt])
   @@map("inventory_movements")
 }
 
@@ -343,6 +423,7 @@ model CartItem {
 
   @@unique([cartId, variantId])
   @@index([cartId])
+  @@index([variantId])
   @@map("cart_items")
 }
 
@@ -365,6 +446,7 @@ model Order {
   items               OrderItem[]
   payments            Payment[]
   inventoryReservations InventoryReservation[]
+  returnRequest        OrderReturn?
   user                User          @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
@@ -387,8 +469,10 @@ model OrderItem {
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   order          Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
   variant        ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  returnItems    OrderReturnItem[]
 
   @@index([orderId])
+  @@index([variantId])
   @@map("order_items")
 }
 
@@ -400,18 +484,100 @@ model Payment {
   amountPaise       Int             @map("amount_paise")
   status            PaymentStatus   @default(PENDING)
   providerReference String?         @unique @map("provider_reference") @db.VarChar(255)
-  idempotencyKey    String          @unique @map("idempotency_key") @db.Uuid
+  idempotencyKey    String          @unique @map("idempotency_key") @db.VarChar(128)
   expiresAt         DateTime?       @map("expires_at") @db.Timestamptz(6)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
   order             Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  initiation        PaymentInitiation?
+  observations      PaymentObservation[]
+  refunds           PaymentRefund[]
 
   @@index([orderId])
+  @@index([status, expiresAt])
   @@map("payments")
 }
 
+model PaymentObservation {
+  id                 String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId          String                        @map("payment_id") @db.Uuid
+  source             PaymentObservationSource
+  observedState      PaymentObservedState          @map("observed_state")
+  disposition        PaymentObservationDisposition
+  deduplicationKey   String                        @unique @map("deduplication_key") @db.VarChar(128)
+  amountPaise        Int?                          @map("amount_paise")
+  merchantId         String?                       @map("merchant_id") @db.VarChar(255)
+  providerReference  String?                       @map("provider_reference") @db.VarChar(255)
+  responseCode       String?                       @map("response_code") @db.VarChar(120)
+  details            String?                       @db.VarChar(500)
+  createdAt          DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  payment            Payment                       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@index([source, createdAt])
+  @@map("payment_observations")
+}
+
+model PaymentRefund {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId          String       @map("payment_id") @db.Uuid
+  returnId           String?      @unique @map("return_id") @db.Uuid
+  amountPaise        Int          @map("amount_paise")
+  status             RefundStatus @default(REQUESTED)
+  mode               RefundMode
+  reason             RefundReason
+  idempotencyKey     String       @unique @map("idempotency_key") @db.VarChar(128)
+  providerReference  String?      @unique @map("provider_reference") @db.VarChar(255)
+  attemptCount       Int          @default(0) @map("attempt_count")
+  failureCode        String?      @map("failure_code") @db.VarChar(120)
+  requestedAt        DateTime     @default(now()) @map("requested_at") @db.Timestamptz(6)
+  processedAt        DateTime?    @map("processed_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  payment            Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  returnRequest      OrderReturn? @relation(fields: [returnId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, status])
+  @@index([status, requestedAt])
+  @@map("payment_refunds")
+}
+
+model PaymentInitiation {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId         String                 @unique @map("payment_id") @db.Uuid
+  state             PaymentInitiationState @default(READY)
+  leaseToken        String?                @map("lease_token") @db.Uuid
+  leaseExpiresAt    DateTime?              @map("lease_expires_at") @db.Timestamptz(6)
+  providerReference String?                @map("provider_reference") @db.VarChar(255)
+  redirectUrl       String?                @map("redirect_url") @db.Text
+  attemptCount      Int                    @default(0) @map("attempt_count")
+  lastErrorCode     String?                @map("last_error_code") @db.VarChar(120)
+  lastErrorAt       DateTime?              @map("last_error_at") @db.Timestamptz(6)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  payment           Payment                @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([state, leaseExpiresAt])
+  @@map("payment_initiations")
+}
+
+model CheckoutIdempotency {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String   @unique @db.VarChar(128)
+  userId      String   @map("user_id") @db.Uuid
+  requestHash String   @map("request_hash") @db.VarChar(64)
+  orderId     String?  @map("order_id") @db.Uuid
+  paymentId   String?  @map("payment_id") @db.Uuid
+  response    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([key, userId])
+  @@index([expiresAt])
+  @@map("checkout_idempotency")
+}
+
 model InventoryReservation {
-  id          String                     @id @default(uuid()) @db.Uuid
+  id          String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orderId     String                     @map("order_id") @db.Uuid
   variantId   String                     @map("variant_id") @db.Uuid
   quantity    Int
@@ -425,6 +591,7 @@ model InventoryReservation {
   @@unique([orderId, variantId])
   @@index([status, expiresAt])
   @@index([variantId, status])
+  @@index([createdAt])
   @@map("inventory_reservations")
 }
 
@@ -458,8 +625,48 @@ model CouponRedemption {
   user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([couponId, orderId])
+  @@unique([couponId, userId])
   @@index([userId, couponId])
   @@map("coupon_redemptions")
+}
+
+model OrderReturn {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId     String              @unique @map("order_id") @db.Uuid
+  reason      String              @db.VarChar(500)
+  status      ReturnRequestStatus @default(REQUESTED)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt DateTime?           @map("processed_at") @db.Timestamptz(6)
+  order       Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items       OrderReturnItem[]
+  refund      PaymentRefund?
+
+  @@index([status, createdAt])
+  @@map("order_returns")
+}
+
+model OrderReturnItem {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnId     String      @map("return_id") @db.Uuid
+  orderItemId  String      @map("order_item_id") @db.Uuid
+  quantity     Int
+  returnRequest OrderReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem    OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([returnId, orderItemId])
+  @@index([orderItemId])
+  @@map("order_return_items")
+}
+
+model CartMerge {
+  id          String   @id @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  requestHash String   @map("request_hash") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("cart_merges")
 }
 
 model AuditLog {
@@ -474,5 +681,6 @@ model AuditLog {
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])
+  @@index([createdAt])
   @@map("audit_logs")
 }

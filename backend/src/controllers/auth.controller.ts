@@ -6,24 +6,44 @@ import { body, forgotSchema, loginSchema, registerSchema, resetSchema, tokenSche
 
 const auth = new AuthService();
 // Customer APIs beyond /auth use the same server-side session cookie.
+const isSecureEnv = env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
 const baseCookie: CookieOptions = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
+  secure: isSecureEnv,
   sameSite: 'lax',
   path: '/',
   ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
 };
 const csrfCookie: CookieOptions = {
   httpOnly: false,
-  secure: env.NODE_ENV === 'production',
+  secure: isSecureEnv,
   sameSite: 'lax',
   path: '/',
   ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
 };
-function establishSession(res: Parameters<RequestHandler>[1], token: string): string { const csrfToken = createSecret(); res.cookie(SESSION_COOKIE, token, { ...baseCookie, maxAge: 30 * 24 * 60 * 60 * 1000 }); res.cookie(CSRF_COOKIE, csrfToken, { ...csrfCookie, maxAge: 30 * 24 * 60 * 60 * 1000 }); return csrfToken; }
+function establishSession(res: Parameters<RequestHandler>[1], token: string, maxAgeMs = 7 * 24 * 60 * 60 * 1000): string {
+  const csrfToken = createSecret();
+  res.cookie(SESSION_COOKIE, token, { ...baseCookie, maxAge: maxAgeMs });
+  res.cookie(CSRF_COOKIE, csrfToken, { ...csrfCookie, maxAge: maxAgeMs });
+  return csrfToken;
+}
 
-export const register: RequestHandler = async (req, res, next) => { try { const input = body(registerSchema, req.body); const result = await auth.register(input); const csrfToken = establishSession(res, await auth.createSession(result.user.id)); res.status(201).json({ success: true, data: { user: result.user, emailSent: result.emailSent, csrfToken } }); } catch (error) { next(error); } };
-export const login: RequestHandler = async (req, res, next) => { try { const result = await auth.login(body(loginSchema, req.body)); const csrfToken = establishSession(res, result.sessionToken); res.json({ success: true, data: { user: result.user, csrfToken } }); } catch (error) { next(error); } };
+export const register: RequestHandler = async (req, res, next) => {
+  try {
+    const input = body(registerSchema, req.body);
+    const result = await auth.register(input);
+    const session = await auth.createSession(result.user.id);
+    const csrfToken = establishSession(res, session.sessionToken, session.maxAgeMs);
+    res.status(201).json({ success: true, data: { user: result.user, emailSent: result.emailSent, csrfToken } });
+  } catch (error) { next(error); }
+};
+export const login: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await auth.login(body(loginSchema, req.body));
+    const csrfToken = establishSession(res, result.sessionToken, result.maxAgeMs);
+    res.json({ success: true, data: { user: result.user, csrfToken } });
+  } catch (error) { next(error); }
+};
 export const me: RequestHandler = async (req, res, next) => { try { const csrfToken = req.cookies?.[CSRF_COOKIE] ?? ''; res.json({ success: true, data: { user: await auth.me(req.auth!.userId), csrfToken } }); } catch (error) { next(error); } };
 export const logout: RequestHandler = async (req, res, next) => { try { await auth.logout(req.cookies?.[SESSION_COOKIE]); res.clearCookie(SESSION_COOKIE, baseCookie).clearCookie(CSRF_COOKIE, csrfCookie).json({ success: true, data: {} }); } catch (error) { next(error); } };
 export const csrf: RequestHandler = (_req, res) => { const token = createSecret(); res.cookie(CSRF_COOKIE, token, csrfCookie).json({ success: true, data: { csrfToken: token } }); };

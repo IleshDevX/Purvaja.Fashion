@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactNode, useState, createContext, useContext, useCallback } from 'react';
+import { ReactNode, useState, createContext, useContext, useCallback, useEffect } from 'react';
+import { useAuthStore } from '../features/auth/store/authStore.js';
 
 /* ── Toast System ── */
 interface Toast {
@@ -29,6 +30,8 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
       {toasts.map(t => (
         <div
           key={t.id}
+          role={t.type === 'error' ? 'alert' : 'status'}
+          aria-live={t.type === 'error' ? 'assertive' : 'polite'}
           className={`px-5 py-3.5 rounded-sm shadow-elevated font-sans text-body-sm animate-slide-up ${
             t.type === 'success'
               ? 'bg-charcoal-900 text-ivory-100'
@@ -40,8 +43,10 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           <div className="flex items-center justify-between gap-3">
             <span>{t.message}</span>
             <button
+              type="button"
               onClick={() => removeToast(t.id)}
-              className="text-ivory-400 hover:text-white transition-colors text-lg leading-none"
+              aria-label="Dismiss notification"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center text-ivory-400 hover:text-white transition-colors text-lg leading-none"
             >
               ×
             </button>
@@ -58,6 +63,11 @@ export interface AppProvidersProps {
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
+  const owner = useAuthStore(state => state.status === 'authenticated' ? state.user?.id : state.status);
+  return <SessionProviders key={owner} children={children} />;
+}
+
+function SessionProviders({ children }: AppProvidersProps) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -80,6 +90,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   );
 
   const [toasts, setToasts] = useState<Toast[]>([]);
+  useEffect(() => () => { queryClient.clear(); }, [queryClient]);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;

@@ -55,6 +55,9 @@ const CheckoutFailurePage = lazy(() =>
 const DemoPaymentPage = lazy(() =>
   import('../pages/checkout/DemoPaymentPage.js').then(m => ({ default: m.DemoPaymentPage })),
 );
+const PaymentPendingPage = lazy(() =>
+  import('../pages/checkout/PaymentPendingPage.js').then(m => ({ default: m.PaymentPendingPage })),
+);
 
 // Auth Pages
 const LoginPage = lazy(() =>
@@ -208,6 +211,10 @@ export const router = createBrowserRouter([
       {
         path: 'payment',
         element: withSuspense(<DemoPaymentPage />),
+      },
+      {
+        path: 'payment-status',
+        element: withSuspense(<PaymentPendingPage />),
       },
     ],
   },

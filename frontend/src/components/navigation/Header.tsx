@@ -5,6 +5,7 @@ import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
+import { Dialog } from '../ui/Dialog.js';
 
 const NAV_LINKS = [
   { label: 'New In', href: '/new-arrivals' },
@@ -18,6 +19,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,12 +28,24 @@ export function Header() {
   const setCartDrawerOpen = useCartStore(s => s.setDrawerOpen);
   const wishlistCount = useWishlistStore(s => s.getItemCount());
   const { user, status } = useAuthStore();
-  const { data: searchProducts = [] } = useProductsQuery({ search: searchQuery || undefined, limit: 6 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const isSearchActive = searchOpen && debouncedSearchQuery.length >= 2;
+  const { data: searchProducts = [], isFetching: isSearching } = useProductsQuery(
+    { search: debouncedSearchQuery || undefined, limit: 6 },
+    { enabled: isSearchActive }
+  );
 
   const liveSearchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!isSearchActive) return [];
     return searchProducts;
-  }, [searchProducts, searchQuery]);
+  }, [searchProducts, isSearchActive]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -40,27 +54,9 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [searchOpen]);
-
-  useEffect(() => {
     setMobileMenuOpen(false);
     setSearchOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (searchOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
-    }
-  }, [searchOpen]);
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -85,8 +81,10 @@ export function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 -ml-2 text-charcoal-700 hover:text-charcoal-900 transition-colors"
-              aria-label="Toggle menu"
+              className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 text-charcoal-700 hover:text-charcoal-900 transition-colors"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -128,8 +126,8 @@ export function Header() {
                           </Link>
                         </li>
                         <li>
-                          <Link to="/shop?fit=Tailored" className="hover:text-gold-700 transition-colors block">
-                            Tailored Fit
+                          <Link to="/shop?fit=Relaxed" className="hover:text-gold-700 transition-colors block">
+                            Relaxed Fit
                           </Link>
                         </li>
                       </ul>
@@ -140,22 +138,22 @@ export function Header() {
                       </h4>
                       <ul className="space-y-3 text-sm text-charcoal-700 font-medium">
                         <li>
-                          <Link to="/shop?fabric=Oxford" className="hover:text-gold-700 transition-colors block">
+                          <Link to="/shop?fabric=Oxford%20Cotton" className="hover:text-gold-700 transition-colors block">
                             Oxford
                           </Link>
                         </li>
                         <li>
-                          <Link to="/shop?fabric=Silk" className="hover:text-gold-700 transition-colors block">
-                            Silk Blend
+                          <Link to="/shop?fabric=Linen%20Blend" className="hover:text-gold-700 transition-colors block">
+                            Linen Blend
                           </Link>
                         </li>
                         <li>
-                          <Link to="/shop?fabric=Linen" className="hover:text-gold-700 transition-colors block">
+                          <Link to="/shop?fabric=Pure%20Linen" className="hover:text-gold-700 transition-colors block">
                             Linen
                           </Link>
                         </li>
                         <li>
-                          <Link to="/shop?fabric=Poplin" className="hover:text-gold-700 transition-colors block">
+                          <Link to="/shop?fabric=Cotton%20Poplin" className="hover:text-gold-700 transition-colors block">
                             Poplin
                           </Link>
                         </li>
@@ -279,29 +277,23 @@ export function Header() {
       </header>
 
       {/* ── Elevated Luxury Search Modal ── */}
-      {searchOpen && (
-        <div
-          className="fixed inset-0 z-[100] bg-charcoal-950/70 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-16 p-3 sm:p-4 animate-fade-in overflow-y-auto"
-          onClick={() => setSearchOpen(false)}
-        >
-          <div
-            className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl border border-ivory-300 shadow-2xl p-4 sm:p-8 space-y-4 sm:space-y-6 animate-scale-in relative text-charcoal-950 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} labelledBy="search-modal-title" initialFocusRef={searchInputRef}
+        overlayClassName="fixed inset-0 z-[100] bg-charcoal-950/70 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-16 p-3 sm:p-4 animate-fade-in overflow-y-auto"
+        panelClassName="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl border border-ivory-300 shadow-2xl p-4 sm:p-8 space-y-4 sm:space-y-6 animate-scale-in relative text-charcoal-950 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-ivory-200 pb-3 sm:pb-4">
               <div>
                 <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.26em] text-gold-700 font-sans">
                   Atelier Search
                 </p>
-                <h2 className="font-serif text-xl sm:text-3xl font-light tracking-tight text-charcoal-950 mt-0.5">
+                <h2 id="search-modal-title" className="font-serif text-xl sm:text-3xl font-light tracking-tight text-charcoal-950 mt-0.5">
                   Search Menswear
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setSearchOpen(false)}
-                className="p-2 text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-charcoal-400 hover:text-charcoal-950 hover:bg-ivory-100 rounded-full transition-colors"
                 aria-label="Close search"
               >
                 <X className="w-5 h-5" />
@@ -326,7 +318,8 @@ export function Header() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="p-1 text-charcoal-400 hover:text-charcoal-950"
+                    aria-label="Clear search"
+                    className="flex h-11 w-11 items-center justify-center text-charcoal-400 hover:text-charcoal-950"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -350,7 +343,11 @@ export function Header() {
                   )}
                 </div>
 
-                {liveSearchResults.length === 0 ? (
+                {isSearching ? (
+                  <div className="text-center py-6 sm:py-8 text-xs text-charcoal-500 bg-ivory-50 rounded-xl sm:rounded-2xl border border-ivory-200 animate-pulse">
+                    Searching luxury archive...
+                  </div>
+                ) : liveSearchResults.length === 0 ? (
                   <div className="text-center py-6 sm:py-8 text-xs text-charcoal-500 bg-ivory-50 rounded-xl sm:rounded-2xl border border-ivory-200">
                     No shirts found matching "{searchQuery}". Try searching for "Linen", "Cotton", or "Slim".
                   </div>
@@ -406,20 +403,19 @@ export function Header() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+      </Dialog>
 
       {/* ── Full-Screen Mobile Navigation ── */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[55] bg-ivory-100 flex flex-col animate-fade-in lg:hidden overflow-y-auto pb-safe">
+      <Dialog open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} label="Mobile Navigation" panelId="mobile-navigation"
+        overlayClassName="fixed inset-0 z-[55] lg:hidden"
+        panelClassName="fixed inset-0 bg-ivory-100 flex flex-col animate-fade-in overflow-y-auto pb-safe">
           <div className="flex items-center justify-between px-5 h-16 border-b border-ivory-300/80 bg-white/90 backdrop-blur-md sticky top-0 z-10">
             <Link to="/" onClick={() => setMobileMenuOpen(false)} className="font-serif text-2xl font-semibold tracking-tight text-charcoal-950">
               PURVAJA
             </Link>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="w-10 h-10 flex items-center justify-center text-charcoal-700 hover:text-charcoal-950 rounded-full hover:bg-ivory-200 transition-colors"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-charcoal-700 hover:text-charcoal-950 rounded-full hover:bg-ivory-200 transition-colors"
               aria-label="Close menu"
             >
               <X className="w-5 h-5" />
@@ -446,14 +442,14 @@ export function Header() {
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    to="/shop?fabric=Linen"
+                    to="/shop?fabric=Pure%20Linen"
                     onClick={() => setMobileMenuOpen(false)}
                     className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
                   >
                     Pure Linen
                   </Link>
                   <Link
-                    to="/shop?fabric=Oxford"
+                    to="/shop?fabric=Oxford%20Cotton"
                     onClick={() => setMobileMenuOpen(false)}
                     className="px-3.5 py-2.5 rounded-xl bg-white border border-ivory-300 text-xs font-semibold text-charcoal-800 hover:border-gold-500 transition-colors"
                   >
@@ -519,8 +515,7 @@ export function Header() {
               )}
             </div>
           </div>
-        </div>
-      )}
+      </Dialog>
 
       {/* Spacer for fixed header */}
       <div className="h-16 lg:h-20" />

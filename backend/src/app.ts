@@ -5,6 +5,8 @@ import { applySecurityMiddleware } from './middleware/security.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { getHealthStatus, getReadinessStatus } from './controllers/health.controller.js';
+import { requestIdMiddleware } from './middleware/requestId.middleware.js';
+import { boundedRouteLabel, metrics } from './utils/metrics.js';
 import routes from './routes/index.js';
 
 function parseTrustProxy(val: string): boolean | number | string {
@@ -17,6 +19,20 @@ function parseTrustProxy(val: string): boolean | number | string {
 
 export function createApp(): Express {
   const app = express();
+
+  // Attach correlation and request ID tracking
+  app.use(requestIdMiddleware);
+
+  // Operational HTTP metrics collection
+  app.use((req, res, next) => {
+    metrics.requestStarted();
+    const start = performance.now();
+    res.on('finish', () => {
+      const durationMs = performance.now() - start;
+      metrics.requestCompleted(boundedRouteLabel(req), res.statusCode, durationMs);
+    });
+    next();
+  });
 
   // Reverse proxy configuration for Hostinger / Nginx / Cloudflare
   app.set('trust proxy', parseTrustProxy(env.TRUST_PROXY));

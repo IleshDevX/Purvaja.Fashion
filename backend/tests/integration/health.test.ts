@@ -1,12 +1,14 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { checkDatabaseConnection } = vi.hoisted(() => ({
+const { checkDatabaseConnection, checkDatabaseReadiness } = vi.hoisted(() => ({
   checkDatabaseConnection: vi.fn(),
+  checkDatabaseReadiness: vi.fn(),
 }));
 
 vi.mock('../../src/config/database.js', () => ({
   checkDatabaseConnection,
+  checkDatabaseReadiness,
 }));
 
 import { app } from '../../src/app.js';
@@ -14,6 +16,7 @@ import { app } from '../../src/app.js';
 describe('GET /health', () => {
   beforeEach(() => {
     checkDatabaseConnection.mockReset();
+    checkDatabaseReadiness.mockReset();
   });
 
   it('should return 200 OK with healthy status payload', async () => {
@@ -45,20 +48,26 @@ describe('GET /health', () => {
   });
 
   it('should return ready only after a successful database connectivity check', async () => {
-    checkDatabaseConnection.mockResolvedValue(true);
+    checkDatabaseReadiness.mockResolvedValue({ connected: true, migrationsReady: true });
 
     const response = await request(app).get('/api/v1/health/ready');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       success: true,
-      data: { status: 'ready' },
+      data: {
+        status: 'ready',
+        checks: {
+          database: 'connected',
+          migrations: 'ready',
+        },
+      },
     });
-    expect(checkDatabaseConnection).toHaveBeenCalledOnce();
+    expect(checkDatabaseReadiness).toHaveBeenCalledOnce();
   });
 
   it('should return unavailable when PostgreSQL cannot be reached', async () => {
-    checkDatabaseConnection.mockResolvedValue(false);
+    checkDatabaseReadiness.mockResolvedValue({ connected: false, migrationsReady: false });
 
     const response = await request(app).get('/api/v1/health/ready');
 
@@ -70,6 +79,6 @@ describe('GET /health', () => {
         message: 'Service is not ready.',
       },
     });
-    expect(checkDatabaseConnection).toHaveBeenCalledOnce();
+    expect(checkDatabaseReadiness).toHaveBeenCalledOnce();
   });
 });

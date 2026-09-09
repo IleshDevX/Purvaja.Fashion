@@ -18,6 +18,7 @@ import { PageLoadingFallback } from '../../components/common/PageLoadingFallback
 import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
 import { useToast } from '../../app/providers.js';
+import { Dialog } from '../../components/ui/Dialog.js';
 
 export function ProductDetailsPage() {
   const { productId } = useParams<{ productId: string }>();
@@ -72,36 +73,76 @@ export function ProductDetailsPage() {
   const currentSize = selectedSize || shirt.sizes[0] || '39 (M)';
   const inWishlist = isInWishlist(shirt.id);
 
+  const isSizeAvailable = (size: string) => {
+    const v = shirt.variants.find(
+      item => item.color.name === currentColor.name && item.size === size,
+    );
+    return Boolean(v && v.inStock && v.stockCount > 0);
+  };
+
+  const currentVariant = shirt.variants.find(
+    item => item.color.name === currentColor.name && item.size === currentSize,
+  );
+  const isCurrentVariantInStock = Boolean(
+    currentVariant && currentVariant.inStock && currentVariant.stockCount > 0,
+  );
+  const currentPrice = currentVariant?.price ?? shirt.price;
+  const currentPricePaise = currentVariant?.pricePaise ?? shirt.pricePaise;
+
   const discount = shirt.compareAtPrice
-    ? Math.round(((shirt.compareAtPrice - shirt.price) / shirt.compareAtPrice) * 100)
+    ? Math.max(0, Math.round(((shirt.compareAtPrice - currentPrice) / shirt.compareAtPrice) * 100))
     : 0;
 
-  const handleAddToCart = () => {
-    const variant = shirt.variants.find(
-      item => item.color.name === currentColor.name && item.size === currentSize,
-    );
-    if (!variant || !variant.inStock) {
+  const handleAddToCart = async () => {
+    if (!currentVariant || !isCurrentVariantInStock) {
       addToast('This size and color combination is currently unavailable.', 'error');
       return;
     }
-    addItem({
-      shirtId: shirt.id,
-      variantId: variant.id,
-      name: shirt.name,
-      slug: shirt.slug,
-      image: shirt.images[0] || '',
-      price: shirt.price,
-      compareAtPrice: shirt.compareAtPrice,
-      color: currentColor,
-      size: currentSize,
-      quantity,
-    });
-    addToast(`Added ${quantity} × "${shirt.name}" (${currentSize}) to your bag.`, 'success');
+    try {
+      await addItem({
+        shirtId: shirt.id,
+        variantId: currentVariant.id,
+        name: shirt.name,
+        slug: shirt.slug,
+        image: shirt.images[0] || '',
+        pricePaise: currentPricePaise,
+        compareAtPricePaise: shirt.compareAtPricePaise,
+        price: currentPrice,
+        compareAtPrice: shirt.compareAtPrice,
+        color: currentColor,
+        size: currentSize,
+        quantity,
+      });
+      addToast(`Added ${quantity} × "${shirt.name}" (${currentSize}) to your bag.`, 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Unable to add item to your bag.', 'error');
+    }
   };
 
-  const handleBuyNow = () => {
-    handleAddToCart();
-    navigate('/checkout');
+  const handleBuyNow = async () => {
+    if (!currentVariant || !isCurrentVariantInStock) {
+      addToast('This size and color combination is currently unavailable.', 'error');
+      return;
+    }
+    try {
+      await addItem({
+        shirtId: shirt.id,
+        variantId: currentVariant.id,
+        name: shirt.name,
+        slug: shirt.slug,
+        image: shirt.images[0] || '',
+        pricePaise: currentPricePaise,
+        compareAtPricePaise: shirt.compareAtPricePaise,
+        price: currentPrice,
+        compareAtPrice: shirt.compareAtPrice,
+        color: currentColor,
+        size: currentSize,
+        quantity,
+      });
+      navigate('/checkout');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Unable to proceed to checkout.', 'error');
+    }
   };
 
   const handleAddReviewSubmit = async (e: React.FormEvent) => {
@@ -124,7 +165,7 @@ export function ProductDetailsPage() {
   const relatedShirts = productResult?.relatedProducts ?? [];
 
   return (
-    <div className="py-4 lg:py-8">
+    <div className="py-4 lg:py-8 pb-24 lg:pb-8">
       <div className="max-w-editorial mx-auto px-4 sm:px-6 lg:px-10">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center gap-2 text-caption text-charcoal-400 mb-4 sm:mb-6" aria-label="Breadcrumb">
@@ -197,7 +238,7 @@ export function ProductDetailsPage() {
             {/* Price Row */}
             <div className="flex items-baseline gap-3 pb-3 border-b border-ivory-300">
               <span className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-charcoal-900 tabular-nums">
-                ₹{shirt.price.toLocaleString('en-IN')}
+                ₹{currentPrice.toLocaleString('en-IN')}
               </span>
               {shirt.compareAtPrice && (
                 <>
@@ -249,20 +290,27 @@ export function ProductDetailsPage() {
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {shirt.sizes.map(size => (
-                  <button
-                    type="button"
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`py-2 px-2 text-caption font-medium border transition-all rounded-xs ${
-                      currentSize === size
-                        ? 'border-charcoal-900 bg-charcoal-900 text-ivory-100 font-bold'
-                        : 'border-ivory-300 bg-ivory-50 text-charcoal-800 hover:border-charcoal-400'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                {shirt.sizes.map(size => {
+                  const inStock = isSizeAvailable(size);
+                  return (
+                    <button
+                      type="button"
+                      key={size}
+                      disabled={!inStock}
+                      onClick={() => setSelectedSize(size)}
+                      title={inStock ? `Size ${size}` : `Size ${size} - Out of Stock`}
+                      className={`py-2 px-2 text-caption font-medium border transition-all rounded-xs relative ${
+                        !inStock
+                          ? 'opacity-40 line-through cursor-not-allowed border-ivory-200 bg-ivory-100/50 text-charcoal-400'
+                          : currentSize === size
+                          ? 'border-charcoal-900 bg-charcoal-900 text-ivory-100 font-bold'
+                          : 'border-ivory-300 bg-ivory-50 text-charcoal-800 hover:border-charcoal-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
               </div>
             </fieldset>
 
@@ -272,8 +320,9 @@ export function ProductDetailsPage() {
               <div className="inline-flex items-center border border-ivory-300 bg-ivory-50 rounded-xs">
                 <button
                   type="button"
+                  disabled={!isCurrentVariantInStock}
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-2 text-charcoal-600 hover:text-charcoal-900"
+                  className="p-2 text-charcoal-600 hover:text-charcoal-900 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="w-3.5 h-3.5" />
@@ -281,8 +330,9 @@ export function ProductDetailsPage() {
                 <span className="px-4 text-body-sm font-semibold text-charcoal-900">{quantity}</span>
                 <button
                   type="button"
+                  disabled={!isCurrentVariantInStock}
                   onClick={() => setQuantity(quantity + 1)}
-                  className="p-2 text-charcoal-600 hover:text-charcoal-900"
+                  className="p-2 text-charcoal-600 hover:text-charcoal-900 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Increase quantity"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -295,9 +345,10 @@ export function ProductDetailsPage() {
               <div className="flex gap-2.5">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 py-3 bg-charcoal-900 text-ivory-100 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors shadow-subtle rounded-xs"
+                  disabled={!isCurrentVariantInStock}
+                  className="flex-1 py-3 bg-charcoal-900 text-ivory-100 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors shadow-subtle rounded-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  ADD TO SHOPPING BAG
+                  {isCurrentVariantInStock ? 'ADD TO SHOPPING BAG' : 'OUT OF STOCK'}
                 </button>
                 <button
                   onClick={() => {
@@ -319,9 +370,10 @@ export function ProductDetailsPage() {
               </div>
               <button
                 onClick={handleBuyNow}
-                className="w-full py-2.5 border-2 border-charcoal-900 bg-transparent text-charcoal-900 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-900 hover:text-ivory-100 transition-all rounded-xs"
+                disabled={!isCurrentVariantInStock}
+                className="w-full py-2.5 border-2 border-charcoal-900 bg-transparent text-charcoal-900 text-xs sm:text-body-sm font-semibold tracking-wider hover:bg-charcoal-900 hover:text-ivory-100 transition-all rounded-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                BUY NOW WITH 1-CLICK
+                {isCurrentVariantInStock ? 'BUY NOW WITH 1-CLICK' : 'UNAVAILABLE'}
               </button>
             </div>
 
@@ -347,7 +399,7 @@ export function ProductDetailsPage() {
 
         {/* ── Editorial Accordion Tabs (Craft, Fabric, Care) ── */}
         <div className="mt-16 lg:mt-24 pt-12 border-t border-ivory-300 max-w-4xl mx-auto">
-          <div className="flex justify-center border-b border-ivory-300 mb-8 gap-8">
+          <div className="grid grid-cols-3 border-b border-ivory-300 mb-8 gap-2 sm:gap-8">
             {[
               { id: 'details', label: 'Craft & Description' },
               { id: 'care', label: 'Care Instructions' },
@@ -356,7 +408,7 @@ export function ProductDetailsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'details' | 'care' | 'sizing')}
-                className={`pb-3 text-caption-editorial tracking-widest transition-colors relative ${
+                className={`min-h-11 min-w-0 px-1 pb-3 text-[10px] leading-tight tracking-wide sm:text-caption-editorial sm:tracking-widest transition-colors relative ${
                   activeTab === tab.id
                     ? 'text-charcoal-900 font-semibold border-b-2 border-charcoal-900'
                     : 'text-charcoal-400 hover:text-charcoal-700'
@@ -488,16 +540,22 @@ export function ProductDetailsPage() {
 
         {/* Size Guide Modal */}
         {sizeGuideOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white w-full max-w-lg p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto">
+          <Dialog
+            open
+            onClose={() => setSizeGuideOpen(false)}
+            labelledBy="size-guide-modal-title"
+            overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            panelClassName="bg-white w-full max-w-lg p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto"
+          >
               <button
+                type="button"
                 onClick={() => setSizeGuideOpen(false)}
-                className="absolute top-4 right-4 p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100"
+                className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100 transition-colors"
                 aria-label="Close size guide"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Tailored Size Chart</h3>
+              <h3 id="size-guide-modal-title" className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Tailored Size Chart</h3>
               <p className="text-caption text-charcoal-500 mb-4">Measurements in inches (Collar, Chest & Sleeve)</p>
               <div className="table-responsive-wrapper rounded-xl border border-ivory-200">
                 <table className="w-full text-caption sm:text-body-sm text-charcoal-800 border-collapse">
@@ -549,22 +607,27 @@ export function ProductDetailsPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
+          </Dialog>
         )}
 
         {/* Review Modal */}
         {reviewModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white w-full max-w-md p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto">
+          <Dialog
+            open
+            onClose={() => setReviewModalOpen(false)}
+            labelledBy="review-modal-title"
+            overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            panelClassName="bg-white w-full max-w-md p-5 sm:p-6 shadow-2xl border border-ivory-300 rounded-2xl relative animate-scale-in max-h-[90vh] overflow-y-auto"
+          >
               <button
+                type="button"
                 onClick={() => setReviewModalOpen(false)}
-                className="absolute top-4 right-4 p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100"
+                className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-charcoal-400 hover:text-charcoal-900 rounded-full hover:bg-ivory-100 transition-colors"
                 aria-label="Close review modal"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Write a Review</h3>
+              <h3 id="review-modal-title" className="font-serif text-xl sm:text-2xl text-charcoal-900 mb-1">Write a Review</h3>
               <p className="text-body-sm text-charcoal-500 mb-4">
                 Share your impressions on fabric, fit, and craftsmanship.
               </p>
@@ -578,7 +641,7 @@ export function ProductDetailsPage() {
                         type="button"
                         key={r}
                         onClick={() => setNewReviewRating(r)}
-                        className="p-1"
+                        className="flex h-11 w-11 items-center justify-center rounded-full"
                         role="radio"
                         aria-checked={r === newReviewRating}
                         aria-label={`${r} star${r === 1 ? '' : 's'}`}
@@ -614,8 +677,7 @@ export function ProductDetailsPage() {
                   Submit Verified Review
                 </button>
               </form>
-            </div>
-          </div>
+          </Dialog>
         )}
       </div>
 
@@ -625,7 +687,7 @@ export function ProductDetailsPage() {
           <div className="min-w-0">
             <p className="font-serif text-sm font-bold text-charcoal-950 truncate">{shirt.name}</p>
             <p className="font-sans text-sm font-bold text-charcoal-900 tabular-nums">
-              ₹{shirt.price.toLocaleString('en-IN')} <span className="text-[10px] text-gold-700 font-medium">({currentSize})</span>
+              ₹{currentPrice.toLocaleString('en-IN')} <span className="text-[10px] text-gold-700 font-medium">({currentSize})</span>
             </p>
           </div>
           <button

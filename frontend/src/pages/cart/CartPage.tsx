@@ -20,7 +20,7 @@ import { useToast } from '../../app/providers.js';
 export function CartPage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { items, removeItem, updateQuantity, clearCart } = useCartStore();
+  const { items, removeItem, updateQuantity, clearCart, error: cartError, isSyncing, syncWithServer } = useCartStore();
   const { coupon, applyCoupon, removeCoupon, deliveryOptionId } = useCheckoutStore();
 
   const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -28,11 +28,11 @@ export function CartPage() {
 
   const pricing = calculateOrderPricing(items, deliveryOptionId, coupon);
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCodeInput.trim()) return;
 
-    const res = applyCoupon(couponCodeInput);
+    const res = await applyCoupon(couponCodeInput, pricing.subtotalPaise);
     if (res.success) {
       addToast(res.message, 'success');
       setCouponCodeInput('');
@@ -49,6 +49,20 @@ export function CartPage() {
           <p className="text-overline text-gold-600 mb-2">Order Review</p>
           <h1 className="font-serif text-display text-charcoal-900">Your Shopping Bag</h1>
         </div>
+
+        {cartError && (
+          <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-red-300 bg-red-50 px-4 py-3 text-body-sm text-red-800">
+            <span>Your bag could not be synchronized: {cartError}</span>
+            <button
+              type="button"
+              disabled={isSyncing}
+              onClick={() => void syncWithServer().catch(() => undefined)}
+              className="font-semibold underline disabled:opacity-50"
+            >
+              {isSyncing ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
+        )}
 
         {items.length === 0 ? (
           <div className="py-20 text-center max-w-md mx-auto">
@@ -115,12 +129,17 @@ export function CartPage() {
                             {item.name}
                           </Link>
                           <button
-                            onClick={() => {
-                              removeItem(item.id);
-                              addToast(`Removed "${item.name}" from your bag.`, 'info');
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await removeItem(item.id);
+                                addToast(`Removed "${item.name}" from your bag.`, 'info');
+                              } catch (err) {
+                                addToast(err instanceof Error ? err.message : 'Unable to remove item.', 'error');
+                              }
                             }}
-                            className="text-charcoal-400 hover:text-error p-1 transition-colors"
-                            title="Remove"
+                            className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center text-charcoal-400 hover:text-error transition-colors -mr-1.5"
+                            aria-label={`Remove ${item.name} from bag`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -135,21 +154,35 @@ export function CartPage() {
                         {/* Quantity Stepper */}
                         <div className="inline-flex items-center border border-ivory-300 bg-ivory-50 rounded-lg overflow-hidden">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-charcoal-600 hover:text-charcoal-900"
-                            aria-label="Decrease quantity"
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await updateQuantity(item.id, item.quantity - 1);
+                              } catch (err) {
+                                addToast(err instanceof Error ? err.message : 'Unable to update quantity.', 'error');
+                              }
+                            }}
+                            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center text-charcoal-600 hover:text-charcoal-900 transition-colors"
+                            aria-label={`Decrease quantity of ${item.name}`}
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3.5 h-3.5" />
                           </button>
                           <span className="px-2.5 sm:px-3 text-caption font-semibold text-charcoal-900 tabular-nums">
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-charcoal-600 hover:text-charcoal-900"
-                            aria-label="Increase quantity"
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await updateQuantity(item.id, item.quantity + 1);
+                              } catch (err) {
+                                addToast(err instanceof Error ? err.message : 'Unable to update quantity.', 'error');
+                              }
+                            }}
+                            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center text-charcoal-600 hover:text-charcoal-900 transition-colors"
+                            aria-label={`Increase quantity of ${item.name}`}
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
@@ -178,11 +211,12 @@ export function CartPage() {
                   ← Continue Exploring Catalog
                 </Link>
                 <button
+                  type="button"
                   onClick={() => {
                     clearCart();
                     addToast('Shopping bag cleared.', 'info');
                   }}
-                  className="text-caption text-charcoal-400 hover:text-error"
+                  className="text-caption text-charcoal-400 hover:text-error py-2"
                 >
                   Clear Bag
                 </button>
@@ -195,7 +229,7 @@ export function CartPage() {
 
               {/* Coupon Form */}
               <div>
-                <label className="block text-overline text-charcoal-500 mb-2">Promotional Code</label>
+                <label htmlFor="cart-coupon-input" className="block text-overline text-charcoal-500 mb-2">Promotional Code</label>
                 {coupon ? (
                   <div className="flex items-center justify-between p-3 bg-gold-50 border border-gold-300 text-caption font-medium text-gold-800 rounded-xl">
                     <div className="flex items-center gap-2">
@@ -203,8 +237,10 @@ export function CartPage() {
                       <span>{coupon.code} applied</span>
                     </div>
                     <button
+                      type="button"
                       onClick={removeCoupon}
-                      className="text-charcoal-500 hover:text-charcoal-900 p-1"
+                      aria-label="Remove applied coupon"
+                      className="flex h-8 w-8 items-center justify-center text-charcoal-500 hover:text-charcoal-900 rounded-full"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -212,15 +248,16 @@ export function CartPage() {
                 ) : (
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input
+                      id="cart-coupon-input"
                       type="text"
                       value={couponCodeInput}
                       onChange={e => setCouponCodeInput(e.target.value)}
                       placeholder="e.g. SHIRT10 or WELCOME20"
-                      className="flex-1 px-3.5 py-2 bg-white border border-ivory-300 text-caption text-charcoal-900 uppercase placeholder:normal-case placeholder:text-charcoal-400 outline-none focus:border-charcoal-900 rounded-xl"
+                      className="flex-1 px-3.5 py-2.5 bg-white border border-ivory-300 text-caption text-charcoal-900 uppercase placeholder:normal-case placeholder:text-charcoal-400 outline-none focus:border-charcoal-900 rounded-xl"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-charcoal-900 text-ivory-100 text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors rounded-xl shadow-xs"
+                      className="px-4 py-2.5 bg-charcoal-900 text-ivory-100 text-caption font-semibold tracking-wider hover:bg-charcoal-800 transition-colors rounded-xl shadow-xs"
                     >
                       APPLY
                     </button>
