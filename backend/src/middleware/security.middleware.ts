@@ -49,7 +49,8 @@ export function applySecurityMiddleware(app: Express): void {
   const limiter = createLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     prodMax: 100,
-    allowTestLimitOverride: false,
+    testMax: 50000,
+    allowTestLimitOverride: true,
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Too many requests, please try again later.',
   });

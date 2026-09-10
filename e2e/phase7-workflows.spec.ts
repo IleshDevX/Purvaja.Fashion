@@ -22,7 +22,7 @@ test('admin creates a publishable product, verifies storefront visibility, and a
 
   await page.getByRole('link',{name:/Manage Variants/i}).click();
   await expect(page).toHaveURL(new RegExp(`/admin/variants\\?productId=${productId}`));
-  await page.getByLabel('SKU').fill(`P7B-${suffix}`);
+  await page.getByLabel('SKU', { exact: true }).fill(`P7B-${suffix}`);
   await page.getByLabel('Size').fill('42 (L)');
   await page.getByLabel('Colour name').fill('Midnight');
   await page.getByLabel('Stock',{exact:true}).fill('8');

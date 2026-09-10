@@ -59,7 +59,9 @@ async function registerCustomer(page: Page, email: string) {
 
 test('public journeys and dialogs remain usable at every required viewport', async ({ page }, testInfo) => {
   test.setTimeout(180_000);
-  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=1&inStock=true');
+  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=1&inStock=true', {
+    headers: { 'X-Test-Rate-Limit-Max': '50000', 'X-Test-Client-Id': 'phase8-public-catalog' },
+  });
   expect(catalogResponse.ok()).toBe(true);
   const catalog = await catalogResponse.json() as { data: { items: Array<{ id: string }> } };
   const productId = catalog.data.items[0]?.id;

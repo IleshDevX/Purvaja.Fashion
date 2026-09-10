@@ -72,7 +72,9 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
   await page.getByRole('button', { name: 'Sign Out' }).click();
   await expect(page).toHaveURL(/\/$/);
 
-  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=24&inStock=true');
+  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=24&inStock=true', {
+    headers: { 'X-Test-Rate-Limit-Max': '50000', 'X-Test-Client-Id': `phase2-${run}` },
+  });
   expect(catalogResponse.ok()).toBe(true);
   const catalog = await catalogResponse.json() as {
     data: { items: Array<{
