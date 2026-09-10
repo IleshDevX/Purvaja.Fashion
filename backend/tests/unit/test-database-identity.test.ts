@@ -37,4 +37,28 @@ describe('effective test database isolation', () => {
     await expect(verifyTestDatabase(url)).rejects.toThrow('outside its isolated schema');
     expect(mocks.end).toHaveBeenCalledOnce();
   });
+
+  describe('local and containerized database targets (schema=public)', () => {
+    const localUrl = 'postgresql://purvaja_test_runner:secret@localhost:5432/purvaja_test?schema=public';
+
+    it.each(['127.0.0.1', '::1', '172.17.0.2', '172.18.0.3', '10.0.0.5', '192.168.1.10', null])(
+      'accepts local/private address %s',
+      async address => {
+        mocks.query.mockResolvedValueOnce({
+          rows: [{ database: 'purvaja_test', role: 'purvaja_test_runner', address, privileged: false }],
+        });
+        await verifyTestDatabase(localUrl);
+        expect(mocks.query).toHaveBeenCalledOnce();
+        expect(mocks.end).toHaveBeenCalledOnce();
+      },
+    );
+
+    it('rejects public un-isolated addresses for public schema', async () => {
+      mocks.query.mockResolvedValueOnce({
+        rows: [{ database: 'purvaja_test', role: 'purvaja_test_runner', address: '3.108.20.1', privileged: false }],
+      });
+      await expect(verifyTestDatabase(localUrl)).rejects.toThrow('resolve to loopback or private network');
+      expect(mocks.end).toHaveBeenCalledOnce();
+    });
+  });
 });
