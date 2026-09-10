@@ -50,7 +50,7 @@ export function applySecurityMiddleware(app: Express): void {
     windowMs: 15 * 60 * 1000, // 15 minutes
     prodMax: 100,
     testMax: 50000,
-    allowTestLimitOverride: true,
+    allowTestLimitOverride: false,
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Too many requests, please try again later.',
   });

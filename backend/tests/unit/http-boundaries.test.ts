@@ -59,4 +59,40 @@ describe('HTTP trust boundaries', () => {
     const large = await request(app).post('/').send({ value: 'a'.repeat(100) });
     expect(large.status).toBe(413);
   });
+
+  it('preserves route-specific rate limiter error codes when global limiter sets allowTestLimitOverride: false', async () => {
+    env.NODE_ENV = 'test';
+    const app = express();
+    const globalLimiter = createLimiter({
+      windowMs: 60000,
+      prodMax: 100,
+      testMax: 50000,
+      allowTestLimitOverride: false,
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Global limited',
+    });
+    const authLimiter = createLimiter({
+      windowMs: 60000,
+      prodMax: 5,
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: 'Auth limited',
+    });
+    app.use('/api', globalLimiter);
+    app.post('/api/auth/login', authLimiter, (_req, res) => res.sendStatus(200));
+
+    const clientId = 'route-limiter-precedence-test';
+    for (let i = 0; i < 3; i++) {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .set('X-Test-Rate-Limit-Max', '3')
+        .set('X-Test-Client-Id', clientId);
+      expect(res.status).toBe(200);
+    }
+    const fourth = await request(app)
+      .post('/api/auth/login')
+      .set('X-Test-Rate-Limit-Max', '3')
+      .set('X-Test-Client-Id', clientId);
+    expect(fourth.status).toBe(429);
+    expect(fourth.body.error.code).toBe('AUTH_RATE_LIMIT_EXCEEDED');
+  });
 });
