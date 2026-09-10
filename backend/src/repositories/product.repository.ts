@@ -54,18 +54,28 @@ function buildWhere(query: ProductListQuery): Prisma.ProductWhereInput {
   if (query.deals !== undefined) and.push({ isDeal: query.deals });
   if (query.newArrivals !== undefined) and.push({ isNewArrival: query.newArrivals });
   if (query.category?.length) {
-    and.push({ categories: { some: { category: { OR: [{ slug: { in: query.category } }, { name: { in: query.category } }] } } } });
+    and.push({ categories: { some: { category: { isActive: true, OR: [{ slug: { in: query.category } }, { name: { in: query.category } }] } } } });
   }
-  if (query.size?.length) and.push({ variants: { some: { size: { in: query.size }, status: VariantStatus.ACTIVE } } });
+
+  const variantConditions: Prisma.ProductVariantWhereInput[] = [{ status: VariantStatus.ACTIVE }];
+  if (query.size?.length) {
+    variantConditions.push({ size: { in: query.size } });
+  }
   if (query.color?.length) {
-    and.push({ variants: { some: { status: VariantStatus.ACTIVE, OR: [{ colorName: { in: query.color } }, { colorHex: { in: query.color } }] } } });
+    variantConditions.push({ OR: [{ colorName: { in: query.color } }, { colorHex: { in: query.color } }] });
   }
+
+  if (query.inStock === true) {
+    variantConditions.push({ stockQuantity: { gt: 0 } });
+    and.push({ variants: { some: { AND: variantConditions } } });
+  } else if (query.inStock === false) {
+    and.push({ NOT: { variants: { some: { AND: [...variantConditions, { stockQuantity: { gt: 0 } }] } } } });
+  } else if (query.size?.length || query.color?.length) {
+    and.push({ variants: { some: { AND: variantConditions } } });
+  }
+
   if (query.ids?.length) {
     and.push({ id: { in: query.ids } });
-  }
-  if (query.inStock !== undefined) {
-    const availableVariant = { status: VariantStatus.ACTIVE, stockQuantity: { gt: 0 } };
-    and.push(query.inStock ? { variants: { some: availableVariant } } : { NOT: { variants: { some: availableVariant } } });
   }
   if (query.search) {
     const search = query.search;

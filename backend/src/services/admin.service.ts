@@ -115,10 +115,19 @@ export class AdminService {
           (SELECT COUNT(*) FROM orders WHERE payment_status IN ('PENDING', 'INITIATED')) AS pending_payments,
           (SELECT COUNT(*) FROM orders WHERE status = 'CONFIRMED') AS confirmed_orders,
           (SELECT COUNT(*) FROM orders WHERE status = 'PROCESSING') AS processing_orders,
-          (SELECT COUNT(*) FROM product_variants WHERE stock_quantity > 0 AND stock_quantity <= 10) AS low_stock_variants,
+          (SELECT COUNT(*) FROM product_variants WHERE stock_quantity > 0 AND stock_quantity <= low_stock_threshold) AS low_stock_variants,
           (SELECT COUNT(*) FROM product_variants WHERE stock_quantity = 0) AS out_of_stock_variants,
-          COALESCE((SELECT SUM(total_paise) FROM orders WHERE payment_status IN ('SUCCESS', 'PAID')), 0) AS total_revenue_paise,
-          COALESCE((SELECT SUM(quantity) FROM order_items), 0) AS total_units_sold
+          COALESCE((
+            (SELECT COALESCE(SUM(total_paise), 0) FROM orders WHERE payment_status IN ('SUCCESS', 'PAID') AND status != 'CANCELLED')
+            -
+            (SELECT COALESCE(SUM(amount_paise), 0) FROM payment_refunds WHERE status = 'SUCCEEDED')
+          ), 0) AS total_revenue_paise,
+          COALESCE((
+            SELECT SUM(oi.quantity)
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE o.payment_status IN ('SUCCESS', 'PAID') AND o.status != 'CANCELLED'
+          ), 0) AS total_units_sold
       `,
       this.prisma.order.findMany({
         take: 10,
@@ -289,8 +298,21 @@ export class AdminService {
     }
   }
 
-  async categories() {
-    return this.prisma.category.findMany({ orderBy: { name: 'asc' }, take: 100 });
+  async categories(query?: { page?: number; limit?: number }) {
+    if (query?.page || query?.limit) {
+      const page = Math.max(1, Number(query.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(query.limit) || 25));
+      const [total, items] = await Promise.all([
+        this.prisma.category.count(),
+        this.prisma.category.findMany({
+          orderBy: { name: 'asc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ]);
+      return { items, page, limit, total, totalPages: Math.ceil(total / limit) };
+    }
+    return this.prisma.category.findMany({ orderBy: { name: 'asc' } });
   }
 
   async createCategory(actor: string, value: CategoryInput) {
@@ -433,14 +455,25 @@ export class AdminService {
         }
       : {};
 
+    let variantIdsFilter: string[] | undefined;
+    if (q.filter === 'low_stock') {
+      const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM product_variants WHERE stock_quantity > 0 AND stock_quantity <= low_stock_threshold
+      `;
+      variantIdsFilter = rows.map(r => r.id);
+    } else if (q.filter === 'in_stock') {
+      const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM product_variants WHERE stock_quantity > low_stock_threshold
+      `;
+      variantIdsFilter = rows.map(r => r.id);
+    }
+
     const stockWhere: Prisma.ProductVariantWhereInput =
       q.filter === 'out_of_stock'
         ? { stockQuantity: 0 }
-        : q.filter === 'low_stock'
-          ? { stockQuantity: { gt: 0, lte: 10 } }
-          : q.filter === 'in_stock'
-            ? { stockQuantity: { gt: 10 } }
-            : {};
+        : variantIdsFilter
+          ? { id: { in: variantIdsFilter } }
+          : {};
 
     const where: Prisma.ProductVariantWhereInput = {
       ...searchWhere,
@@ -620,10 +653,23 @@ export class AdminService {
         user: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
         items: true,
         payments: { include: { refunds: { orderBy: { requestedAt: 'desc' } } } },
+        returnRequest: { include: { items: true } },
       },
     });
     if (!item) throw new NotFoundError('Order was not found.', 'ORDER_NOT_FOUND');
-    return item;
+    const allowedTransitions: Record<string, Array<'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'RETURNED'>> = {
+      CONFIRMED: ['PROCESSING', 'CANCELLED'],
+      PROCESSING: ['SHIPPED', 'CANCELLED'],
+      SHIPPED: ['DELIVERED'],
+      DELIVERED: [],
+      CANCELLED: [],
+      RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
+      RETURNED: [],
+    };
+    return {
+      ...item,
+      allowedActions: allowedTransitions[item.status] ?? [],
+    };
   }
   async updateOrderStatus(actor: string, id: string, status: 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'RETURNED') {
     return this.prisma.$transaction(async tx => {
@@ -703,6 +749,7 @@ export class AdminService {
           user: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
           items: true,
           payments: { include: { refunds: { orderBy: { requestedAt: 'desc' } } } },
+          returnRequest: { include: { items: true } },
         },
       });
 
@@ -710,6 +757,11 @@ export class AdminService {
         await tx.orderReturn.update({
           where: { id: order.returnRequest.id },
           data: { status: 'COMPLETED', processedAt: new Date() },
+        });
+      } else if (status === 'DELIVERED' && order.status === 'RETURN_REQUESTED' && order.returnRequest) {
+        await tx.orderReturn.update({
+          where: { id: order.returnRequest.id },
+          data: { status: 'REJECTED', processedAt: new Date() },
         });
       }
 
@@ -796,8 +848,21 @@ export class AdminService {
     return item;
   }
 
-  async coupons() {
-    return this.prisma.coupon.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
+  async coupons(query?: { page?: number; limit?: number }) {
+    if (query?.page || query?.limit) {
+      const page = Math.max(1, Number(query.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(query.limit) || 25));
+      const [total, items] = await Promise.all([
+        this.prisma.coupon.count(),
+        this.prisma.coupon.findMany({
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ]);
+      return { items, page, limit, total, totalPages: Math.ceil(total / limit) };
+    }
+    return this.prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
   async createCoupon(actor: string, value: CouponInput) {
@@ -830,10 +895,11 @@ export class AdminService {
           where: { id },
           data: {
             ...value,
-            startsAt: value.startsAt ? new Date(value.startsAt) : undefined,
-            endsAt: value.endsAt ? new Date(value.endsAt) : undefined,
+            startsAt: value.startsAt === null ? null : value.startsAt ? new Date(value.startsAt) : undefined,
+            endsAt: value.endsAt === null ? null : value.endsAt ? new Date(value.endsAt) : undefined,
           },
         });
+
         await this.audit(actor, 'COUPON_UPDATED', 'coupon', id, undefined, tx);
         return result;
       });

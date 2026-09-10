@@ -53,8 +53,15 @@ export function applySecurityMiddleware(app: Express): void {
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Too many requests, please try again later.',
   });
-  app.use('/api', limiter);
+  app.use('/api', (req, res, next) => {
+    // Exempt cryptographically verified payment provider callbacks and webhooks
+    if (req.path.includes('/payments/') && (req.path.includes('callback') || req.path.includes('webhook'))) {
+      return next();
+    }
+    return limiter(req, res, next);
+  });
   app.use(cookieParser());
+
 
   // JSON Body Parser with reasonable size limits
   app.use(express.json({ limit: '1mb' }));

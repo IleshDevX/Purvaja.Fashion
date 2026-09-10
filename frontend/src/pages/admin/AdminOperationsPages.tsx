@@ -121,11 +121,20 @@ export function AdminCategoriesPage() {
       {error && <PageState>{error}</PageState>}
       {editing && (
         <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-ivory-300 bg-white p-5 sm:grid-cols-2">
-          <input name="name" required defaultValue={editing.name} placeholder="Name" className="rounded-lg border p-2" />
-          <input name="slug" required defaultValue={editing.slug} placeholder="slug" className="rounded-lg border p-2" />
-          <input name="description" defaultValue={editing.description ?? ''} placeholder="Description" className="rounded-lg border p-2 sm:col-span-2" />
-          <label className="text-xs">
-            <input name="isActive" type="checkbox" defaultChecked={editing.isActive} /> Active
+          <div>
+            <label htmlFor="cat-name" className="block text-xs font-semibold text-charcoal-700 mb-1">Category Name</label>
+            <input id="cat-name" name="name" required defaultValue={editing.name} placeholder="Category Name" className="w-full rounded-lg border border-ivory-300 p-2 text-xs" />
+          </div>
+          <div>
+            <label htmlFor="cat-slug" className="block text-xs font-semibold text-charcoal-700 mb-1">Slug</label>
+            <input id="cat-slug" name="slug" required defaultValue={editing.slug} placeholder="category-slug" className="w-full rounded-lg border border-ivory-300 p-2 text-xs" />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="cat-desc" className="block text-xs font-semibold text-charcoal-700 mb-1">Description</label>
+            <input id="cat-desc" name="description" defaultValue={editing.description ?? ''} placeholder="Description" className="w-full rounded-lg border border-ivory-300 p-2 text-xs" />
+          </div>
+          <label className="text-xs font-medium text-charcoal-700 flex items-center gap-1.5 sm:col-span-2">
+            <input name="isActive" type="checkbox" defaultChecked={editing.isActive} className="rounded" /> Active
           </label>
           <div className="flex gap-2">
             <button disabled={busy} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white">
@@ -182,6 +191,17 @@ export function AdminVariantsPage() {
     priceOverridePaise:null, stockQuantity:0, lowStockThreshold:5, status:'ACTIVE',
   });
 
+  const [productSearch, setProductSearch] = useState('');
+
+  const searchProducts = useCallback(async (query: string) => {
+    try {
+      const res = await adminService.listProducts(query, 1, 50);
+      setProducts(res.items);
+    } catch {
+      // Keep existing products on search error
+    }
+  }, []);
+
   const load = useCallback(async (query = '', page = 1) => {
     try {
       setError('');
@@ -223,6 +243,7 @@ export function AdminVariantsPage() {
         <div className="flex gap-2">
           <button type="button" onClick={openCreate} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white"><Plus className="mr-1 inline h-4 w-4" />Add variant</button>
           <input
+            aria-label="Search SKU, colour or product"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="SKU, colour or product"
@@ -235,7 +256,34 @@ export function AdminVariantsPage() {
       </Header>
       {error && <PageState><p>{error}</p><button type="button" onClick={() => void load(search,1)} className="mt-3 font-bold text-gold-800">Retry</button></PageState>}
       {formOpen && <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-ivory-300 bg-white p-5 sm:grid-cols-3">
-        {!editing && <select aria-label="Product" required value={form.productId} onChange={e=>setForm({...form,productId:e.target.value})}><option value="">Select product</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>}
+        {!editing && (
+          <div className="space-y-1.5 sm:col-span-3">
+            <input
+              aria-label="Search product for variant"
+              placeholder="Search product by title or SKU..."
+              value={productSearch}
+              onChange={e => {
+                setProductSearch(e.target.value);
+                void searchProducts(e.target.value);
+              }}
+              className="w-full rounded-lg border border-ivory-300 p-2 text-xs"
+            />
+            <select
+              aria-label="Product"
+              required
+              value={form.productId}
+              onChange={e => setForm({ ...form, productId: e.target.value })}
+              className="w-full rounded-lg border border-ivory-300 p-2 text-xs"
+            >
+              <option value="">Select product ({products.length} available)</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <input aria-label="SKU" required minLength={3} value={form.sku} onChange={e=>setForm({...form,sku:e.target.value})} placeholder="SKU" />
         <input aria-label="Size" required value={form.size} onChange={e=>setForm({...form,size:e.target.value})} placeholder="Size" />
         <input aria-label="Colour name" required value={form.colorName} onChange={e=>setForm({...form,colorName:e.target.value})} placeholder="Colour name" />
@@ -335,14 +383,23 @@ export function AdminCouponsPage() {
         </button>
       </Header>
       {formOpen && (
-        <form onSubmit={submit} className="flex flex-wrap gap-3 rounded-2xl border border-ivory-300 bg-white p-5">
-          <input required name="code" placeholder="CODE" className="rounded-lg border p-2 text-xs" />
-          <select name="discountType" className="rounded-lg border p-2 text-xs">
-            <option value="PERCENTAGE">Percentage</option>
-            <option value="FIXED">Fixed rupees</option>
-          </select>
-          <input required min="1" type="number" name="discountValue" placeholder="Value" className="rounded-lg border p-2 text-xs" />
-          <button className="rounded-lg bg-charcoal-950 px-3 text-xs font-bold text-white">Create</button>
+        <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-2xl border border-ivory-300 bg-white p-5">
+          <div>
+            <label htmlFor="coupon-code" className="block text-xs font-semibold text-charcoal-700 mb-1">Coupon Code</label>
+            <input id="coupon-code" required name="code" placeholder="CODE" className="rounded-lg border p-2 text-xs" />
+          </div>
+          <div>
+            <label htmlFor="coupon-type" className="block text-xs font-semibold text-charcoal-700 mb-1">Discount Type</label>
+            <select id="coupon-type" name="discountType" className="rounded-lg border p-2 text-xs">
+              <option value="PERCENTAGE">Percentage</option>
+              <option value="FIXED">Fixed rupees</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="coupon-value" className="block text-xs font-semibold text-charcoal-700 mb-1">Discount Value</label>
+            <input id="coupon-value" required min="1" type="number" name="discountValue" placeholder="Value" className="rounded-lg border p-2 text-xs" />
+          </div>
+          <button className="rounded-lg bg-charcoal-950 px-4 py-2 text-xs font-bold text-white min-h-[38px]">Create</button>
         </form>
       )}
       {error && <PageState>{error}</PageState>}

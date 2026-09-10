@@ -53,14 +53,15 @@ export function calculateOrderPricing(
 
   let couponDiscountPaise = 0;
   if (coupon && subtotalPaise > 0) {
-    if (coupon.discountPaise !== undefined) {
-      couponDiscountPaise = coupon.discountPaise;
-    } else if (coupon.percentOff) {
+    if (coupon.percentOff) {
       couponDiscountPaise = Math.floor((subtotalPaise * coupon.percentOff) / 100);
+    } else if (coupon.discountPaise !== undefined) {
+      couponDiscountPaise = coupon.discountPaise;
     } else if (coupon.fixedOff) {
       couponDiscountPaise = Math.round(coupon.fixedOff * 100);
     }
     couponDiscountPaise = Math.min(couponDiscountPaise, subtotalPaise);
+
   }
   const couponDiscount = couponDiscountPaise / 100;
 

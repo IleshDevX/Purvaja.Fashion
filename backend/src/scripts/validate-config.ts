@@ -139,7 +139,7 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
     if (isEnforced) {
       errors.push('SESSION_SECRET is required and must be at least 32 characters long in production/staging.');
     } else {
-      warnings.push('SESSION_SECRET is missing; secure session signing will be disabled.');
+      warnings.push('SESSION_SECRET is optional in development; runtime uses cryptographically secure opaque PostgreSQL session tokens.');
     }
   } else if (sessionSecret.length < 32) {
     errors.push(`SESSION_SECRET must be at least 32 characters long (received: ${sessionSecret.length} characters).`);
@@ -209,9 +209,10 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
     // Reject test/prod environment mixing
     const phonepeEnv = rawEnv.PHONEPE_ENVIRONMENT ?? (isProd ? 'production' : 'sandbox');
     summary.PHONEPE_ENVIRONMENT = phonepeEnv;
-    if (isProd && rawEnv.PHONEPE_ENVIRONMENT === 'sandbox') {
+    if (isProd && rawEnv.PHONEPE_ENVIRONMENT !== 'production') {
       errors.push('PHONEPE_ENVIRONMENT must be set to "production" in production environments (cannot mix test and production environments).');
     }
+
 
     // Validate PhonePe callback URL
     const callbackUrl = rawEnv.PHONEPE_CALLBACK_URL;

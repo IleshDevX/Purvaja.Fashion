@@ -28,7 +28,7 @@ function paginationItems(totalPages: number, currentPage: number): Array<number 
   const visible = [...pages].filter(page => page >= 1 && page <= totalPages).sort((a, b) => a - b);
   const items: Array<number | string> = [];
   for (const page of visible) {
-    const previous = items.at(-1);
+    const previous = items[items.length - 1];
     if (typeof previous === 'number' && page - previous > 1) items.push(`ellipsis-${previous}`);
     items.push(page);
   }

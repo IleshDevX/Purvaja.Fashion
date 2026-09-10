@@ -112,6 +112,7 @@ describe('Phase 8 — DevOps & Production Readiness Verification', () => {
         FRONTEND_URL: 'https://purvaja.fashion',
         CORS_ORIGIN: 'https://purvaja.fashion',
         PAYMENT_PROVIDER: 'phonepe',
+        PHONEPE_ENVIRONMENT: 'production',
         PHONEPE_MERCHANT_ID: 'MERCHANT123',
         PHONEPE_CLIENT_ID: 'CLIENT123',
         PHONEPE_CLIENT_SECRET: 'SECRET123',

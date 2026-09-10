@@ -17,11 +17,11 @@ import { useToast } from '../../app/providers.js';
 const transitions: Record<AdminOrder['status'], AdminOrderTransition[]> = {
   PENDING: [],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['SHIPPED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
   SHIPPED: ['DELIVERED'],
   DELIVERED: [],
   CANCELLED: [],
-  RETURN_REQUESTED: [],
+  RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
   RETURNED: [],
 };
 
@@ -35,16 +35,25 @@ export function AdminOrderDetailsPage() {
 
   useEffect(() => {
     if (!orderId) return;
+    let active = true;
     setLoading(true);
     void adminService
       .getOrder(orderId)
       .then(found => {
+        if (!active) return;
         setOrder(found);
-        const validNext = transitions[found.status] ?? [];
+        const validNext = found.allowedActions?.length ? found.allowedActions : (transitions[found.status] ?? []);
         setSelectedStatus(validNext[0] ?? '');
       })
-      .catch(() => setOrder(null))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (active) setOrder(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [orderId]);
 
   if (loading) {
@@ -270,6 +279,46 @@ export function AdminOrderDetailsPage() {
             )}
           </div>
 
+          {/* Return Request Details Card (if present) */}
+          {order.returnRequest && (
+            <div className="rounded-2xl border border-rose-300 bg-rose-50/50 p-6 space-y-3 shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
+              <div className="flex items-center justify-between">
+                <h3 className="font-serif text-base font-bold text-charcoal-950">Return Ticket Details</h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  order.returnRequest.status === 'COMPLETED'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : order.returnRequest.status === 'REJECTED'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-gold-100 text-gold-800'
+                }`}>
+                  {order.returnRequest.status}
+                </span>
+              </div>
+              <div className="text-xs space-y-1 text-charcoal-700">
+                <p><span className="font-semibold text-charcoal-900">Reason:</span> {order.returnRequest.reason}</p>
+                <p><span className="font-semibold text-charcoal-900">Requested:</span> {new Date(order.returnRequest.createdAt).toLocaleString('en-IN')}</p>
+                {order.returnRequest.processedAt && (
+                  <p><span className="font-semibold text-charcoal-900">Processed:</span> {new Date(order.returnRequest.processedAt).toLocaleString('en-IN')}</p>
+                )}
+                {order.returnRequest.items?.length > 0 && (
+                  <div className="pt-2">
+                    <span className="font-semibold text-charcoal-900 block mb-1">Return Lines:</span>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                      {order.returnRequest.items.map(ri => {
+                        const matchedItem = order.items.find(it => it.id === ri.orderItemId);
+                        return (
+                          <li key={ri.id}>
+                            {ri.quantity} × {matchedItem?.productName ?? ri.orderItemId}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Patron & Client Account */}
           <div className="rounded-2xl border border-ivory-300 bg-white p-6 space-y-3 shadow-[0_4px_20px_rgba(26,26,26,0.02)]">
             <div className="flex items-center gap-2 text-gold-800">
@@ -333,6 +382,52 @@ export function AdminOrderDetailsPage() {
                     : order.paymentProvider || 'Direct Tailoring Invoice'}
               </p>
               <p className="text-[11px] text-charcoal-500">Payment Status: {order.paymentStatus}</p>
+              {order.payments?.[0] && (
+                <div className="pt-3 border-t border-ivory-200 space-y-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await adminService.reconcilePayment(order.payments[0].id);
+                        addToast('Payment state reconciled successfully with provider.', 'success');
+                        const refreshed = await adminService.getOrder(order.id);
+                        setOrder(refreshed);
+                      } catch (err) {
+                        addToast(err instanceof Error ? err.message : 'Reconciliation failed', 'error');
+                      }
+                    }}
+                    className="w-full text-center rounded-lg border border-ivory-300 py-1.5 text-[11px] font-bold text-charcoal-800 hover:bg-ivory-100 transition-colors"
+                  >
+                    Reconcile Payment State
+                  </button>
+                  {order.payments[0]?.refunds?.map(rf => (
+                    <div key={rf.id} className="text-[11px] p-2 bg-ivory-50 rounded-lg space-y-1">
+                      <div className="flex justify-between font-semibold">
+                        <span>Refund ₹{(rf.amountPaise / 100).toLocaleString('en-IN')}</span>
+                        <span className="uppercase">{rf.status}</span>
+                      </div>
+                      {rf.status === 'REQUESTED' && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await adminService.processRefund(rf.id);
+                              addToast('Refund executed successfully.', 'success');
+                              const refreshed = await adminService.getOrder(order.id);
+                              setOrder(refreshed);
+                            } catch (err) {
+                              addToast(err instanceof Error ? err.message : 'Refund execution failed', 'error');
+                            }
+                          }}
+                          className="w-full rounded bg-charcoal-900 text-white py-1 text-[10px] font-bold hover:bg-gold-600 transition-colors"
+                        >
+                          Execute Demo Refund
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

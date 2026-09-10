@@ -8,6 +8,9 @@ export function VerifyEmailPage() {
   const [email, setEmail] = useState('');
   const [resent, setResent] = useState(false);
 
+  const [resending, setResending] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+
   useEffect(() => {
     const token = params.get('token');
     if (!token) { setState('error'); return; }
@@ -15,9 +18,17 @@ export function VerifyEmailPage() {
   }, [params]);
 
   const resend = async () => {
-    if (!email) return;
-    await apiClient.post('/auth/resend-verification', { email });
-    setResent(true);
+    if (!email || resending) return;
+    setResendError(null);
+    setResending(true);
+    try {
+      await apiClient.post('/auth/resend-verification', { email });
+      setResent(true);
+    } catch (err) {
+      setResendError(err instanceof Error ? err.message : 'Unable to send verification email. Please try again.');
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -46,13 +57,19 @@ export function VerifyEmailPage() {
             placeholder="Enter your registered email"
             className="w-full px-3 py-2 bg-white border border-ivory-300 text-body-sm outline-none focus:border-charcoal-900"
           />
+          {resendError && (
+            <p className="text-caption text-error font-medium">{resendError}</p>
+          )}
+          {resent && (
+            <p className="text-caption text-emerald-700 font-medium">Verification link sent to your inbox.</p>
+          )}
           <button
             type="button"
             onClick={() => void resend()}
-            disabled={!email || resent}
+            disabled={!email || resending || resent}
             className="w-full py-2.5 bg-charcoal-900 text-ivory-100 text-xs font-semibold tracking-wider hover:bg-charcoal-800 disabled:opacity-50 transition-colors"
           >
-            {resent ? 'Verification Link Sent' : 'Send New Verification Email'}
+            {resending ? 'Sending…' : resent ? 'Verification Link Sent' : 'Send New Verification Email'}
           </button>
         </div>
       )}

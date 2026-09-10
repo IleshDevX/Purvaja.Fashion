@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { apiClient, unwrapApiData } from '../../services/api/client.js';
@@ -14,32 +14,74 @@ export function PaymentPendingPage() {
   const paymentId = params.get('paymentId');
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const checkingRef = useRef(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const checkStatus = useCallback(async () => {
-    if (!paymentId) return;
+    if (!paymentId || checkingRef.current) return false;
+    checkingRef.current = true;
     setChecking(true);
     try {
-      const data = unwrapApiData<PaymentStatusResponse>(
-        (await apiClient.get(`/payments/${encodeURIComponent(paymentId)}/status`)).data,
-      );
+      const response = await apiClient.get(`/payments/${encodeURIComponent(paymentId)}/status`);
+      if (!response?.data) return false;
+      const data = unwrapApiData<PaymentStatusResponse>(response.data);
       setError(null);
+      setIsRateLimited(false);
       if (data.paymentStatus === 'SUCCESS' || data.paymentStatus === 'PAID') {
         navigate(`/checkout/success?orderId=${encodeURIComponent(data.orderId)}`, { replace: true });
-      } else if (['FAILED', 'EXPIRED', 'CANCELLED'].includes(data.paymentStatus)) {
+        return true;
+      } else if (['FAILED', 'EXPIRED', 'CANCELLED', 'REFUNDED'].includes(data.paymentStatus)) {
         navigate(`/checkout/failure?orderId=${encodeURIComponent(data.orderId)}`, { replace: true });
+        return true;
       }
+      return false;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Payment status could not be checked.');
+      if (cause instanceof Error && cause.message.includes('429')) {
+        setIsRateLimited(true);
+        setError('Rate limit reached. Please wait before refreshing.');
+      } else {
+        setError(cause instanceof Error ? cause.message : 'Payment status could not be checked.');
+      }
+      return false;
     } finally {
+      checkingRef.current = false;
       setChecking(false);
     }
   }, [navigate, paymentId]);
 
+
   useEffect(() => {
-    void checkStatus();
-    const timer = window.setInterval(() => void checkStatus(), 2500);
-    return () => window.clearInterval(timer);
-  }, [checkStatus]);
+    if (!paymentId) return;
+
+    let isMounted = true;
+    let timeoutId: number | undefined;
+    let delay = 2500;
+    const startTime = Date.now();
+    const MAX_POLL_DURATION_MS = 10 * 60 * 1000; // 10 minutes max
+
+    const poll = async () => {
+      if (!isMounted) return;
+      if (Date.now() - startTime > MAX_POLL_DURATION_MS) {
+        setError('Payment verification is taking longer than expected. You can check manually or view your order history.');
+        return;
+      }
+
+      const isTerminal = await checkStatus();
+      if (!isMounted || isTerminal || isRateLimited) return;
+
+      // Exponential backoff: 2.5s -> 5s -> 10s -> max 15s
+      delay = Math.min(delay * 1.5, 15000);
+      timeoutId = window.setTimeout(() => void poll(), delay);
+    };
+
+    void poll();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [paymentId, checkStatus, isRateLimited]);
+
 
   if (!paymentId) return <Navigate to="/cart" replace />;
 

@@ -116,6 +116,17 @@ export interface AdminShippingAddress {
   country: string;
 }
 
+export interface AdminPaymentRefund {
+  id: string;
+  paymentId: string;
+  amountPaise: number;
+  reason?: string | null;
+  status: 'REQUESTED' | 'SUBMITTED' | 'PENDING' | 'SUCCEEDED' | 'FAILED' | string;
+  providerReference?: string | null;
+  requestedAt: string;
+  processedAt?: string | null;
+}
+
 export interface AdminPayment {
   id: string;
   orderId?: string;
@@ -124,6 +135,7 @@ export interface AdminPayment {
   amountPaise: number;
   status: 'PENDING' | 'AUTHORIZED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED' | string;
   providerReference?: string | null;
+  refunds?: AdminPaymentRefund[];
   createdAt: string;
   updatedAt: string;
 }
@@ -165,11 +177,29 @@ export interface AdminOrder {
   paymentStatus: string;
   paymentProvider: 'COD' | 'PHONEPE' | string | null;
   payments: AdminPayment[];
+  returnRequest?: AdminOrderReturn | null;
+  allowedActions?: AdminOrderTransition[];
   createdAt: string;
   updatedAt: string;
 }
 
-export type AdminOrderTransition = 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export interface AdminOrderReturnItem {
+  id: string;
+  orderItemId: string;
+  quantity: number;
+}
+
+export interface AdminOrderReturn {
+  id: string;
+  orderId: string;
+  reason: string;
+  status: 'REQUESTED' | 'COMPLETED' | 'REJECTED';
+  createdAt: string;
+  processedAt?: string | null;
+  items: AdminOrderReturnItem[];
+}
+
+export type AdminOrderTransition = 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'RETURNED';
 
 export interface AdminDashboardMetrics {
   totalProducts: number;

@@ -95,14 +95,17 @@ interface HeroSectionProps {
   featuredProduct?: Shirt;
 }
 
-export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionProps) {
+export function HeroSection({ featuredProduct }: HeroSectionProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
 
   // Auto-slide interval: Cycles every 2.5 seconds
   useEffect(() => {
-    if (isPaused) return;
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isPaused || prefersReducedMotion) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
@@ -112,6 +115,9 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
   }, [isPaused]);
 
   const slide = HERO_SLIDES[currentSlide];
+  const activeBadgeTitle = currentSlide === 0 && featuredProduct ? featuredProduct.name : slide.badgeTitle;
+  const activeLink = currentSlide === 0 && featuredProduct ? `/product/${featuredProduct.slug}` : slide.link;
+  const activeImage = currentSlide === 0 && featuredProduct && featuredProduct.images?.[0] ? featuredProduct.images[0] : slide.image;
 
   const handlePrev = () => {
     setCurrentSlide((prev) => (prev === 0 ? HERO_SLIDES.length - 1 : prev - 1));
@@ -240,8 +246,8 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
               {/* Cycling Image */}
               <img
                 key={`img-${slide.id}`}
-                src={slide.image}
-                alt={slide.badgeTitle}
+                src={activeImage}
+                alt={activeBadgeTitle}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -251,8 +257,16 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
               {/* Subtle ambient lighting vignette */}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal-950/70 via-transparent to-black/10" />
 
-              {/* Manual Arrow Controls on Image */}
+              {/* Manual Controls on Image */}
               <div className="absolute right-5 top-5 flex items-center gap-2 z-10">
+                <button
+                  type="button"
+                  onClick={() => setIsPaused(p => !p)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95 text-xs font-bold"
+                  aria-label={isPaused ? "Play hero carousel" : "Pause hero carousel"}
+                >
+                  {isPaused ? '▶' : '⏸'}
+                </button>
                 <button
                   type="button"
                   onClick={handlePrev}
@@ -274,13 +288,13 @@ export function HeroSection({ featuredProduct: _featuredProduct }: HeroSectionPr
               {/* Floating Featured Product Card Badge */}
               <div className="absolute bottom-5 left-5 right-5 sm:bottom-6 sm:left-6 sm:right-6">
                 <Link
-                  to={slide.link}
+                  to={activeLink}
                   key={`badge-${slide.id}`}
                   className="flex items-center justify-between gap-4 rounded-2xl border border-white/20 bg-black/50 px-5 py-3.5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-black/70 group/badge animate-fade-in"
                 >
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-serif text-lg font-bold text-ivory-100 sm:text-xl group-hover/badge:text-gold-300 transition-colors">
-                      {slide.badgeTitle}
+                      {activeBadgeTitle}
                     </h3>
                   </div>
 

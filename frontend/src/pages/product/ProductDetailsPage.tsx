@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { ShirtColor, ShirtSize } from '../../features/products/types/product.js';
-import { useCreateProductReview, useProductQuery, useProductReviewsQuery } from '../../features/products/hooks/useProducts.js';
+import { useCreateProductReview, useProductQuery, useProductReviewsPaginatedQuery } from '../../features/products/hooks/useProducts.js';
 import { PageLoadingFallback } from '../../components/common/PageLoadingFallback.js';
 import { useCartStore } from '../../store/cartStore.js';
 import { useWishlistStore } from '../../store/wishlistStore.js';
@@ -28,8 +28,12 @@ export function ProductDetailsPage() {
   const toggleWishlist = useWishlistStore(s => s.toggleWishlist);
   const isInWishlist = useWishlistStore(s => s.isInWishlist);
 
-  const { data: productResult, isPending, isError } = useProductQuery(productId);
-  const { data: reviews = [] } = useProductReviewsQuery(productId);
+  const { data: productResult, isPending, isError, error, refetch } = useProductQuery(productId);
+  const [reviewPage, setReviewPage] = useState(1);
+  const { data: reviewsResult, isLoading: reviewsLoading } = useProductReviewsPaginatedQuery(productId, reviewPage, 5);
+  const reviews = reviewsResult?.items ?? [];
+  const reviewsTotal = reviewsResult?.total ?? 0;
+  const reviewsTotalPages = reviewsResult?.totalPages ?? 1;
   const createReview = useCreateProductReview(productId);
   const shirt = productResult?.product ?? null;
 
@@ -52,7 +56,33 @@ export function ProductDetailsPage() {
 
   if (isPending) return <PageLoadingFallback />;
 
-  if (isError || !shirt) {
+  // Server error or network disruption must NOT masquerade as 404 Piece Not Found (AUD-012)
+  if (isError) {
+    return (
+      <div className="py-24 text-center max-w-md mx-auto px-6 space-y-4">
+        <h2 className="font-serif text-display text-charcoal-900">Unable to Load Piece</h2>
+        <p className="text-body text-charcoal-500">
+          {error instanceof Error ? error.message : 'We encountered a connection issue while loading garment details.'}
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          <button
+            onClick={() => void refetch()}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold hover:bg-charcoal-800 transition-colors"
+          >
+            Retry Loading
+          </button>
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 px-6 py-3 border border-charcoal-300 text-charcoal-900 text-body-sm font-semibold hover:bg-ivory-100 transition-colors"
+          >
+            Return to Catalog
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!shirt) {
     return (
       <div className="py-24 text-center max-w-md mx-auto px-6">
         <h2 className="font-serif text-display text-charcoal-900 mb-4">Piece Not Found</h2>
@@ -112,6 +142,7 @@ export function ProductDetailsPage() {
         color: currentColor,
         size: currentSize,
         quantity,
+        stockQuantity: currentVariant.stockCount,
       });
       addToast(`Added ${quantity} × "${shirt.name}" (${currentSize}) to your bag.`, 'success');
     } catch (err) {
@@ -138,6 +169,7 @@ export function ProductDetailsPage() {
         color: currentColor,
         size: currentSize,
         quantity,
+        stockQuantity: currentVariant.stockCount,
       });
       navigate('/checkout');
     } catch (err) {
@@ -480,7 +512,9 @@ export function ProductDetailsPage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
               <p className="text-overline text-gold-600 mb-1">Verified Client Voices</p>
-              <h2 className="font-serif text-display text-charcoal-900">Reviews & Ratings</h2>
+              <h2 className="font-serif text-display text-charcoal-900">
+                Reviews & Ratings {reviewsTotal > 0 && <span className="text-body text-charcoal-400 font-sans font-normal">({reviewsTotal})</span>}
+              </h2>
             </div>
             <button
               onClick={() => setReviewModalOpen(true)}
@@ -490,23 +524,55 @@ export function ProductDetailsPage() {
             </button>
           </div>
 
-          <div className="space-y-6">
-            {reviews.map(rev => (
-              <div key={rev.id} className="p-6 bg-ivory-50 border border-ivory-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {[...Array(rev.rating)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-gold-500 text-gold-500" />
-                    ))}
+          {reviewsLoading ? (
+            <div className="p-8 text-center text-xs text-charcoal-500">Loading reviews…</div>
+          ) : reviews.length === 0 ? (
+            <div className="p-8 text-center text-xs text-charcoal-500 bg-ivory-50 border border-ivory-200">
+              No client reviews yet. Be the first to share your impressions on this piece.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {reviews.map(rev => (
+                <div key={rev.id} className="p-6 bg-ivory-50 border border-ivory-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      {[...Array(rev.rating)].map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-gold-500 text-gold-500" />
+                      ))}
+                    </div>
+                    <span className="text-caption text-charcoal-400">{rev.date}</span>
                   </div>
-                  <span className="text-caption text-charcoal-400">{rev.date}</span>
+                  <h4 className="font-serif text-heading text-charcoal-900">{rev.title}</h4>
+                  <p className="text-body-sm text-charcoal-600 leading-relaxed">{rev.comment}</p>
+                  <p className="text-caption font-medium text-charcoal-800 pt-2">{rev.author}</p>
                 </div>
-                <h4 className="font-serif text-heading text-charcoal-900">{rev.title}</h4>
-                <p className="text-body-sm text-charcoal-600 leading-relaxed">{rev.comment}</p>
-                <p className="text-caption font-medium text-charcoal-800 pt-2">{rev.author}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+
+              {reviewsTotalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-ivory-200 text-xs font-semibold text-charcoal-700">
+                  <button
+                    type="button"
+                    onClick={() => setReviewPage(p => Math.max(1, p - 1))}
+                    disabled={reviewPage <= 1}
+                    className="px-3 py-1.5 border border-ivory-300 rounded hover:bg-ivory-100 disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    Page {reviewPage} of {reviewsTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setReviewPage(p => Math.min(reviewsTotalPages, p + 1))}
+                    disabled={reviewPage >= reviewsTotalPages}
+                    className="px-3 py-1.5 border border-ivory-300 rounded hover:bg-ivory-100 disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Curated Companions (Related Products) ── */}

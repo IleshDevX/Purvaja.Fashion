@@ -3,6 +3,8 @@ import { AdminService } from '../services/admin.service.js';
 import { CommerceService } from '../services/commerce.service.js';
 import { metricsAggregationService } from '../services/metrics-aggregation.service.js';
 import { ReservationCleanupWorker } from '../services/reservation-worker.service.js';
+import { uploadService } from '../services/upload.service.js';
+import { ValidationError } from '../utils/errors.js';
 import {
   adjustment,
   category,
@@ -13,6 +15,7 @@ import {
   pagination,
   product,
   stockCorrection,
+  updateCouponSchema,
   uuid,
   variant,
 } from '../validators/admin.validator.js';
@@ -67,9 +70,11 @@ export const updateProduct: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const categories: RequestHandler = async (_q, res, next) => {
+export const categories: RequestHandler = async (req, res, next) => {
   try {
-    send(res, await admin.categories());
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    send(res, await admin.categories({ page, limit }));
   } catch (e) {
     next(e);
   }
@@ -209,9 +214,11 @@ export const customerDetail: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const coupons: RequestHandler = async (_q, res, next) => {
+export const coupons: RequestHandler = async (req, res, next) => {
   try {
-    send(res, await admin.coupons());
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    send(res, await admin.coupons({ page, limit }));
   } catch (e) {
     next(e);
   }
@@ -229,7 +236,7 @@ export const updateCoupon: RequestHandler = async (req, res, next) => {
   try {
     send(
       res,
-      await admin.updateCoupon(req.auth!.userId, id(req.params.id), input(coupon.partial(), req.body)),
+      await admin.updateCoupon(req.auth!.userId, id(req.params.id), input(updateCouponSchema, req.body)),
     );
   } catch (e) {
     next(e);
@@ -269,6 +276,32 @@ export const operationalMetrics: RequestHandler = async (_req, res, next) => {
     const snapshot = aggregated.snapshot;
     const workerTelemetry = ReservationCleanupWorker.getInstance().getTelemetry();
     send(res, { ...snapshot, aggregation: { scope: aggregated.scope, workerCount: aggregated.workerCount }, worker: workerTelemetry });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const presignedUpload: RequestHandler = async (req, res, next) => {
+  try {
+    const { filename, contentType } = req.body as { filename: string; contentType: string };
+    if (!filename || !contentType) {
+      throw new ValidationError('filename and contentType are required.', undefined, 'INVALID_UPLOAD_INPUT');
+    }
+    const contract = await uploadService.getPresignedUploadUrl(filename, contentType);
+    send(res, contract);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const directUpload: RequestHandler = async (req, res, next) => {
+  try {
+    const { filename, contentType, base64Data } = req.body as { filename: string; contentType: string; base64Data: string };
+    if (!filename || !contentType || !base64Data) {
+      throw new ValidationError('filename, contentType, and base64Data are required.', undefined, 'INVALID_UPLOAD_INPUT');
+    }
+    const result = await uploadService.handleDirectUpload({ filename, contentType, base64Data });
+    send(res, result, 201);
   } catch (e) {
     next(e);
   }

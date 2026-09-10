@@ -47,13 +47,15 @@ const orderInclude = {
   returnRequest: { include: { items: true } },
 };
 
-function toOrderResponse<T extends { status: string; payments: Array<{ status: string }>; returnRequest?: unknown }>(order: T) {
+function toOrderResponse<T extends { status: string; updatedAt: Date; payments: Array<{ status: string }>; returnRequest?: { status: string } | null }>(order: T) {
   const payment = order.payments[0];
+  const within7Days = Date.now() - new Date(order.updatedAt).getTime() <= 7 * 24 * 60 * 60 * 1000;
+  const hasActiveOrCompletedReturn = Boolean(order.returnRequest && order.returnRequest.status !== 'REJECTED');
   return {
     ...order,
     availableActions: {
       canCancel: order.status === 'PENDING' && Boolean(payment && ['PENDING', 'INITIATED'].includes(payment.status)),
-      canReturn: order.status === 'DELIVERED' && !order.returnRequest,
+      canReturn: order.status === 'DELIVERED' && !hasActiveOrCompletedReturn && within7Days,
     },
   };
 }
@@ -114,27 +116,48 @@ export class CommerceService {
     this.providerFactory = providerFactory;
   }
 
+
   private get prisma() {
     return this.clientOverride ?? getPrismaClient();
   }
 
   async saveAddress(userId: string, input: AddressInput) {
-    if (input.isDefault) await this.prisma.address.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
-    return this.prisma.address.create({ data: { userId, ...input, country: input.country.toUpperCase() } });
+    return this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId}::uuid FOR UPDATE`;
+      if (input.isDefault) {
+        await tx.address.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
+      }
+      return tx.address.create({ data: { userId, ...input, country: input.country.toUpperCase() } });
+    });
   }
 
   async updateAddress(userId: string, addressId: string, input: Partial<AddressInput>) {
-    const existing = await this.prisma.address.findFirst({ where: { id: addressId, userId } });
-    if (!existing) throw new NotFoundError('Address was not found.', 'ADDRESS_NOT_FOUND');
-    if (input.isDefault) await this.prisma.address.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
-    return this.prisma.address.update({ where: { id: addressId }, data: { ...input, country: input.country ? input.country.toUpperCase() : undefined } });
+    return this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId}::uuid FOR UPDATE`;
+      const existing = await tx.address.findFirst({ where: { id: addressId, userId } });
+      if (!existing) throw new NotFoundError('Address was not found.', 'ADDRESS_NOT_FOUND');
+      if (input.isDefault) {
+        await tx.address.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
+      }
+      return tx.address.update({
+        where: { id: addressId },
+        data: { ...input, country: input.country ? input.country.toUpperCase() : undefined },
+      });
+    });
   }
 
   async deleteAddress(userId: string, addressId: string) {
-    const existing = await this.prisma.address.findFirst({ where: { id: addressId, userId } });
-    if (!existing) throw new NotFoundError('Address was not found.', 'ADDRESS_NOT_FOUND');
-    await this.prisma.address.delete({ where: { id: addressId } });
-    return { success: true };
+    return this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId}::uuid FOR UPDATE`;
+      const existing = await tx.address.findFirst({ where: { id: addressId, userId } });
+      if (!existing) throw new NotFoundError('Address was not found.', 'ADDRESS_NOT_FOUND');
+      await tx.address.delete({ where: { id: addressId } });
+      if (existing.isDefault) {
+        const next = await tx.address.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } });
+        if (next) await tx.address.update({ where: { id: next.id }, data: { isDefault: true } });
+      }
+      return { success: true };
+    });
   }
 
   async addresses(userId: string) {
@@ -142,6 +165,7 @@ export class CommerceService {
   }
 
   async validateCoupon(userId: string, code: string, subtotalPaise: number) {
+
     const coupon = await this.prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
     const now = new Date();
     if (!coupon || !coupon.isActive || (coupon.startsAt && coupon.startsAt > now) || (coupon.endsAt && coupon.endsAt < now)) {
@@ -788,8 +812,25 @@ export class CommerceService {
       };
     }
 
+    if (check.state === 'COMPLETED' && (typeof check.amountPaise !== 'number' || check.amountPaise !== payment.amountPaise)) {
+      logger.error({ paymentId, expected: payment.amountPaise, received: check.amountPaise }, 'Reconciliation amount mismatch');
+      metrics.recordPaymentMismatch();
+      void operationalAlerts.deliver({
+        code: 'PAYMENT_RECONCILIATION_MISMATCH', severity: 'critical',
+        summary: 'Payment reconciliation returned an invalid or mismatching amount.',
+        attributes: { paymentId, expected: payment.amountPaise, received: check.amountPaise ?? 0 },
+      }, `reconciliation-amount:${paymentId}`);
+
+      return {
+        paymentId, orderId: payment.orderId, previousStatus, newStatus: payment.status,
+        reconciled: false,
+        details: `Reconciliation rejected: provider amount (${check.amountPaise}) did not match authoritative payment amount (${payment.amountPaise}).`,
+      };
+    }
+
     const observedState = check.state === 'COMPLETED' ? 'SUCCESS' : check.state;
     const transition = await this.prisma.$transaction(tx => applyPaymentObservation(tx, payment.id, {
+
       source: 'RECONCILIATION',
       state: observedState,
       deduplicationKey: `reconciliation:${payment.id}:${observedState}:${check.providerReference ?? check.responseCode ?? 'none'}`,
@@ -976,8 +1017,16 @@ export class CommerceService {
       if (order.status !== 'DELIVERED') {
         throw new ConflictError('Only delivered orders can be returned.', 'ORDER_NOT_RETURNABLE');
       }
+      const within7Days = Date.now() - new Date(order.updatedAt).getTime() <= 7 * 24 * 60 * 60 * 1000;
+      if (!within7Days) {
+        throw new ConflictError('The 7-day return window for this order has expired.', 'RETURN_WINDOW_EXPIRED');
+      }
       if (order.returnRequest) {
-        throw new ConflictError('A return has already been requested for this order.', 'RETURN_ALREADY_REQUESTED');
+        if (order.returnRequest.status === 'REQUESTED' || order.returnRequest.status === 'COMPLETED') {
+          throw new ConflictError('A return has already been requested for this order.', 'RETURN_ALREADY_REQUESTED');
+        }
+        await tx.orderReturnItem.deleteMany({ where: { returnId: order.returnRequest.id } });
+        await tx.orderReturn.delete({ where: { id: order.returnRequest.id } });
       }
 
       const requestedItems = returnItems?.length

@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import compression from 'compression';
 import express, { Express } from 'express';
 import { env } from './config/env.js';
@@ -46,6 +48,10 @@ export function createApp(): Express {
 
   // Compress text responses after security headers have been applied.
   app.use(compression());
+
+  // Static uploads directory (for product images uploaded locally or on VPS)
+  const uploadsDir = join(fileURLToPath(new URL('../../', import.meta.url)), 'uploads');
+  app.use('/uploads', express.static(uploadsDir));
 
   // Routes
   app.use(routes);

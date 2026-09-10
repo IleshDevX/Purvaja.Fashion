@@ -11,7 +11,7 @@ export function WishlistPage() {
   const { savedItemIds, removeFromWishlist, clearWishlist } = useWishlistStore();
   const addItem = useCartStore(s => s.addItem);
   const hasSavedItems = savedItemIds.length > 0;
-  const { data: products = [], isPending } = useProductsQuery(
+  const { data: products = [], isPending, isError, error, refetch } = useProductsQuery(
     { ids: savedItemIds, limit: 100 },
     { enabled: hasSavedItems }
   );
@@ -24,23 +24,33 @@ export function WishlistPage() {
     try {
       const primaryColor = shirt.colors[0] || { name: 'Standard', hex: '#000000' };
       const primarySize = shirt.sizes[0] || '39 (M)';
-      const primaryVariant = shirt.variants.find(
-        variant => variant.color.name === primaryColor.name && variant.size === primarySize,
+      let targetVariant = shirt.variants.find(
+        variant => variant.color.name === primaryColor.name && variant.size === primarySize && variant.inStock && variant.stockCount > 0,
       );
+
+      if (!targetVariant) {
+        targetVariant = shirt.variants.find(v => v.inStock && v.stockCount > 0);
+      }
+
+      if (!targetVariant) {
+        addToast('This piece is currently out of stock.', 'error');
+        return;
+      }
 
       await addItem({
         shirtId: shirt.id,
-        variantId: primaryVariant?.id ?? '',
+        variantId: targetVariant.id,
         name: shirt.name,
         slug: shirt.slug,
         image: shirt.images[0] || '',
-        pricePaise: primaryVariant?.pricePaise ?? shirt.pricePaise,
+        pricePaise: targetVariant.pricePaise ?? shirt.pricePaise,
         compareAtPricePaise: shirt.compareAtPricePaise,
-        price: shirt.price,
+        price: targetVariant.price ?? shirt.price,
         compareAtPrice: shirt.compareAtPrice,
-        color: primaryColor,
-        size: primarySize,
+        color: targetVariant.color || primaryColor,
+        size: targetVariant.size || primarySize,
         quantity: 1,
+        stockQuantity: targetVariant.stockCount,
       });
 
       removeFromWishlist(shirt.id);
@@ -72,7 +82,24 @@ export function WishlistPage() {
           )}
         </div>
 
-        {savedShirts.length === 0 ? (
+        {hasSavedItems && isError ? (
+          <div className="py-20 text-center max-w-md mx-auto space-y-4">
+            <div className="w-16 h-16 bg-error/10 text-error rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-7 h-7" />
+            </div>
+            <h2 className="font-serif text-display text-charcoal-900">Unable to Load Saved Pieces</h2>
+            <p className="text-body-sm text-charcoal-500">
+              {error instanceof Error ? error.message : 'We encountered a connection issue while loading your wishlist.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wide hover:bg-charcoal-800 transition-colors rounded-xl"
+            >
+              Retry Loading
+            </button>
+          </div>
+        ) : savedShirts.length === 0 ? (
           <div className="py-20 text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-ivory-200 rounded-full flex items-center justify-center mx-auto mb-6">
               <Heart className="w-7 h-7 text-charcoal-400" />

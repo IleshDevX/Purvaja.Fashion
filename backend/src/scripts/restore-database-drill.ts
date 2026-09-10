@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertRecoveryTarget, runPostgresTool } from './postgres-recovery.js';
+import { assertRecoveryTarget, runPostgresTool, verifyRecoveryDestination } from './postgres-recovery.js';
 
 interface BackupManifest {
   schemaVersion: number;
@@ -39,9 +39,9 @@ export async function runRestoreDrill(rawEnv: NodeJS.ProcessEnv = process.env): 
   if (checksum !== manifest.sha256) throw new Error('Backup checksum does not match its manifest.');
 
   const startedAt = new Date();
+  await verifyRecoveryDestination(sourceUrl, recoveryUrl);
   await runPostgresTool(rawEnv.PG_RESTORE_BIN || 'pg_restore', [
-    '--clean',
-    '--if-exists',
+    '--single-transaction',
     '--exit-on-error',
     '--no-owner',
     '--no-privileges',
@@ -74,7 +74,7 @@ export async function runRestoreDrill(rawEnv: NodeJS.ProcessEnv = process.env): 
     completedAt: completedAt.toISOString(),
     measuredRtoSeconds: Math.ceil((completedAt.getTime() - startedAt.getTime()) / 1000),
     measuredBackupAgeSeconds: Math.max(0, Math.ceil((startedAt.getTime() - backupStats.mtimeMs) / 1000)),
-    validations: ['backup_sha256', 'pg_restore', 'prisma_migration_status', 'data_consistency'],
+    validations: ['backup_sha256', 'database_identity', 'empty_destination', 'pg_restore', 'prisma_migration_status', 'data_consistency'],
   }, null, 2)}\n`, { flag: 'wx' });
   return reportPath;
 }

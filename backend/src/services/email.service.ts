@@ -15,6 +15,7 @@ export interface AuthEmailSender {
   sendPasswordReset(email: string, token: string, idempotencyKey?: string): Promise<void>;
   sendOrderConfirmation?(email: string, details: OrderEmailDetails): Promise<void>;
   sendOrderShipped?(email: string, details: OrderEmailDetails): Promise<void>;
+  sendOrderDelivered?(email: string, details: OrderEmailDetails): Promise<void>;
   sendOrderCancelled?(email: string, details: OrderEmailDetails): Promise<void>;
 }
 
@@ -80,6 +81,23 @@ export class ResendAuthEmailSender implements AuthEmailSender {
       );
     } catch (err) {
       logger.warn({ orderId: details.id, error: err instanceof Error ? err.message : 'Unknown' }, 'Order shipped email could not be sent.');
+    }
+  }
+
+  async sendOrderDelivered(email: string, details: OrderEmailDetails): Promise<void> {
+    const orderRef = details.orderNumber ?? details.id.slice(0, 8).toUpperCase();
+    try {
+      await this.send(
+        email,
+        `Order Delivered #${orderRef} - Purvaja Fashion`,
+        `<div style="font-family: sans-serif; color: #1a1a1a;">` +
+        `<h2>Your Order Has Arrived</h2>` +
+        `<p>Your bespoke Purvaja Fashion package for order #${orderRef} has been delivered.</p>` +
+        `<p>We hope you cherish your garments. You can share your feedback on <a href="${env.FRONTEND_URL}/orders/${details.id}">your orders page</a>.</p>` +
+        `</div>`,
+      );
+    } catch (err) {
+      logger.warn({ orderId: details.id, error: err instanceof Error ? err.message : 'Unknown' }, 'Order delivered email could not be sent.');
     }
   }
 

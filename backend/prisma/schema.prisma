@@ -164,6 +164,8 @@ model User {
   reviews                 Review[]
   sessions                Session[]
   cartMerges              CartMerge[]
+  checkoutIdempotencies   CheckoutIdempotency[]
+  wishlistItems           WishlistItem[]
 
   @@index([role, status])
   @@map("users")
@@ -295,6 +297,7 @@ model Product {
   images              ProductImage[]
   reviews             Review[]
   variants            ProductVariant[]
+  wishlistItems       WishlistItem[]
 
   @@index([status, createdAt])
   @@index([isFeatured, status])
@@ -447,6 +450,8 @@ model Order {
   payments            Payment[]
   inventoryReservations InventoryReservation[]
   returnRequest        OrderReturn?
+  checkoutIdempotencies CheckoutIdempotency[]
+  shipment             OrderShipment?
   user                User          @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
@@ -492,6 +497,7 @@ model Payment {
   initiation        PaymentInitiation?
   observations      PaymentObservation[]
   refunds           PaymentRefund[]
+  checkoutIdempotencies CheckoutIdempotency[]
 
   @@index([orderId])
   @@index([status, expiresAt])
@@ -571,9 +577,46 @@ model CheckoutIdempotency {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   expiresAt   DateTime @map("expires_at") @db.Timestamptz(6)
 
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment     Payment? @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
   @@index([key, userId])
   @@index([expiresAt])
   @@map("checkout_idempotency")
+}
+
+model WishlistItem {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("wishlist_items")
+}
+
+model OrderShipment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId        String    @unique @map("order_id") @db.Uuid
+  carrier        String    @db.VarChar(64)
+  trackingNumber String    @unique @map("tracking_number") @db.VarChar(128)
+  awbCode        String?   @map("awb_code") @db.VarChar(128)
+  status         String    @default("MANIFESTED") @db.VarChar(64)
+  trackingUrl    String?   @map("tracking_url") @db.VarChar(500)
+  details        Json?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([trackingNumber])
+  @@map("order_shipments")
 }
 
 model InventoryReservation {

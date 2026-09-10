@@ -160,10 +160,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }));
 
 import { onSessionExpired, advanceApiSession } from '../../../services/api/client.js';
+import { broadcastAuthBoundary } from '../utils/authSync.js';
+
 useAuthStore.subscribe((state, previous) => {
   if (state.user?.id !== previous.user?.id || state.status !== previous.status) {
     authGeneration++;
     advanceApiSession();
+    // Only broadcast confirmed states (avoid broadcasting initial loading)
+    if (state.status !== 'loading') {
+      broadcastAuthBoundary(state.user?.id ?? null, state.status);
+    }
   }
 });
 onSessionExpired(() => {

@@ -7,13 +7,14 @@ import type { AdminCustomer, AdminPage } from '../../features/admin/types/admin.
 export function AdminCustomersPage() {
   const [result, setResult] = useState<AdminPage<AdminCustomer> | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     const timeout = window.setTimeout(() => {
       adminService
-        .getCustomers(search)
+        .getCustomers(search, page)
         .then(data => {
           if (active) {
             setError('');
@@ -31,7 +32,7 @@ export function AdminCustomersPage() {
       active = false;
       window.clearTimeout(timeout);
     };
-  }, [search]);
+  }, [search, page]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -48,7 +49,10 @@ export function AdminCustomersPage() {
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-charcoal-400" />
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder="Search name or email"
           className="w-full rounded-xl border border-ivory-300 bg-white py-2 pl-9 pr-3 text-xs"
         />
@@ -104,6 +108,30 @@ export function AdminCustomersPage() {
               No customers match this search.
             </p>
           )}
+          <div className="flex items-center justify-between border-t border-ivory-200 p-4 text-xs text-charcoal-600">
+            <span>{result.total} total customers</span>
+            <div className="space-x-2">
+              <button
+                type="button"
+                disabled={result.page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-[11px] text-charcoal-400">
+                Page {result.page} of {Math.max(result.totalPages, 1)}
+              </span>
+              <button
+                type="button"
+                disabled={result.page >= result.totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="rounded-lg border border-ivory-300 px-3 py-1 font-semibold disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { env } from '../config/env.js';
-import { ForbiddenError } from '../utils/errors.js';
+import { ForbiddenError, ValidationError } from '../utils/errors.js';
 import { CartService } from '../services/cart.service.js';
 import { mergeCartSchema } from '../validators/commerce.validator.js';
 import { CommerceService } from '../services/commerce.service.js';
@@ -9,7 +9,14 @@ import { addCartItemSchema, addressSchema, cancelOrderSchema, checkoutSchema, de
 const cart = new CartService();
 const commerce = new CommerceService();
 const send = (res: Parameters<RequestHandler>[1], data: unknown, status = 200) => res.status(status).json({ success: true, data });
-const param = (value: string | string[] | undefined, name: string): string => { if (typeof value !== 'string') throw new Error(`Missing ${name} route parameter.`); return value; };
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const param = (value: string | string[] | undefined, name: string): string => {
+  if (typeof value !== 'string' || !uuidRegex.test(value)) {
+    throw new ValidationError(`Invalid ${name} route parameter. Must be a valid UUID.`, undefined, 'INVALID_IDENTIFIER');
+  }
+  return value;
+};
+
 
 export const getCart: RequestHandler = async (req, res, next) => { try { send(res, await cart.get(req.auth!.userId)); } catch (error) { next(error); } };
 export const mergeCart: RequestHandler = async (req, res, next) => { try { const input = parse(mergeCartSchema, req.body); send(res, await cart.merge(req.auth!.userId, input.mergeId, input.items)); } catch (error) { next(error); } };

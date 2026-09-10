@@ -44,13 +44,39 @@ export class OperationalAlertService {
     this.recent.set(deduplicationKey, now);
 
     try {
+      const isSlack = this.webhookUrl.includes('hooks.slack.com');
+      const isDiscord = this.webhookUrl.includes('discord.com/api/webhooks');
+
+      let bodyString: string;
+      if (isSlack) {
+        const emoji = alert.severity === 'critical' ? ':rotating_light:' : ':warning:';
+        bodyString = JSON.stringify({
+          text: `${emoji} *[${alert.severity.toUpperCase()}] ${alert.code}*: ${alert.summary}`,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `${emoji} *Purvaja Operational Alert: ${alert.code}*\n*Severity:* \`${alert.severity}\`\n*Summary:* ${alert.summary}\n*Time:* \`${new Date(now).toISOString()}\``,
+              },
+            },
+          ],
+        });
+      } else if (isDiscord) {
+        bodyString = JSON.stringify({
+          content: `🚨 **[${alert.severity.toUpperCase()}] ${alert.code}**\n${alert.summary}\nTime: \`${new Date(now).toISOString()}\``,
+        });
+      } else {
+        bodyString = JSON.stringify({ ...alert, occurredAt: new Date(now).toISOString() } satisfies OperationalAlert);
+      }
+
       const response = await fetch(this.webhookUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         },
-        body: JSON.stringify({ ...alert, occurredAt: new Date(now).toISOString() } satisfies OperationalAlert),
+        body: bodyString,
         signal: AbortSignal.timeout(3_000),
       });
       if (!response.ok) throw new Error(`Alert destination returned HTTP ${response.status}.`);

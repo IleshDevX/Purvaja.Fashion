@@ -30,10 +30,31 @@ export function OrderListPage() {
   const [cancelModalOrder, setCancelModalOrder] = useState<Order | null>(null);
   const [cancelReason, setCancelReason] = useState('Ordered wrong size or color');
   const [returnModalOrder, setReturnModalOrder] = useState<Order | null>(null);
-  const [returnReason, setReturnReason] = useState('Size fit issue — need exchange');
-
+  const [returnReason, setReturnReason] = useState('Size fit issue — return');
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
-  const { data: orders = [] } = useOrdersQuery({ status: statusFilter, searchQuery });
+  const { data: rawOrders = [], isPending, isLoading, isError, error, refetch } = useOrdersQuery({
+    status: statusFilter,
+    searchQuery,
+    page,
+    limit: 10,
+  });
+
+  const ordersList: Order[] = Array.isArray(rawOrders)
+    ? rawOrders
+    : ((rawOrders as unknown as { items?: Order[] })?.items ?? []);
+
+  const totalOrders = Array.isArray(rawOrders)
+    ? rawOrders.length
+    : ((rawOrders as unknown as { total?: number })?.total ?? ordersList.length);
+
+  const totalPages = Math.max(1, Math.ceil(totalOrders / 10));
+
+  const orders = Array.isArray(rawOrders)
+    ? (ordersList.length > 10 ? ordersList.slice((page - 1) * 10, page * 10) : ordersList)
+    : ordersList;
+
+  const loading = Boolean(isPending || isLoading);
   const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ['orders'] });
 
   const handleCancelOrderConfirm = async () => {
@@ -107,7 +128,7 @@ export function OrderListPage() {
               </p>
             </div>
             <span className="text-xs font-medium text-charcoal-500">
-              Showing <span className="font-bold text-charcoal-950">{orders.length}</span> orders placed
+              Showing <span className="font-bold text-charcoal-950">{orders.length}</span> of {totalOrders} orders
             </span>
           </div>
         </div>
@@ -121,7 +142,10 @@ export function OrderListPage() {
                 <button
                   key={status}
                   type="button"
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => {
+                    setStatusFilter(status);
+                    setPage(1);
+                  }}
                   className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all ${
                     statusFilter === status
                       ? 'bg-charcoal-950 text-white shadow-sm'
@@ -139,7 +163,10 @@ export function OrderListPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search by Order # or shirt..."
               className="w-full rounded-full border border-ivory-300 bg-ivory-50 py-2 pl-9 pr-4 text-xs font-medium text-charcoal-900 placeholder:text-charcoal-400 outline-none transition-colors focus:border-charcoal-950 focus:bg-white"
             />
@@ -148,7 +175,24 @@ export function OrderListPage() {
         </div>
 
         {/* Order List */}
-        {orders.length === 0 ? (
+        {loading ? (
+          <div className="rounded-[26px] border border-ivory-300 bg-white p-12 text-center max-w-md mx-auto space-y-3 shadow-[0_12px_32px_rgba(26,26,26,0.03)]">
+            <Package className="h-10 w-10 text-charcoal-300 mx-auto animate-pulse" />
+            <h3 className="font-serif text-xl font-light text-charcoal-950">Loading Orders…</h3>
+            <p className="text-xs text-charcoal-500">Retrieving your order archives.</p>
+          </div>
+        ) : isError ? (
+          <div role="alert" className="rounded-[26px] border border-rose-200 bg-rose-50/50 p-12 text-center max-w-md mx-auto space-y-3">
+            <p className="text-sm font-semibold text-rose-800">Unable to load orders</p>
+            <p className="text-xs text-rose-600">{error instanceof Error ? error.message : 'Please check your connection and try again.'}</p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-4 rounded-full bg-charcoal-950 px-6 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-gold-500 hover:text-charcoal-950 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : orders.length === 0 ? (
           <div className="rounded-[26px] border border-ivory-300 bg-white p-12 text-center max-w-md mx-auto shadow-[0_12px_32px_rgba(26,26,26,0.03)]">
             <Package className="h-12 w-12 text-charcoal-300 mx-auto mb-3" />
             <h3 className="font-serif text-2xl font-light text-charcoal-950 mb-2">No Orders Found</h3>
@@ -200,7 +244,13 @@ export function OrderListPage() {
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-charcoal-400 block mb-0.5">
-                          Total Paid
+                          {order.paymentStatus === 'paid'
+                            ? 'Total Paid'
+                            : order.paymentStatus === 'refunded'
+                            ? 'Refunded'
+                            : order.paymentStatus === 'cancelled'
+                            ? 'Cancelled Total'
+                            : 'Order Total'}
                         </span>
                         <span className="font-sans text-base font-bold tabular-nums text-charcoal-950">
                           ₹{order.grandTotal.toLocaleString('en-IN')}
@@ -296,6 +346,30 @@ export function OrderListPage() {
                 </div>
               );
             })}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-ivory-300 pt-6 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="rounded-xl border border-ivory-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-700 hover:bg-ivory-100 disabled:opacity-40 transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-semibold text-charcoal-600">
+                  Page {page} of {totalPages} ({totalOrders} {totalOrders === 1 ? 'order' : 'orders'})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="rounded-xl border border-ivory-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-700 hover:bg-ivory-100 disabled:opacity-40 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -368,7 +442,7 @@ export function OrderListPage() {
               >
                 <X className="w-5 h-5" />
               </button>
-              <h3 id="return-modal-title" className="font-serif text-heading-lg text-charcoal-900">Request Return / Swap</h3>
+              <h3 id="return-modal-title" className="font-serif text-heading-lg text-charcoal-900">Request Return</h3>
               <p className="text-body-sm text-charcoal-600">
                 Order <strong className="text-charcoal-900">#{returnModalOrder.orderNumber}</strong> · 7-Day Guarantee
               </p>
@@ -382,7 +456,7 @@ export function OrderListPage() {
                   onChange={e => setReturnReason(e.target.value)}
                   className="w-full p-2.5 bg-ivory-50 border border-ivory-300 text-body-sm text-charcoal-900 outline-none rounded-xl"
                 >
-                  <option value="Size fit issue — need exchange">Size fit issue — need exchange</option>
+                  <option value="Size fit issue — return">Size fit issue</option>
                   <option value="Fabric color differs slightly from screen">Fabric color differs slightly</option>
                   <option value="Defect or stitching issue">Defect or stitching issue</option>
                   <option value="Other reason">Other reason</option>

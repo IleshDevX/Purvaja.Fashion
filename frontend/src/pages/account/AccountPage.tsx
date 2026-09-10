@@ -67,7 +67,13 @@ export function AccountPage() {
 
   const isAdmin = user?.role === 'admin';
 
-  const { data: addresses = [], isLoading: addressesLoading } = useQuery({
+  const {
+    data: addresses = [],
+    isLoading: addressesLoading,
+    isError: addressesError,
+    error: addressesErrorObj,
+    refetch: refetchAddresses,
+  } = useQuery({
     queryKey: ['addresses'],
     queryFn: () => addressService.list(),
   });
@@ -464,6 +470,19 @@ export function AccountPage() {
 
                   {addressesLoading ? (
                     <div className="p-8 text-center text-xs text-charcoal-500">Loading delivery addresses…</div>
+                  ) : addressesError ? (
+                    <div className="rounded-2xl border border-error/30 bg-error/5 p-8 text-center space-y-3">
+                      <p className="text-sm font-medium text-error">
+                        {addressesErrorObj instanceof Error ? addressesErrorObj.message : 'Unable to load delivery destinations.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void refetchAddresses()}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-charcoal-950 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-gold-500 hover:text-charcoal-950 transition-colors"
+                      >
+                        Retry Loading
+                      </button>
+                    </div>
                   ) : addresses.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-ivory-300 p-8 text-center space-y-3">
                       <MapPin className="h-8 w-8 text-charcoal-400 mx-auto" />
