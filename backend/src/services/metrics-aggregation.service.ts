@@ -99,6 +99,8 @@ export class MetricsAggregationService {
     socket: { connectTimeout: 2_000, reconnectStrategy: false },
   }) : undefined;
   private timer?: NodeJS.Timeout;
+  private publishing?: Promise<void>;
+  private stopping = false;
 
   constructor() { this.client?.on('error', () => undefined); }
 
@@ -106,10 +108,15 @@ export class MetricsAggregationService {
 
   async start(): Promise<void> {
     if (!this.client || this.timer) return;
+    this.stopping = false;
     try {
       if (!this.client.isReady) await this.client.connect();
       await this.publish();
-      this.timer = setInterval(() => { void this.publish(); }, 15_000);
+      this.timer = setInterval(() => {
+        void this.publish().catch(error => {
+          logger.error({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Shared metrics publication failed; next interval will retry.');
+        });
+      }, 15_000);
       this.timer.unref();
     } catch (error) {
       logger.error({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Shared metrics publisher could not connect.');
@@ -118,16 +125,25 @@ export class MetricsAggregationService {
   }
 
   async stop(): Promise<void> {
+    this.stopping = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    // Closing the socket settles any blocked command, so shutdown does not wait
+    // forever for optional telemetry. The interval owns its rejection handler.
+    if (this.publishing && this.client?.isOpen) this.client.destroy();
+    await this.publishing?.catch(() => undefined);
     if (!this.client?.isOpen) return;
     await this.client.del(this.prefix + this.instanceId).catch(() => undefined);
     await this.client.disconnect().catch(() => undefined);
   }
 
   async publish(): Promise<void> {
-    if (!this.client?.isReady) return;
-    await this.client.set(this.prefix + this.instanceId, JSON.stringify(metrics.getSnapshot()), { EX: 45 });
+    if (this.stopping || !this.client?.isReady) return;
+    if (this.publishing) return this.publishing;
+    const pending = this.client.set(this.prefix + this.instanceId, JSON.stringify(metrics.getSnapshot()), { EX: 45 }).then(() => undefined);
+    this.publishing = pending;
+    try { await pending; }
+    finally { if (this.publishing === pending) this.publishing = undefined; }
   }
 
   async getSnapshot(): Promise<AggregatedMetrics> {

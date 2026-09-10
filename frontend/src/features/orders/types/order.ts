@@ -13,7 +13,7 @@ export type OrderStatus =
   | 'return_requested'
   | 'returned';
 
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
 
 export interface PaymentRefund {
   id: string;

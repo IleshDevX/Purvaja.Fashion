@@ -24,6 +24,7 @@ export default defineConfig({
     port: 4174,
   },
   build: {
+    target: 'es2022',
     rollupOptions: {
       output: {
         manualChunks(id) {

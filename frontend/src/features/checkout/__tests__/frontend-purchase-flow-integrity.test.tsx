@@ -417,6 +417,41 @@ describe('Phase 5: Frontend Authentication, Cart & Checkout Integrity', () => {
     expect((await useCheckoutStore.getState().processPayment([{ ...baseItem, quantity: 2 }])).success).toBe(true);
   });
 
+  it('10d. Checkout idempotency: preserves attempt across initial auth hydration and clears on account switch', async () => {
+    const address = {
+      firstName: 'Aarav', lastName: 'Mehta', phone: '9876543210', addressLine1: '123 MG Road',
+      city: 'Mumbai', state: 'Maharashtra', postalCode: '400001', country: 'IN',
+    };
+    const cartItems = [{
+      id: 'item-hydrate', shirtId: 's1', variantId: 'v1', name: 'Shirt', slug: 'shirt', image: '',
+      pricePaise: 249900, price: 2499, color: { name: 'White', hex: '#FFF' }, size: '40 (M)' as const, quantity: 1,
+    }];
+    useAuthStore.setState({ user: { id: 'usr-1', email: 'aarav@example.com', firstName: 'Test', lastName: 'Customer', role: 'customer', emailVerified: true }, status: 'authenticated' });
+    useCheckoutStore.getState().setShippingAddress(address);
+    vi.spyOn(useCartStore.getState(), 'syncWithServer').mockResolvedValue();
+
+    let attemptKey = '';
+    vi.spyOn(orderService, 'checkout').mockImplementationOnce(async request => {
+      attemptKey = request.idempotencyKey!;
+      throw new Error('Network timeout');
+    });
+
+    await useCheckoutStore.getState().processPayment(cartItems);
+    expect(attemptKey).toBeTruthy();
+    expect(sessionStorage.getItem('purvaja-checkout-attempt-v1')).toContain(attemptKey);
+
+    // Simulate page reload: auth starts at null/loading then hydrates to usr-1
+    useAuthStore.setState({ user: null, status: 'loading' });
+    useAuthStore.setState({ user: { id: 'usr-1', email: 'aarav@example.com', firstName: 'Test', lastName: 'Customer', role: 'customer', emailVerified: true }, status: 'authenticated' });
+
+    // The retry attempt key in sessionStorage MUST still exist and be intact
+    expect(sessionStorage.getItem('purvaja-checkout-attempt-v1')).toContain(attemptKey);
+
+    // But switching to a different user usr-2 MUST clear the attempt
+    useAuthStore.setState({ user: { id: 'usr-2', email: 'other@example.com', firstName: 'Test', lastName: 'Customer', role: 'customer', emailVerified: true }, status: 'authenticated' });
+    expect(sessionStorage.getItem('purvaja-checkout-attempt-v1')).toBeNull();
+  });
+
   // 11. Payment success
   it('11. Payment success: confirms order and clears cart when payment status is paid', () => {
     const clearCartSpy = vi.spyOn(useCartStore.getState(), 'clearCart');

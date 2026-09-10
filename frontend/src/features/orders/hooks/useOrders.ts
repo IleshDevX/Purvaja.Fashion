@@ -6,6 +6,10 @@ export function useOrdersQuery(options: OrderFilterOptions = {}) {
   return useQuery({ queryKey: ['orders', options], queryFn: () => orderService.list(options) });
 }
 
+export function useOrdersPaginatedQuery(options: OrderFilterOptions = {}) {
+  return useQuery({ queryKey: ['orders-paginated', options], queryFn: () => orderService.listPaginated(options) });
+}
+
 export function useOrderQuery(
   orderId: string | undefined,
   options?: Pick<UseQueryOptions<Order>, 'refetchInterval'>,

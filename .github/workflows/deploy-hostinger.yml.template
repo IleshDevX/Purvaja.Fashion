@@ -65,9 +65,13 @@ jobs:
 
       - name: Validate Production Prisma Schema
         run: pnpm db:validate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Generate Prisma Client
         run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Typecheck Application
         run: pnpm typecheck
@@ -87,7 +91,6 @@ jobs:
           cp backend/package.json release-bundle/backend/package.json
           cp backend/prisma.config.ts release-bundle/backend/prisma.config.ts
           cp frontend/package.json release-bundle/frontend/package.json
-          cp backend/ecosystem.config.cjs release-bundle/backend/ecosystem.config.cjs
           cp package.json release-bundle/package.json
           cp pnpm-lock.yaml release-bundle/pnpm-lock.yaml
           cp pnpm-workspace.yaml release-bundle/pnpm-workspace.yaml

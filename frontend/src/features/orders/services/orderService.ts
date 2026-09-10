@@ -63,6 +63,8 @@ function normalizePaymentStatus(status: string): PaymentStatus {
       return 'failed';
     case 'REFUNDED':
       return 'refunded';
+    case 'CANCELLED':
+      return 'cancelled';
     case 'PENDING':
     case 'INITIATED':
     case 'AUTHORIZED':
@@ -324,18 +326,29 @@ export const orderService = {
   },
 
   async list(options: OrderFilterOptions = {}): Promise<Order[]> {
+    const res = await this.listPaginated({ limit: 100, ...options });
+    return res.items;
+  },
+
+  async listPaginated(options: OrderFilterOptions = {}): Promise<PageResult<Order>> {
     const status = options.status && options.status !== 'all'
       ? options.status.toUpperCase()
       : undefined;
     const response = await apiClient.get(`/orders?${toSearchParams({
       page: options.page ?? 1,
-      limit: options.limit ?? 100,
+      limit: options.limit ?? 10,
       status,
       search: options.searchQuery || undefined,
       sort: options.sortBy?.replace('_', '-') ?? 'newest',
     })}`);
     const data = unwrapApiData<PageResult<BackendOrderDto>>(response.data);
-    return data.items.map(mapBackendOrderToFrontendOrder);
+    return {
+      items: data.items.map(mapBackendOrderToFrontendOrder),
+      total: data.total,
+      page: data.page,
+      limit: data.limit,
+      totalPages: data.totalPages,
+    };
   },
 
   async getById(orderId: string): Promise<Order> {

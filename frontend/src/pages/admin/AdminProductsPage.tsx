@@ -19,9 +19,21 @@ export function AdminProductsPage() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(search), 250);
-    return () => window.clearTimeout(timer);
-  }, [search, load]);
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        setError('');
+        const res = await adminService.listProducts(search, 1);
+        if (active) setData(res);
+      } catch {
+        if (active) setError('Unable to load products.');
+      }
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [search]);
 
   return (
     <div className="space-y-6 animate-fade-in text-charcoal-900">
@@ -55,82 +67,87 @@ export function AdminProductsPage() {
       </div>
 
       {error ? (
-        <div role="alert" className="rounded-xl bg-white p-6 text-sm text-rose-800">{error}<button type="button" onClick={() => void load(search)} className="ml-4 font-bold text-gold-800">Retry</button></div>
+        <div role="alert" className="rounded-xl bg-white p-6 text-sm text-rose-800">
+          {error}
+          <button type="button" onClick={() => void load(search)} className="ml-4 font-bold text-gold-800">
+            Retry
+          </button>
+        </div>
       ) : !data ? (
         <div className="rounded-xl bg-white p-6 text-sm text-charcoal-500">Loading products…</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-ivory-300 bg-white shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-            <thead className="bg-ivory-50 text-charcoal-500">
-              <tr>
-                <th className="p-4">Product Name / Slug</th>
-                <th className="p-4">Categories</th>
-                <th className="p-4">Base Price</th>
-                <th className="p-4">Variants / Stock</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map(item => {
-                const stock = item.variants.reduce((total, v) => total + v.stockQuantity, 0);
-                return (
-                  <tr key={item.id} className="border-t hover:bg-ivory-50/50 transition-colors">
-                    <td className="p-4 font-semibold text-charcoal-950">
-                      {item.name}
-                      <p className="mt-0.5 font-mono text-[10px] text-charcoal-400">{item.slug}</p>
-                    </td>
-                    <td className="p-4">
-                      {item.categories.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.categories.map(c => (
-                            <span
-                              key={c.id}
-                              className="rounded-md bg-ivory-100 px-2 py-0.5 text-[10px] font-medium text-charcoal-700"
-                            >
-                              {c.name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-charcoal-400">Uncategorised</span>
-                      )}
-                    </td>
-                    <td className="p-4 font-sans font-medium text-charcoal-950">
-                      ₹{(item.basePricePaise / 100).toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-4 text-charcoal-700">
-                      <span className="font-semibold text-charcoal-950">{item.variants.length}</span> SKUs{' '}
-                      <span className="text-charcoal-400">({stock} units)</span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          item.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            : item.status === 'ARCHIVED'
-                              ? 'bg-charcoal-100 text-charcoal-600'
-                              : 'bg-gold-50 text-gold-800 border border-gold-200'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Link
-                        to={`/admin/products/${item.id}`}
-                        className="inline-flex items-center gap-1 font-bold text-gold-800 hover:text-charcoal-950 transition-colors"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>View</span>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              <thead className="bg-ivory-50 text-charcoal-500">
+                <tr>
+                  <th className="p-4">Product Name / Slug</th>
+                  <th className="p-4">Categories</th>
+                  <th className="p-4">Base Price</th>
+                  <th className="p-4">Variants / Stock</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map(item => {
+                  const stock = item.variants.reduce((total, v) => total + v.stockQuantity, 0);
+                  return (
+                    <tr key={item.id} className="border-t hover:bg-ivory-50/50 transition-colors">
+                      <td className="p-4 font-semibold text-charcoal-950">
+                        {item.name}
+                        <p className="mt-0.5 font-mono text-[10px] text-charcoal-400">{item.slug}</p>
+                      </td>
+                      <td className="p-4">
+                        {item.categories.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.categories.map(c => (
+                              <span
+                                key={c.id}
+                                className="rounded-md bg-ivory-100 px-2 py-0.5 text-[10px] font-medium text-charcoal-700"
+                              >
+                                {c.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-charcoal-400">Uncategorised</span>
+                        )}
+                      </td>
+                      <td className="p-4 font-sans font-medium text-charcoal-950">
+                        ₹{(item.basePricePaise / 100).toLocaleString('en-IN')}
+                      </td>
+                      <td className="p-4 text-charcoal-700">
+                        <span className="font-semibold text-charcoal-950">{item.variants.length}</span> SKUs{' '}
+                        <span className="text-charcoal-400">({stock} units)</span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            item.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : item.status === 'ARCHIVED'
+                                ? 'bg-charcoal-100 text-charcoal-600'
+                                : 'bg-gold-50 text-gold-800 border border-gold-200'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <Link
+                          to={`/admin/products/${item.id}`}
+                          className="inline-flex items-center gap-1 font-bold text-gold-800 hover:text-charcoal-950 transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>View</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {!data.items.length && (

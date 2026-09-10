@@ -41,7 +41,43 @@ export function CheckoutSuccessPage() {
     return <Navigate to="/shop" replace />;
   }
   if (isPending) return <PageLoadingFallback />;
-  if (isError || !order) {
+
+  // Network/temporary fetch failure must NOT be reported as payment failure (AUD-012)
+  if (isError) {
+    return (
+      <div className="py-8 lg:py-16 max-w-xl mx-auto px-4">
+        <div className="bg-ivory-100 p-8 sm:p-12 border border-ivory-300 shadow-subtle text-center space-y-6">
+          <div className="w-16 h-16 bg-gold-100 rounded-full flex items-center justify-center mx-auto">
+            <RefreshCw className="w-8 h-8 text-gold-600" />
+          </div>
+          <div>
+            <p className="text-overline text-gold-600 mb-1">Network Communication</p>
+            <h1 className="font-serif text-display text-charcoal-900">Unable to Load Confirmation</h1>
+            <p className="text-body-sm text-charcoal-500 mt-2">
+              We encountered a temporary connection error while retrieving your order confirmation.
+              Your transaction has not necessarily failed.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              onClick={() => void refetch()}
+              className="flex-1 py-3.5 bg-charcoal-900 text-ivory-100 text-body-sm font-semibold tracking-wider hover:bg-charcoal-800 transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> RETRY
+            </button>
+            <Link
+              to="/account/orders"
+              className="flex-1 py-3.5 border border-charcoal-400 text-charcoal-800 text-body-sm font-semibold tracking-wider hover:border-charcoal-900 transition-colors flex items-center justify-center gap-2"
+            >
+              VIEW MY ORDERS
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
     return <Navigate to={`/checkout/failure?orderId=${encodeURIComponent(orderId)}`} replace />;
   }
 

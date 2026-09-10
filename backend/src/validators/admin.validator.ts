@@ -34,5 +34,34 @@ export const variant = z.object({ productId: uuid.optional(), sku: z.string().tr
 export const adjustment = z.object({ variantId: uuid, quantity: z.number().int().refine(value => value !== 0), type: z.enum(['RESTOCK', 'ADJUSTMENT', 'DAMAGE', 'RETURN', 'CORRECTION']), reason: z.string().trim().min(3).max(500) });
 export const stockCorrection = z.object({ stock: z.number().int().min(0) });
 export const orderStatus = z.object({ status: z.enum(['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED']) });
-export const coupon = z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,80}$/), discountType: z.enum(['PERCENTAGE', 'FIXED']), discountValue: z.number().int().min(1), minimumOrderPaise: z.number().int().min(0).nullable().optional(), maximumDiscountPaise: z.number().int().min(0).nullable().optional(), usageLimit: z.number().int().min(1).nullable().optional(), startsAt: z.string().datetime().nullable().optional(), endsAt: z.string().datetime().nullable().optional(), isActive: z.boolean().optional() });
+export const couponBase = z.object({
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,80}$/),
+  discountType: z.enum(['PERCENTAGE', 'FIXED']),
+  discountValue: z.number().int().min(1).max(2147483647),
+  minimumOrderPaise: z.number().int().min(0).max(2147483647).nullable().optional(),
+  maximumDiscountPaise: z.number().int().min(0).max(2147483647).nullable().optional(),
+  usageLimit: z.number().int().min(1).max(2147483647).nullable().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const coupon = couponBase.refine(data => {
+  if (data.discountType === 'PERCENTAGE' && data.discountValue > 100) return false;
+  return true;
+}, { message: 'Percentage discount cannot exceed 100%.', path: ['discountValue'] })
+.refine(data => {
+  if (data.startsAt && data.endsAt && new Date(data.endsAt) <= new Date(data.startsAt)) return false;
+  return true;
+}, { message: 'End date must be after start date.', path: ['endsAt'] });
+
+export const updateCouponSchema = couponBase.partial().refine(data => {
+  if (data.discountType === 'PERCENTAGE' && data.discountValue !== undefined && data.discountValue > 100) return false;
+  return true;
+}, { message: 'Percentage discount cannot exceed 100%.', path: ['discountValue'] })
+.refine(data => {
+  if (data.startsAt && data.endsAt && new Date(data.endsAt) <= new Date(data.startsAt)) return false;
+  return true;
+}, { message: 'End date must be after start date.', path: ['endsAt'] });
+
 export function input<T extends z.ZodTypeAny>(schema: T, value: unknown): z.output<T> { const parsed = schema.safeParse(value); if (!parsed.success) throw new ValidationError('Invalid request.', parsed.error.flatten()); return parsed.data; }

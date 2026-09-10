@@ -27,6 +27,7 @@ export class CartService {
   async merge(userId: string, mergeId: string, items: Array<{ variantId: string; quantity: number }>) {
     const normalized = [...items].sort((a, b) => a.variantId.localeCompare(b.variantId));
     const requestHash = createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+    const conflicts: Array<{ variantId: string; reason: 'VARIANT_NOT_FOUND' | 'INSUFFICIENT_STOCK'; requestedQuantity: number; availableQuantity: number }> = [];
     await this.transaction(userId, async tx => {
       const existing = await tx.cartMerge.findUnique({ where: { id: mergeId } });
       if (existing) {
@@ -35,10 +36,34 @@ export class CartService {
         }
         return;
       }
-      for (const item of normalized) await this.addInside(tx, userId, item.variantId, item.quantity);
+      for (const item of normalized) {
+        const variant = await tx.productVariant.findFirst({ where: { id: item.variantId, status: 'ACTIVE', product: { status: 'ACTIVE' } } });
+        if (!variant) {
+          conflicts.push({ variantId: item.variantId, reason: 'VARIANT_NOT_FOUND', requestedQuantity: item.quantity, availableQuantity: 0 });
+          continue;
+        }
+        const cart = await tx.cart.upsert({ where: { userId }, create: { userId }, update: { status: 'ACTIVE' } });
+        const existingCartItem = await tx.cartItem.findUnique({ where: { cartId_variantId: { cartId: cart.id, variantId: item.variantId } } });
+        const existingQuantity = existingCartItem?.quantity ?? 0;
+        const maxAddable = Math.max(0, Math.min(variant.stockQuantity - existingQuantity, 20 - existingQuantity));
+        if (maxAddable <= 0) {
+          conflicts.push({ variantId: item.variantId, reason: 'INSUFFICIENT_STOCK', requestedQuantity: item.quantity, availableQuantity: existingQuantity });
+          continue;
+        }
+        const toAdd = Math.min(item.quantity, maxAddable);
+        if (toAdd < item.quantity) {
+          conflicts.push({ variantId: item.variantId, reason: 'INSUFFICIENT_STOCK', requestedQuantity: item.quantity, availableQuantity: existingQuantity + toAdd });
+        }
+        const total = existingQuantity + toAdd;
+        await tx.cartItem.upsert({ where: { cartId_variantId: { cartId: cart.id, variantId: item.variantId } }, create: { cartId: cart.id, variantId: item.variantId, quantity: total }, update: { quantity: total } });
+      }
       await tx.cartMerge.create({ data: { id: mergeId, userId, requestHash } });
     });
-    return this.get(userId);
+    const result = await this.get(userId);
+    return {
+      ...result,
+      conflicts,
+    };
   }
   async get(userId: string) {
     const cart = await this.prisma.cart.upsert({ where: { userId }, create: { userId }, update: { status: 'ACTIVE' }, include: cartInclude });

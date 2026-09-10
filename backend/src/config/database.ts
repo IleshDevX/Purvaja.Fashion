@@ -5,6 +5,7 @@ import { PrismaClient } from '../generated/prisma/client.js';
 import { env, getDatabaseUrl } from './env.js';
 import { logger } from '../utils/logger.js';
 import { metrics } from '../utils/metrics.js';
+import { validateTestDatabaseUrl, verifyTestDatabase } from './test-database.js';
 
 let prismaClient: PrismaClient | undefined;
 
@@ -37,7 +38,11 @@ export function getPrismaClient(): PrismaClient {
     // while resolving one nested mutation. Explicit pg pipeline mode keeps
     // those statements ordered on the transaction connection and is required
     // by pg 9's concurrency contract.
-    const adapter = new PrismaPg({ connectionString: getDatabaseUrl(), pipeline: true });
+    const url = env.NODE_ENV === 'test' ? validateTestDatabaseUrl(process.env.TEST_DATABASE_URL!) : new URL(getDatabaseUrl());
+    const schema = url.searchParams.get('schema') ?? 'public';
+    if (!/^[a-z_][a-z0-9_]*$/.test(schema)) throw new Error('Invalid database schema.');
+    const adapter = new PrismaPg({ connectionString: url.toString(), pipeline: true,
+      options: `-c search_path=${schema}`, max: env.NODE_ENV === 'test' ? 5 : 10 }, { schema });
     prismaClient = new PrismaClient({ adapter });
   }
 
@@ -46,6 +51,7 @@ export function getPrismaClient(): PrismaClient {
 
 export async function connectDatabase(): Promise<void> {
   try {
+    if (env.NODE_ENV === 'test') await verifyTestDatabase(process.env.TEST_DATABASE_URL ?? '');
     await getPrismaClient().$connect();
     logger.info('PostgreSQL database connection established.');
   } catch (error) {

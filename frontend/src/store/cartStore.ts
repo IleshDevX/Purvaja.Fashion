@@ -84,10 +84,11 @@ export const useCartStore = create<CartState>()(persist((set, get) => {
       if (useAuthStore.getState().status === 'loading') throw new Error('Please wait while your session loads.');
       const existing = get().items.find(entry => entry.variantId === item.variantId);
       const quantity = (existing?.quantity ?? 0) + item.quantity;
-      if (quantity > Math.min(item.stockQuantity ?? 20, 20)) throw new Error('Requested quantity is unavailable.');
+      const maxAllowed = Math.min(item.stockQuantity ?? existing?.stockQuantity ?? 20, 20);
+      if (quantity > maxAllowed) throw new Error('Requested quantity is unavailable.');
       guestItems(existing
-        ? get().items.map(entry => entry.variantId === item.variantId ? { ...entry, quantity } : entry)
-        : [...get().items, { ...item, id: item.shirtId + '-' + item.variantId }]);
+        ? get().items.map(entry => entry.variantId === item.variantId ? { ...entry, quantity, stockQuantity: item.stockQuantity ?? entry.stockQuantity } : entry)
+        : [...get().items, { ...item, id: item.shirtId + '-' + item.variantId, stockQuantity: item.stockQuantity }]);
       set({ isDrawerOpen: true });
     },
     removeItem: async id => {

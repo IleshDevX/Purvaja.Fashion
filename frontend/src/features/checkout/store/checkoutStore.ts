@@ -250,7 +250,31 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
 }));
 
 useAuthStore.subscribe((state, previous) => {
-  if (state.user?.id !== previous.user?.id || (previous.status === 'authenticated' && state.status !== 'authenticated')) {
+  // If user transitions from authenticated to guest / logged out (explicit logout or session expiry)
+  if (previous.user && !state.user && state.status !== 'loading') {
     useCheckoutStore.getState().resetCheckout();
+    return;
+  }
+
+  // If status transitions away from authenticated to guest/unauthenticated (not loading)
+  if (previous.status === 'authenticated' && state.status !== 'authenticated' && state.status !== 'loading') {
+    useCheckoutStore.getState().resetCheckout();
+    return;
+  }
+
+  // If a different user account is detected
+  if (state.user && previous.user && state.user.id !== previous.user.id) {
+    useCheckoutStore.getState().resetCheckout();
+    return;
+  }
+
+  // When a user authenticates (initial hydration or login)
+  if (state.user) {
+    const persisted = readPersistedCheckoutAttempt();
+    // Clear foreign attempts that do not belong to this user
+    if (persisted && persisted.ownerId !== state.user.id) {
+      useCheckoutStore.getState().resetCheckout();
+      return;
+    }
   }
 });

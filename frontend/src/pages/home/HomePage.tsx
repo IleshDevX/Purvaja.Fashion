@@ -60,11 +60,11 @@ const ATELIER_STANDARDS = [
   {
     id: 1,
     pill: '7-Day Easy Returns',
-    question: 'What is your return & exchange policy?',
+    question: 'What is your return policy?',
     answer:
-      'Unworn pieces with original tags can be exchanged or returned within 7 days with complimentary doorstep pickup.',
+      'Unworn pieces with original tags can be returned within 7 days with complimentary doorstep pickup.',
     tag: 'Client Assurance',
-    badgeTitle: '7-Day Doorstep Exchange',
+    badgeTitle: '7-Day Doorstep Returns',
     image: '/images/products/natural-linen-cream-1.jpg',
   },
   {
@@ -447,7 +447,7 @@ export function HomePage() {
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold-500/20 text-gold-700">
                     <Check className="h-3 w-3" />
                   </span>
-                  <span>Free doorstep exchange across India</span>
+                  <span>Free doorstep returns across India</span>
                 </div>
                 <Link
                   to="/shop"
@@ -567,7 +567,7 @@ export function HomePage() {
 
             {/* Subtitle */}
             <p className="mx-auto mt-4 max-w-lg text-xs leading-relaxed text-ivory-200/80 sm:text-sm md:text-base">
-              Experience the distinction of 100s 2-Ply Egyptian Giza Cotton. Enjoy free express delivery and complimentary exchanges across India.
+              Experience the distinction of 100s 2-Ply Egyptian Giza Cotton. Enjoy free express delivery and complimentary returns across India.
             </p>
 
             {/* CTA Buttons */}

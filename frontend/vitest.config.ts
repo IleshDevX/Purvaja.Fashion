@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
   test: {
+    // Each jsdom worker loads the app graph; bound memory on local/CI hosts.
+    maxWorkers: 2,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     include: ['src/**/*.test.{ts,tsx}'],

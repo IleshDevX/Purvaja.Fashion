@@ -7,11 +7,11 @@ import type { AdminOrder, AdminOrderTransition, AdminPage } from '../../features
 const transitions: Record<AdminOrder['status'], AdminOrderTransition[]> = {
   PENDING: [],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['SHIPPED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
   SHIPPED: ['DELIVERED'],
   DELIVERED: [],
   CANCELLED: [],
-  RETURN_REQUESTED: [],
+  RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
   RETURNED: [],
 };
 
@@ -31,9 +31,21 @@ export function AdminOrdersPage() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(search), 250);
-    return () => window.clearTimeout(timer);
-  }, [search, load]);
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        setError('');
+        const res = await adminService.listOrders(search, 1);
+        if (active) setData(res);
+      } catch {
+        if (active) setError('Unable to load orders.');
+      }
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [search]);
 
   const change = async (id: string, status: AdminOrderTransition) => {
     try {

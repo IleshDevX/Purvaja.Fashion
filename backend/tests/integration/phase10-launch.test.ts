@@ -281,6 +281,7 @@ describe('Phase 10 — Production Launch, Disaster Recovery & Continuous Operati
     >`
       SELECT migration_name, finished_at, checksum
       FROM "_prisma_migrations"
+      WHERE rolled_back_at IS NULL
       ORDER BY finished_at ASC
     `;
 

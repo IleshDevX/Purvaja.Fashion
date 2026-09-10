@@ -82,6 +82,8 @@ interface BackendOrder {
   };
   items: AdminOrderItem[];
   payments: AdminPayment[];
+  returnRequest?: AdminOrder['returnRequest'];
+  allowedActions?: AdminOrder['allowedActions'];
 }
 
 const query = (page = 1, limit = 25, search = '') =>
@@ -105,6 +107,8 @@ function mapOrder(dto: BackendOrder): AdminOrder {
     paymentProvider: dto.payments?.[0]?.provider ?? null,
     payments: dto.payments ?? [],
     items: dto.items ?? [],
+    returnRequest: dto.returnRequest ?? null,
+    allowedActions: dto.allowedActions ?? [],
   };
 }
 
@@ -278,5 +282,40 @@ export const adminService = {
 
   async listAuditLogs(page = 1): Promise<AdminPage<AuditLog>> {
     return read<AdminPage<AuditLog>>(await apiClient.get(`/admin/audit-logs${query(page)}`));
+  },
+
+  async reconcilePayment(paymentId: string): Promise<unknown> {
+    return read(await apiClient.post(`/admin/payments/${encodeURIComponent(paymentId)}/reconcile`));
+  },
+
+  async processRefund(refundId: string): Promise<unknown> {
+    return read(await apiClient.post(`/admin/refunds/${encodeURIComponent(refundId)}/process`));
+  },
+
+  async getOperationalMetrics(): Promise<unknown> {
+    return read(await apiClient.get('/admin/metrics'));
+  },
+
+  async uploadProductImage(file: File): Promise<{ url: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          const result = read<{ url: string }>(
+            await apiClient.post('/admin/uploads/direct', {
+              filename: file.name,
+              contentType: file.type || 'image/jpeg',
+              base64Data,
+            }),
+          );
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.readAsDataURL(file);
+    });
   },
 };

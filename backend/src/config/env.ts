@@ -54,7 +54,11 @@ if (env.PAYMENT_PROVIDER === 'phonepe') {
   const missing = ['PHONEPE_MERCHANT_ID', 'PHONEPE_CLIENT_ID', 'PHONEPE_CLIENT_SECRET', 'PHONEPE_CLIENT_VERSION', 'PHONEPE_CALLBACK_URL']
     .filter(key => !env[key as keyof typeof env]);
   if (missing.length > 0) throw new Error(`PAYMENT_PROVIDER=phonepe requires: ${missing.join(', ')}`);
+  if (env.NODE_ENV === 'production' && process.env.PHONEPE_ENVIRONMENT !== 'production') {
+    throw new Error('PHONEPE_ENVIRONMENT must be explicitly set to "production" in production environments.');
+  }
 }
+
 if (env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') {
   const validation = validateProductionConfig(process.env);
   if (!validation.isValid) {

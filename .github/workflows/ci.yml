@@ -114,10 +114,10 @@ jobs:
       - name: Run frontend test suite with coverage
         run: pnpm --filter @ecommerce/prototype-b test:coverage
 
-      - name: Install Chromium for authenticated browser acceptance
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright Browsers (Chromium, Firefox, WebKit)
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Verify authenticated session isolation and persistence in Chromium
+      - name: Verify cross-browser acceptance suite
         run: pnpm test:e2e
 
       - name: Verify clean git tree (no unstaged artifacts, drift, or untracked files)

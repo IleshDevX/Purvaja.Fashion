@@ -29,8 +29,13 @@ export const productService = {
   },
 
   async getReviews(productId: string): Promise<ProductReview[]> {
-    const response = await apiClient.get(`/products/${encodeURIComponent(productId)}/reviews`);
-    return unwrapApiData<PageResult<ProductReview>>(response.data).items;
+    const res = await this.getReviewsPaginated(productId, 1, 100);
+    return res.items;
+  },
+
+  async getReviewsPaginated(productId: string, page = 1, limit = 10): Promise<PageResult<ProductReview>> {
+    const response = await apiClient.get(`/products/${encodeURIComponent(productId)}/reviews?page=${page}&limit=${limit}`);
+    return unwrapApiData<PageResult<ProductReview>>(response.data);
   },
 
   async createReview(productId: string, review: Pick<ProductReview, 'rating' | 'title' | 'comment'>): Promise<ProductReview> {

@@ -35,6 +35,14 @@ export function useProductReviewsQuery(productId: string | undefined) {
   });
 }
 
+export function useProductReviewsPaginatedQuery(productId: string | undefined, page = 1, limit = 5) {
+  return useQuery({
+    queryKey: ['product-reviews-paginated', productId, page, limit],
+    queryFn: () => productService.getReviewsPaginated(productId!, page, limit),
+    enabled: Boolean(productId),
+  });
+}
+
 export function useCreateProductReview(productId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

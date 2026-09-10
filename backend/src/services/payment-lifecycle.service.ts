@@ -8,6 +8,7 @@ import type {
 } from '../generated/prisma/client.js';
 import { ConflictError, NotFoundError } from '../utils/errors.js';
 import { releaseOrderReservations } from './inventory.service.js';
+import { emailService } from './email.service.js';
 
 export type PaymentObservation = {
   source: PaymentObservationSource;
@@ -113,14 +114,22 @@ export async function applyPaymentObservation(
 ) {
   const deduplicationKey = boundedKey(observation.deduplicationKey);
   await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${paymentId}::uuid FOR UPDATE`;
-  const payment = await tx.payment.findUnique({ where: { id: paymentId }, include: { order: true } });
+  const payment = await tx.payment.findUnique({
+    where: { id: paymentId },
+    include: { order: { include: { user: true } } },
+  });
   if (!payment) throw new NotFoundError('Payment was not found.', 'PAYMENT_NOT_FOUND');
 
   const existing = await tx.paymentObservation.findUnique({ where: { deduplicationKey } });
   if (existing) return { payment, disposition: 'DUPLICATE' as const, changed: false };
-  if (observation.amountPaise !== undefined && observation.amountPaise !== payment.amountPaise) {
+  if (observation.state === 'SUCCESS') {
+    if (typeof observation.amountPaise !== 'number' || !Number.isInteger(observation.amountPaise) || observation.amountPaise !== payment.amountPaise) {
+      throw new ConflictError('Provider amount must be specified and must match the authoritative payment amount.', 'PAYMENT_AMOUNT_MISMATCH');
+    }
+  } else if (observation.amountPaise !== undefined && observation.amountPaise !== payment.amountPaise) {
     throw new ConflictError('Provider amount does not match the payment amount.', 'PAYMENT_AMOUNT_MISMATCH');
   }
+
 
   let disposition: 'APPLIED' | 'DUPLICATE' | 'IGNORED' | 'LATE_CAPTURE' = 'APPLIED';
   let details = 'Provider observation applied.';
@@ -169,16 +178,32 @@ export async function applyPaymentObservation(
         });
       } else {
         const purchased = await tx.orderItem.findMany({ where: { orderId: payment.orderId } });
-        for (const line of purchased) {
-          if (!line.variantId) continue;
-          const cartItem = await tx.cartItem.findFirst({
-            where: { cart: { userId: payment.order.userId }, variantId: line.variantId },
-          });
-          if (!cartItem) continue;
-          if (cartItem.quantity <= line.quantity) await tx.cartItem.delete({ where: { id: cartItem.id } });
-          else await tx.cartItem.update({ where: { id: cartItem.id }, data: { quantity: cartItem.quantity - line.quantity } });
+        const cart = await tx.cart.findUnique({ where: { userId: payment.order.userId } });
+        if (cart) {
+          for (const line of purchased) {
+            if (!line.variantId) continue;
+            // Atomically delete cart items where remaining quantity is exhausted
+            const deleted = await tx.cartItem.deleteMany({
+              where: { cartId: cart.id, variantId: line.variantId, quantity: { lte: line.quantity } },
+            });
+            // If items remain beyond purchased quantity, atomically decrement the difference
+            if (deleted.count === 0) {
+              await tx.cartItem.updateMany({
+                where: { cartId: cart.id, variantId: line.variantId, quantity: { gt: line.quantity } },
+                data: { quantity: { decrement: line.quantity } },
+              });
+            }
+          }
+        }
+        if (payment.order.user?.email && payment.order.status === 'PENDING') {
+          void emailService.sendOrderConfirmation(payment.order.user.email, {
+            id: payment.orderId,
+            orderNumber: payment.order.orderNumber,
+            totalAmountPaise: payment.amountPaise,
+          }).catch(() => {});
         }
       }
+
     }
   } else if (['SUCCESS', 'PAID', 'REFUNDED'].includes(payment.status)) {
     disposition = 'IGNORED';
