@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Mail, Phone, Eye, EyeOff, Check, X } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
-import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 import { useToast } from '../../app/providers.js';
 
 export function RegisterPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { register, isLoading, error, fieldErrors, clearError } = useAuthStore();
@@ -25,8 +23,6 @@ export function RegisterPage() {
   const hasNumber = /[0-9]/.test(password);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
   const isPasswordValid = hasMinLength && hasUpper && hasLower && hasNumber;
-
-  const redirectTarget = sanitizeInternalRedirect(searchParams.get('redirect'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +49,7 @@ export function RegisterPage() {
 
     if (success) {
       addToast(`Welcome to Purvaja Fashion, ${firstName}!`, 'success');
-      navigate(redirectTarget);
+      // GuestRoute owns navigation when the authenticated state is committed.
     }
   };
 
@@ -63,7 +59,7 @@ export function RegisterPage() {
         <p className="text-overline text-gold-600 mb-1">New Membership</p>
         <h2 className="font-serif text-heading-xl text-charcoal-900">Create an Account</h2>
         <p className="text-body-sm text-charcoal-500 mt-1">
-          Enjoy complimentary sizing replacements, early collection access, and private styling.
+          Create an account to manage orders, addresses, your cart, and wishlist.
         </p>
       </div>
 

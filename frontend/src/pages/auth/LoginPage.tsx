@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
-import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 import { useToast } from '../../app/providers.js';
 
 export function LoginPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { login, isLoading, error, clearError } = useAuthStore();
@@ -16,15 +14,13 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
-  const redirectTarget = sanitizeInternalRedirect(searchParams.get('redirect'));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     const success = await login({ email, password, rememberMe });
     if (success) {
       addToast('Welcome back to Purvaja Fashion.', 'success');
-      navigate(redirectTarget);
+      // GuestRoute owns navigation when the authenticated state is committed.
     }
   };
 
@@ -34,7 +30,7 @@ export function LoginPage() {
         <p className="text-overline text-gold-600 mb-1">Client Sanctuary</p>
         <h2 className="font-serif text-heading-xl text-charcoal-900">Sign In to Your Account</h2>
         <p className="text-body-sm text-charcoal-500 mt-1">
-          Access your orders, saved measurements, and bespoke wishlist.
+          Access your orders, saved addresses, cart, and wishlist.
         </p>
       </div>
 

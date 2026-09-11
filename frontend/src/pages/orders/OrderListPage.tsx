@@ -124,7 +124,7 @@ export function OrderListPage() {
                 Your Tailored Orders
               </h1>
               <p className="mt-1.5 text-xs text-charcoal-500 sm:text-sm">
-                Track status, access digital invoices, or manage bespoke alterations.
+                Track order status and review order details.
               </p>
             </div>
             <span className="text-xs font-medium text-charcoal-500">
@@ -444,7 +444,7 @@ export function OrderListPage() {
               </button>
               <h3 id="return-modal-title" className="font-serif text-heading-lg text-charcoal-900">Request Return</h3>
               <p className="text-body-sm text-charcoal-600">
-                Order <strong className="text-charcoal-900">#{returnModalOrder.orderNumber}</strong> · 7-Day Guarantee
+                Order <strong className="text-charcoal-900">#{returnModalOrder.orderNumber}</strong> · Return eligibility
               </p>
               <div>
                 <label htmlFor="return-reason" className="block text-caption text-charcoal-700 font-medium mb-1">

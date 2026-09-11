@@ -48,12 +48,11 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/purvaja_test?schema=public
       REDIS_URL: redis://localhost:6379
       RATE_LIMIT_REDIS_URL: redis://localhost:6379/1
-      SESSION_SECRET: ci-test-session-secret-32-chars-minimum-quality-gate
       FRONTEND_URL: http://localhost:5174
       CORS_ORIGIN: http://localhost:5174,http://localhost:4174
       EMAIL_FROM: noreply@purvaja.fashion
       INITIAL_ADMIN_EMAIL: ci-admin@example.invalid
-      VITE_API_URL: http://localhost:5001/api/v1
+      VITE_API_URL: /api/v1
       VITE_APP_NAME: Purvaja Fashion - Atelier CI
 
     steps:

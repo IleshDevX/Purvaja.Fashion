@@ -118,6 +118,8 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
         discountValue: number;
         discountPaise: number;
         discountRupees: number;
+        minimumOrderPaise: number | null;
+        maximumDiscountPaise: number | null;
       }>(response.data);
 
       if (generation !== checkoutGeneration) return { success: false, message: 'Your session changed. Please try again.' };
@@ -125,12 +127,13 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
         checkoutIdempotencyKey: null,
         coupon: {
           code: data.code,
-          percentOff: data.discountType === 'PERCENTAGE' ? data.discountValue : undefined,
-          fixedOff: data.discountType === 'FIXED' ? data.discountRupees : undefined,
-          discountPaise: data.discountPaise,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          minimumOrderPaise: data.minimumOrderPaise,
+          maximumDiscountPaise: data.maximumDiscountPaise,
           description: data.discountType === 'PERCENTAGE'
             ? `${data.discountValue}% promotional discount applied.`
-            : `₹${data.discountRupees} promotional discount applied.`,
+            : `₹${data.discountValue / 100} promotional discount, subject to coupon eligibility.`,
         },
       });
       return {

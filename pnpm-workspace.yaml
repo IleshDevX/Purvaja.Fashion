@@ -1,6 +1,7 @@
 packages:
   - 'frontend'
   - 'backend'
+  - 'shared/*'
 
 overrides:
   qs: ^6.16.0

@@ -25,7 +25,6 @@ describe('Production Configuration Validator', () => {
     TRUST_PROXY: '1',
     DATABASE_URL: 'postgresql://prod_user:SuperSecretPassword123!@db.hostinger.com:5432/purvaja_prod?schema=public&sslmode=require',
     DIRECT_URL: 'postgresql://prod_user:SuperSecretPassword123!@db.hostinger.com:5432/purvaja_prod?schema=public&sslmode=require',
-    SESSION_SECRET: 'a-cryptographically-secure-32-character-secret-key-prod',
     CORS_ORIGIN: 'https://purvaja.fashion,https://www.purvaja.fashion',
     FRONTEND_URL: 'https://purvaja.fashion',
     PAYMENT_PROVIDER: 'phonepe',
@@ -35,6 +34,8 @@ describe('Production Configuration Validator', () => {
     PHONEPE_CLIENT_VERSION: '1',
     PHONEPE_ENVIRONMENT: 'production',
     PHONEPE_CALLBACK_URL: 'https://purvaja.fashion/api/v1/payments/webhook',
+    PHONEPE_WEBHOOK_USERNAME: 'purvaja-webhook',
+    PHONEPE_WEBHOOK_PASSWORD: 'secure-webhook-password',
     EMAIL_FROM: 'noreply@purvaja.fashion',
     RESEND_API_KEY: 're_valid_live_key',
     RATE_LIMIT_REDIS_URL: 'rediss://quota.internal:6380/1',
@@ -46,20 +47,6 @@ describe('Production Configuration Validator', () => {
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
     expect(result.summary.NODE_ENV).toBe('production');
-  });
-
-  it('fails production validation when SESSION_SECRET is missing', () => {
-    const env = { ...baseValidProdEnv, SESSION_SECRET: '' };
-    const result = validateProductionConfig(env);
-    expect(result.isValid).toBe(false);
-    expect(result.errors.some((err) => err.includes('SESSION_SECRET'))).toBe(true);
-  });
-
-  it('fails production validation when SESSION_SECRET is shorter than 32 characters', () => {
-    const env = { ...baseValidProdEnv, SESSION_SECRET: 'short-secret-key' };
-    const result = validateProductionConfig(env);
-    expect(result.isValid).toBe(false);
-    expect(result.errors.some((err) => err.includes('SESSION_SECRET must be at least 32 characters'))).toBe(true);
   });
 
   it('strictly rejects sslmode=no-verify in production DATABASE_URL', () => {
@@ -254,7 +241,6 @@ describe('Production Configuration Validator', () => {
     const env = {
       ...baseValidProdEnv,
       DATABASE_URL: `not-a-valid-url-with-secret-${rawSecret}`,
-      SESSION_SECRET: 'short',
     };
     const result = validateProductionConfig(env);
     expect(result.isValid).toBe(false);

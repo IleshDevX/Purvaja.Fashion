@@ -1,9 +1,8 @@
 # ==============================================================================
-# GitHub Actions Template: Hostinger Production Deployment Workflow
+# Hostinger Production Deployment Workflow
 # ==============================================================================
-# INSTRUCTIONS FOR ENABLING:
-# 1. Rename this file from 'deploy-hostinger.yml.template' to 'deploy-hostinger.yml'
-# 2. Add the required repository secrets in GitHub:
+# REQUIRED REPOSITORY CONFIGURATION:
+# 1. Add the required repository secrets in GitHub:
 #    Settings -> Secrets and variables -> Actions -> Repository secrets:
 #    - HOSTINGER_SSH_HOST: IP address or domain of your Hostinger VPS
 #    - HOSTINGER_SSH_PORT: SSH port (default is 22)
@@ -11,15 +10,22 @@
 #    - HOSTINGER_SSH_KEY: Private SSH key corresponding to authorized_keys on server
 #    - HOSTINGER_SSH_KNOWN_HOSTS: Stored server host key fingerprint to prevent MITM attacks.
 #      Generate using: ssh-keyscan -p <PORT> <HOST>
+# 2. Protect the GitHub production environment with required reviewers.
 # 3. Ensure target directory on Hostinger VPS exists with correct permissions:
 #    e.g., sudo mkdir -p /var/www/purvaja && sudo chown -R $USER:$USER /var/www/purvaja
 # ==============================================================================
 
-name: Deploy to Hostinger Production
+name: Deploy to Hostinger
 
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
+        description: Protected target environment
       confirm_deployment:
         description: 'Type "DEPLOY" to confirm production release'
         required: true
@@ -30,7 +36,7 @@ on:
   #     - 'v*.*.*'
 
 concurrency:
-  group: production-deployment
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
@@ -40,8 +46,10 @@ jobs:
     steps:
       - name: Validate Deployment Confirmation
         if: github.event_name == 'workflow_dispatch'
+        env:
+          CONFIRM_DEPLOYMENT: ${{ inputs.confirm_deployment }}
         run: |
-          if [ "${{ github.event.inputs.confirm_deployment }}" != "DEPLOY" ]; then
+          if [ "$CONFIRM_DEPLOYMENT" != "DEPLOY" ]; then
             echo "Deployment cancelled: confirmation input was not 'DEPLOY'"
             exit 1
           fi
@@ -76,6 +84,12 @@ jobs:
       - name: Typecheck Application
         run: pnpm typecheck
 
+      - name: Verify lint and unit tests
+        run: |
+          pnpm lint
+          pnpm --filter @ecommerce/prototype-b-backend test tests/unit
+          pnpm --filter @ecommerce/prototype-b test
+
       - name: Build Monorepo Bundles
         run: pnpm build
         env:
@@ -94,6 +108,7 @@ jobs:
           cp package.json release-bundle/package.json
           cp pnpm-lock.yaml release-bundle/pnpm-lock.yaml
           cp pnpm-workspace.yaml release-bundle/pnpm-workspace.yaml
+          cp -r shared release-bundle/shared
           cp ecosystem.config.cjs release-bundle/ecosystem.config.cjs
 
       - name: Archive Production Release Bundle
@@ -107,6 +122,7 @@ jobs:
     name: Deploy to Hostinger VPS
     needs: validate-and-build
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Download Release Bundle Artifact
         uses: actions/download-artifact@v4
@@ -138,21 +154,37 @@ jobs:
           HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           USER: ${{ secrets.HOSTINGER_SSH_USER }}
           PORT: ${{ secrets.HOSTINGER_SSH_PORT || '22' }}
-          RELEASE_ROOT: /var/www/purvaja/releases
+          DEPLOY_ENV: ${{ inputs.environment }}
           RELEASE_ID: ${{ github.sha }}
         run: |
+          RELEASE_ROOT="/var/www/purvaja/$DEPLOY_ENV/releases"
           echo "Syncing immutable release bundle to target host..."
           ssh -p "$PORT" "$USER@$HOST" "mkdir -p '$RELEASE_ROOT/$RELEASE_ID'"
           rsync -avz --delete -e "ssh -p $PORT" ./release-bundle/ "$USER@$HOST:$RELEASE_ROOT/$RELEASE_ID/"
 
           echo "Running remote deployment and migration tasks on Hostinger VPS..."
-          ssh -p "$PORT" "$USER@$HOST" RELEASE_ID="$RELEASE_ID" 'bash -se' << 'EOF'
+          ssh -p "$PORT" "$USER@$HOST" RELEASE_ID="$RELEASE_ID" DEPLOY_ENV="$DEPLOY_ENV" 'bash -se' << 'EOF'
             set -Eeuo pipefail
-            ROOT=/var/www/purvaja
+            ROOT="/var/www/purvaja/$DEPLOY_ENV"
             RELEASE="$ROOT/releases/$RELEASE_ID"
             CURRENT="$ROOT/current"
             PREVIOUS="$(readlink -f "$CURRENT" 2>/dev/null || true)"
             cd "$RELEASE"
+            test -f "$ROOT/shared/backend.env"
+            ln -s "$ROOT/shared/backend.env" "$RELEASE/.env"
+            ln -s "$ROOT/shared/backend.env" "$RELEASE/backend/.env"
+            mkdir -p "$ROOT/shared/uploads"
+            ln -s "$ROOT/shared/uploads" "$RELEASE/uploads"
+            export NODE_ENV="$DEPLOY_ENV"
+
+            rollback() {
+              if [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ]; then
+                ln -sfn "$PREVIOUS" "$ROOT/current.next"
+                mv -Tf "$ROOT/current.next" "$CURRENT"
+                cd "$CURRENT"
+                pm2 reload ecosystem.config.cjs --env "$DEPLOY_ENV" --update-env
+              fi
+            }
 
             echo "Installing production dependencies with frozen lockfile..."
             pnpm install --prod --frozen-lockfile
@@ -173,9 +205,13 @@ jobs:
             ln -sfn "$RELEASE" "$ROOT/current.next"
             mv -Tf "$ROOT/current.next" "$CURRENT"
             cd "$CURRENT"
+            trap rollback ERR
 
             echo "Reloading backend application via PM2 with zero downtime..."
-            pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
+            pm2 reload ecosystem.config.cjs --env "$DEPLOY_ENV" --update-env || pm2 start ecosystem.config.cjs --env "$DEPLOY_ENV"
+
+            echo "Checking same-origin storefront and API routing..."
+            node backend/dist/scripts/release-smoke.js
 
             echo "Verifying backend liveness probe (/healthz)..."
             if ! curl --fail --silent --show-error --max-time 5 http://127.0.0.1:5001/healthz; then
@@ -184,7 +220,7 @@ jobs:
                 ln -sfn "$PREVIOUS" "$ROOT/current.next"
                 mv -Tf "$ROOT/current.next" "$CURRENT"
                 cd "$CURRENT"
-                pm2 reload ecosystem.config.cjs --env production
+                pm2 reload ecosystem.config.cjs --env "$DEPLOY_ENV" --update-env
               fi
               exit 1
             fi
@@ -196,7 +232,7 @@ jobs:
                 ln -sfn "$PREVIOUS" "$ROOT/current.next"
                 mv -Tf "$ROOT/current.next" "$CURRENT"
                 cd "$CURRENT"
-                pm2 reload ecosystem.config.cjs --env production
+                pm2 reload ecosystem.config.cjs --env "$DEPLOY_ENV" --update-env
               fi
               exit 1
             fi

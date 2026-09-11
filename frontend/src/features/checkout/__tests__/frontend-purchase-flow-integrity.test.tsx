@@ -172,6 +172,7 @@ describe('Phase 5: Frontend Authentication, Cart & Checkout Integrity', () => {
       color: { name: 'White', hex: '#FFFFFF' },
       size: '40 (M)' as const,
       quantity: 1,
+      stockQuantity: 10,
     };
 
     await useCartStore.getState().addItem(item);
@@ -208,6 +209,7 @@ describe('Phase 5: Frontend Authentication, Cart & Checkout Integrity', () => {
           color: { name: 'White', hex: '#FFFFFF' },
           size: '40 (M)',
           quantity: 2,
+          stockQuantity: 10,
         },
       ],
     });
@@ -224,6 +226,7 @@ describe('Phase 5: Frontend Authentication, Cart & Checkout Integrity', () => {
       color: { name: 'White', hex: '#FFFFFF' },
       size: '40 (M)' as const,
       quantity: 2,
+      stockQuantity: 10,
     };
 
     vi.spyOn(cartService, 'mergeGuestItems').mockResolvedValue([serverItem]);
@@ -259,6 +262,7 @@ describe('Phase 5: Frontend Authentication, Cart & Checkout Integrity', () => {
         color: { name: 'Blue', hex: '#00F' },
         size: '40 (M)',
         quantity: 5,
+        stockQuantity: 5,
       }),
     ).rejects.toThrow('Requested quantity is unavailable.');
 

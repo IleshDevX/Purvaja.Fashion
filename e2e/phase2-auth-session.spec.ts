@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { reloadDocument } from './browser-navigation.js';
 
 const password = 'BrowserSecurity123!';
 
 async function register(page: Page, firstName: string, lastName: string, email: string) {
-  await page.goto('/auth/register');
+  await page.goto('/auth/register', { waitUntil: 'domcontentloaded' });
   await page.getByLabel('First Name').fill(firstName);
   await page.getByLabel('Last Name').fill(lastName);
   await page.getByLabel('Email Address').fill(email);
@@ -14,7 +15,7 @@ async function register(page: Page, firstName: string, lastName: string, email: 
 }
 
 async function login(page: Page, email: string) {
-  await page.goto('/auth/login');
+  await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Email Address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'SIGN IN' }).click();
@@ -27,7 +28,6 @@ test('keeps persisted private state with its owner across logout, account switch
   const emailB = `browser-b-${run}@example.invalid`;
 
   await register(page, 'OwnerA', 'Browser', emailA);
-  await page.goto('/account');
   await expect(page.getByRole('heading', { name: 'Welcome, OwnerA' })).toBeVisible();
 
   await page.getByRole('button', { name: /Addresses/ }).click();
@@ -40,26 +40,25 @@ test('keeps persisted private state with its owner across logout, account switch
   await page.getByLabel('Postal Code *').fill('395006');
   await page.getByRole('button', { name: 'Save Address' }).click();
   await expect(page.getByText('A-only address')).toBeVisible();
-  await page.reload();
+  await reloadDocument(page);
   await page.getByRole('button', { name: /Addresses/ }).click();
   await expect(page.getByText('A-only address')).toBeVisible();
 
   await page.getByRole('button', { name: 'Sign Out' }).click();
   await expect(page).toHaveURL(/\/$/);
   await register(page, 'OwnerB', 'Browser', emailB);
-  await page.goto('/account');
   await expect(page.getByRole('heading', { name: 'Welcome, OwnerB' })).toBeVisible();
   await expect(page.getByText(emailB, { exact: false })).toBeVisible();
   await expect(page.getByText(emailA, { exact: false })).toHaveCount(0);
   await page.getByRole('button', { name: /Addresses/ }).click();
   await expect(page.getByText('No saved addresses yet')).toBeVisible();
   await expect(page.getByText('A-only address')).toHaveCount(0);
-  await page.reload();
+  await reloadDocument(page);
   await expect(page.getByRole('heading', { name: 'Welcome, OwnerB' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Sign Out' }).click();
+  await expect(page).toHaveURL(/\/$/);
   await login(page, emailA);
-  await page.goto('/account');
   await page.getByRole('button', { name: /Addresses/ }).click();
   await expect(page.getByText('A-only address')).toBeVisible();
   await expect(page.getByText(emailB, { exact: false })).toHaveCount(0);
@@ -72,7 +71,7 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
   await page.getByRole('button', { name: 'Sign Out' }).click();
   await expect(page).toHaveURL(/\/$/);
 
-  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=24&inStock=true', {
+  const catalogResponse = await page.request.get('/api/v1/products?limit=24&inStock=true', {
     headers: { 'X-Test-Rate-Limit-Max': '50000', 'X-Test-Client-Id': `phase2-${run}` },
   });
   expect(catalogResponse.ok()).toBe(true);
@@ -88,6 +87,7 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
         color: { name: string; hex: string };
         size: string;
         price: number;
+        pricePaise: number;
         stockCount: number;
         inStock: boolean;
       }>;
@@ -105,6 +105,7 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
     slug: product!.slug,
     image: product!.images[0] ?? '',
     price: variant.price,
+    pricePaise: variant.pricePaise,
     color: variant.color,
     size: variant.size,
     quantity: 1,
@@ -117,20 +118,21 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
       version: 3,
     }));
   }, { item: guestItem, id: mergeId });
-  await page.reload();
+  await reloadDocument(page);
   const secondTab = await context.newPage();
-  await secondTab.goto('/');
+  await secondTab.goto('/', { waitUntil: 'domcontentloaded' });
 
   await Promise.all([login(page, email), login(secondTab, email)]);
   await expect.poll(async () => {
-    const response = await page.request.get('http://localhost:5001/api/v1/cart');
+    const response = await page.request.get('/api/v1/cart');
     const body = await response.json() as { data?: { items?: Array<{ variantId: string; quantity: number }> } };
     return body.data?.items?.find(item => item.variantId === variant.id)?.quantity ?? 0;
   }).toBe(1);
 
-  await secondTab.reload();
   await secondTab.bringToFront();
-  await secondTab.goto('/cart');
+  await secondTab.goto('/cart', { waitUntil: 'domcontentloaded' });
+  await expect(secondTab.getByText(product!.name, { exact: true }).first()).toBeVisible();
+  await reloadDocument(secondTab);
   await expect(secondTab.getByText(product!.name, { exact: true }).first()).toBeVisible();
   await secondTab.close();
 });

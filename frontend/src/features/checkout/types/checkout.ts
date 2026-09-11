@@ -35,9 +35,10 @@ export interface PaymentMethod {
 
 export interface CouponDiscount {
   code: string;
-  percentOff?: number;
-  fixedOff?: number;
-  discountPaise?: number;
+  discountType: 'PERCENTAGE' | 'FIXED';
+  discountValue: number;
+  minimumOrderPaise: number | null;
+  maximumDiscountPaise: number | null;
   description: string;
 }
 
@@ -57,6 +58,7 @@ export interface OrderPricing {
   isFreeShipping: boolean;
   remainingForFreeShippingPaise: number;
   remainingForFreeShipping: number;
+  couponEligibilityError: string | null;
 }
 
 export type CheckoutStep = 'address' | 'delivery' | 'review' | 'payment';

@@ -192,6 +192,7 @@ export function AdminVariantsPage() {
   });
 
   const [productSearch, setProductSearch] = useState('');
+  const scopedProductId = params.get('productId') ?? undefined;
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -206,13 +207,13 @@ export function AdminVariantsPage() {
     try {
       setError('');
       const [variants, productPage] = await Promise.all([
-        adminService.listVariants(query,page), adminService.listProducts('',1,100),
+        adminService.listVariants(query,page,scopedProductId), adminService.listProducts('',1,100),
       ]);
       setData(variants); setProducts(productPage.items);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load variants.');
     }
-  }, []);
+  }, [scopedProductId]);
 
   useEffect(() => {
     void load();
@@ -276,6 +277,10 @@ export function AdminVariantsPage() {
               className="w-full rounded-lg border border-ivory-300 p-2 text-xs"
             >
               <option value="">Select product ({products.length} available)</option>
+              {/* A selected ID remains valid while options load or searches/pages exclude it. */}
+              {form.productId && !products.some(product => product.id === form.productId) && (
+                <option value={form.productId}>Selected product ({form.productId})</option>
+              )}
               {products.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.name}

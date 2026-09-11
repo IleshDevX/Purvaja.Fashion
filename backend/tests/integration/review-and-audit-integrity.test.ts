@@ -109,6 +109,7 @@ describe('Phase 4: Review Integrity & Audit Reliability', () => {
         subtotalPaise: 299900,
         totalPaise: 299900,
         status,
+        deliveredAt: status === 'DELIVERED' ? new Date() : undefined,
         paymentStatus: status === 'DELIVERED' ? 'SUCCESS' : 'PENDING',
         items: includeProduct
           ? {

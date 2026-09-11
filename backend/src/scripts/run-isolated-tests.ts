@@ -22,8 +22,9 @@ async function main(): Promise<void> {
   const require = createRequire(import.meta.url);
   const mode = process.argv[2];
   const selectedFiles = process.argv.slice(3);
-  if (selectedFiles.some(file => !/^tests\/integration\/[a-z0-9-]+\.test\.ts$/.test(file))) {
-    throw new Error('Only explicit integration test files can be selected.');
+  const selectionPattern = mode === 'e2e' ? /^e2e\/[a-z0-9-]+\.spec\.ts(?::[1-9][0-9]*)?$/ : /^tests\/integration\/[a-z0-9-]+\.test\.ts$/;
+  if (selectedFiles.some(file => !selectionPattern.test(file))) {
+    throw new Error('Only explicit test files for the selected mode can be selected.');
   }
   const commands: Record<string, string[]> = {
     migrate: [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'],
@@ -31,7 +32,7 @@ async function main(): Promise<void> {
     // Hosted integration cases include multiple real network round trips. This
     // wall-clock test budget does not change application transaction timeouts.
     integration: [require.resolve('vitest/package.json').replace(/package\.json$/, 'vitest.mjs'), 'run', ...(selectedFiles.length ? selectedFiles : ['tests/integration']), '--testTimeout=30000', '--hookTimeout=60000', '--reporter=default', '--reporter=json', '--outputFile=.local/integration-results.json'],
-    e2e: [require.resolve('@playwright/test/cli'), 'test'],
+    e2e: [require.resolve('@playwright/test/cli'), 'test', ...selectedFiles],
   };
   const args = mode ? commands[mode] : undefined;
   if (!args) throw new Error('Choose migrate, seed, integration or e2e.');

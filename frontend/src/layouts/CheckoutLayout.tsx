@@ -50,7 +50,7 @@ export function CheckoutLayout({ children }: { children?: ReactNode }) {
         <div className="max-w-content mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 text-success" />
-            <span>Complimentary size replacement & 7-day returns</span>
+            <span>Return requests are subject to order eligibility</span>
           </div>
           <p>© {new Date().getFullYear()} Purvaja Fashion</p>
         </div>

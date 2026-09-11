@@ -18,7 +18,7 @@ interface CartState {
   isSyncing: boolean;
   error: string | null;
   setDrawerOpen: (open: boolean) => void;
-  addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
+  addItem: (item: Omit<CartItem, 'id' | 'stockQuantity'> & { stockQuantity: number }) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -82,12 +82,16 @@ export const useCartStore = create<CartState>()(persist((set, get) => {
     addItem: async item => {
       if (authenticatedOwner()) return serverOperation(() => cartService.addCartItem(item.variantId, item.quantity), true);
       if (useAuthStore.getState().status === 'loading') throw new Error('Please wait while your session loads.');
+      if (!Number.isInteger(item.stockQuantity) || item.stockQuantity < 0) {
+        throw new Error('Current inventory is required before adding this item.');
+      }
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) throw new Error('Quantity must be a positive whole number.');
       const existing = get().items.find(entry => entry.variantId === item.variantId);
       const quantity = (existing?.quantity ?? 0) + item.quantity;
-      const maxAllowed = Math.min(item.stockQuantity ?? existing?.stockQuantity ?? 20, 20);
+      const maxAllowed = Math.min(item.stockQuantity, 20);
       if (quantity > maxAllowed) throw new Error('Requested quantity is unavailable.');
       guestItems(existing
-        ? get().items.map(entry => entry.variantId === item.variantId ? { ...entry, quantity, stockQuantity: item.stockQuantity ?? entry.stockQuantity } : entry)
+        ? get().items.map(entry => entry.variantId === item.variantId ? { ...entry, quantity, stockQuantity: item.stockQuantity } : entry)
         : [...get().items, { ...item, id: item.shirtId + '-' + item.variantId, stockQuantity: item.stockQuantity }]);
       set({ isDrawerOpen: true });
     },
@@ -99,7 +103,7 @@ export const useCartStore = create<CartState>()(persist((set, get) => {
       if (quantity <= 0) return get().removeItem(id);
       if (authenticatedOwner()) return serverOperation(() => cartService.updateCartItem(id, quantity));
       const item = get().items.find(entry => entry.id === id || entry.variantId === id);
-      if (!Number.isInteger(quantity) || quantity > Math.min(item?.stockQuantity ?? 20, 20)) throw new Error('Requested quantity is unavailable.');
+      if (!item || !Number.isInteger(item.stockQuantity) || !Number.isInteger(quantity) || quantity > Math.min(item.stockQuantity!, 20)) throw new Error('Requested quantity is unavailable.');
       guestItems(get().items.map(entry => entry === item ? { ...entry, quantity } : entry));
     },
     clearCart: async () => {
@@ -115,11 +119,19 @@ export const useCartStore = create<CartState>()(persist((set, get) => {
   };
 }, {
   name: 'purvaja-cart-v2',
-  version: 3,
+  version: 4,
   storage: createJSONStorage(() => localStorage),
   // Legacy snapshots mix server data and guest additions with no provenance.
   // Never replay ambiguous data into an authenticated cart.
-  migrate: () => ({ items: [], ownerId: null, guestMergeId: null }),
+  migrate: (persisted, version) => {
+    const value = persisted as Partial<CartState> | undefined;
+    const items = version === 3 && value?.ownerId === null && Array.isArray(value.items)
+      ? value.items.filter(item => Number.isSafeInteger(item.stockQuantity) && item.stockQuantity! >= 0 &&
+          Number.isSafeInteger(item.quantity) && item.quantity > 0 && item.quantity <= Math.min(item.stockQuantity!, 20) &&
+          Number.isSafeInteger(item.pricePaise) && item.pricePaise >= 0)
+      : [];
+    return { items, ownerId: null, guestMergeId: items.length ? value?.guestMergeId ?? crypto.randomUUID() : null };
+  },
   partialize: state => ({ items: state.ownerId === null ? state.items : [], guestMergeId: state.ownerId === null ? state.guestMergeId : null, ownerId: null }),
 }));
 

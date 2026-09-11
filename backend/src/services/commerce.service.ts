@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { commercePolicy, isWithinReturnWindow } from '@purvaja/commerce-policy';
 import { getPrismaClient } from '../config/database.js';
 import { env } from '../config/env.js';
 import { logger, logOperationalEvent } from '../utils/logger.js';
@@ -11,6 +12,7 @@ import {
   ProviderInitiationError,
   ProviderRefundError,
   type PaymentProviderAdapter,
+  type RefundResult,
 } from './payment-provider.service.js';
 import { sanitizeAuditMetadata } from '../utils/audit.js';
 import { changeStock, lockInventory } from './inventory.service.js';
@@ -47,9 +49,9 @@ const orderInclude = {
   returnRequest: { include: { items: true } },
 };
 
-function toOrderResponse<T extends { status: string; updatedAt: Date; payments: Array<{ status: string }>; returnRequest?: { status: string } | null }>(order: T) {
+function toOrderResponse<T extends { status: string; deliveredAt: Date | null; payments: Array<{ status: string }>; returnRequest?: { status: string } | null }>(order: T) {
   const payment = order.payments[0];
-  const within7Days = Date.now() - new Date(order.updatedAt).getTime() <= 7 * 24 * 60 * 60 * 1000;
+  const within7Days = isWithinReturnWindow(order.deliveredAt);
   const hasActiveOrCompletedReturn = Boolean(order.returnRequest && order.returnRequest.status !== 'REJECTED');
   return {
     ...order,
@@ -65,7 +67,7 @@ function orderNumber() {
 }
 
 function shippingFee(subtotal: number, delivery: 'standard' | 'express') {
-  return delivery === 'express' ? 29900 : subtotal >= 250000 ? 0 : 19900;
+  return delivery === 'express' ? commercePolicy.expressShippingPaise : subtotal >= commercePolicy.freeShippingThresholdPaise ? 0 : commercePolicy.standardShippingPaise;
 }
 
 function computeCheckoutHash(
@@ -196,6 +198,8 @@ export class CommerceService {
       discountValue: coupon.discountValue,
       discountPaise,
       discountRupees: discountPaise / 100,
+      minimumOrderPaise: coupon.minimumOrderPaise,
+      maximumDiscountPaise: coupon.maximumDiscountPaise,
     };
   }
 
@@ -598,49 +602,48 @@ export class CommerceService {
 
   async handlePhonePeCallback(
     rawBody: string,
-    responsePayload: string,
-    xVerify?: string,
+    authorization?: string,
     routePaymentId?: string,
   ) {
-    if (!xVerify) {
-      throw new UnauthorizedError('Missing PhonePe X-VERIFY signature header.', 'MISSING_SIGNATURE');
+    if (!authorization) {
+      throw new UnauthorizedError('Missing PhonePe webhook authorization header.', 'MISSING_SIGNATURE');
     }
 
     const phonePe = new PhonePeProvider();
-    const isValid = phonePe.verifyCallbackSignature(responsePayload, xVerify) ||
-                    phonePe.verifyCallbackSignature(rawBody, xVerify);
-    if (!isValid) {
+    if (!phonePe.verifyWebhookAuthorization(authorization)) {
       metrics.recordPaymentMismatch();
-      logger.warn({ paymentId: routePaymentId }, 'PhonePe callback signature verification failed.');
-      throw new UnauthorizedError('Invalid PhonePe callback signature.', 'INVALID_SIGNATURE');
+      logger.warn({ paymentId: routePaymentId }, 'PhonePe webhook authorization verification failed.');
+      throw new UnauthorizedError('Invalid PhonePe webhook authorization.', 'INVALID_SIGNATURE');
     }
 
     let decodedJson: {
-      success?: boolean;
-      code?: string;
-      message?: string;
-      data?: {
+      event?: string;
+      payload?: {
         merchantId?: string;
-        merchantTransactionId?: string;
-        transactionId?: string;
+        merchantOrderId?: string;
+        orderId?: string;
         amount?: number;
         state?: string;
-        responseCode?: string;
+        errorCode?: string;
+        paymentDetails?: Array<{ transactionId?: string; state?: string }>;
       };
     };
 
     try {
-      const decodedStr = Buffer.from(responsePayload, 'base64').toString('utf-8');
-      decodedJson = JSON.parse(decodedStr);
+      decodedJson = JSON.parse(rawBody);
     } catch {
       throw new ValidationError('Malformed PhonePe callback payload.', undefined, 'INVALID_CALLBACK_PAYLOAD');
     }
 
-    const paymentId = decodedJson.data?.merchantTransactionId || routePaymentId;
-    if (!paymentId) {
-      throw new ValidationError('Missing merchantTransactionId in callback payload.', undefined, 'INVALID_PAYMENT_ID');
+    if (!['checkout.order.completed', 'checkout.order.failed'].includes(decodedJson.event ?? '')) {
+      throw new ValidationError('Unsupported PhonePe webhook event.', undefined, 'INVALID_CALLBACK_EVENT');
     }
-    if (routePaymentId && decodedJson.data?.merchantTransactionId !== routePaymentId) {
+    const payload = decodedJson.payload;
+    const paymentId = payload?.merchantOrderId || routePaymentId;
+    if (!paymentId) {
+      throw new ValidationError('Missing merchantOrderId in callback payload.', undefined, 'INVALID_PAYMENT_ID');
+    }
+    if (routePaymentId && payload?.merchantOrderId !== routePaymentId) {
       throw new ConflictError('Callback route and merchant transaction identifiers do not match.', 'PAYMENT_ID_MISMATCH');
     }
 
@@ -653,15 +656,15 @@ export class CommerceService {
     }
 
     // A configured live merchant contract requires an explicit matching merchant.
-    if (env.PAYMENT_PROVIDER === 'phonepe' && !decodedJson.data?.merchantId) {
+    if (env.PAYMENT_PROVIDER === 'phonepe' && !payload?.merchantId) {
       throw new ValidationError('Missing merchantId in callback payload.', undefined, 'MERCHANT_ID_REQUIRED');
     }
-    if (env.PHONEPE_MERCHANT_ID && decodedJson.data?.merchantId !== env.PHONEPE_MERCHANT_ID) {
+    if (env.PHONEPE_MERCHANT_ID && payload?.merchantId !== env.PHONEPE_MERCHANT_ID) {
       throw new ConflictError('PhonePe merchant ID mismatch.', 'MERCHANT_MISMATCH');
     }
 
     // Validate amount
-    const reportedAmount = decodedJson.data?.amount;
+    const reportedAmount = payload?.amount;
     if (reportedAmount === undefined) {
       throw new ValidationError('Missing amount in callback payload.', undefined, 'PAYMENT_AMOUNT_REQUIRED');
     }
@@ -683,33 +686,37 @@ export class CommerceService {
 
     // Map PhonePe state
     let targetResult: 'SUCCESS' | 'FAILED' | 'PENDING' = 'PENDING';
-    const state = decodedJson.data?.state;
-    if (state === 'COMPLETED' && decodedJson.success) {
+    const state = payload?.state;
+    if (state === 'COMPLETED' && decodedJson.event === 'checkout.order.completed') {
       targetResult = 'SUCCESS';
-    } else if (state === 'FAILED' || decodedJson.code === 'PAYMENT_ERROR') {
+    } else if (state === 'FAILED' && decodedJson.event === 'checkout.order.failed') {
       targetResult = 'FAILED';
     }
+
+    const providerReference = payload?.paymentDetails?.find(detail => detail.state === 'COMPLETED')?.transactionId
+      ?? payload?.paymentDetails?.[0]?.transactionId
+      ?? payload?.orderId;
 
     if (targetResult === 'PENDING') {
       await this.prisma.$transaction(tx => applyPaymentObservation(tx, payment.id, {
         source: 'CALLBACK',
         state: 'PENDING',
-        deduplicationKey: `callback:${createHash('sha256').update(responsePayload).digest('hex')}`,
+        deduplicationKey: `callback:${createHash('sha256').update(rawBody).digest('hex')}`,
         amountPaise: reportedAmount,
-        merchantId: decodedJson.data?.merchantId,
-        providerReference: decodedJson.data?.transactionId,
-        responseCode: decodedJson.data?.responseCode ?? decodedJson.code,
+        merchantId: payload?.merchantId,
+        providerReference,
+        responseCode: payload?.errorCode,
       }));
       return this.paymentSession(payment.id, payment.status, payment.orderId);
     }
     const transition = await this.prisma.$transaction(tx => applyPaymentObservation(tx, payment.id, {
       source: 'CALLBACK',
       state: targetResult,
-      deduplicationKey: `callback:${createHash('sha256').update(responsePayload).digest('hex')}`,
+      deduplicationKey: `callback:${createHash('sha256').update(rawBody).digest('hex')}`,
       amountPaise: reportedAmount,
-      merchantId: decodedJson.data?.merchantId,
-      providerReference: decodedJson.data?.transactionId,
-      responseCode: decodedJson.data?.responseCode ?? decodedJson.code,
+      merchantId: payload?.merchantId,
+      providerReference,
+      responseCode: payload?.errorCode,
     }));
     if (transition.disposition === 'LATE_CAPTURE') {
       metrics.recordPaymentMismatch();
@@ -733,8 +740,9 @@ export class CommerceService {
     // If INITIATED and PhonePe provider, actively reconcile with PhonePe status API
     if (payment.status === 'INITIATED' && env.PAYMENT_PROVIDER === 'phonepe') {
       try {
-        const phonePe = new PhonePeProvider();
-        const statusCheck = await phonePe.checkStatus(payment.id);
+        const provider = this.providerFactory();
+        if (!provider.checkStatus) throw new ConflictError('Provider status verification is unavailable.', 'PAYMENT_STATUS_UNAVAILABLE');
+        const statusCheck = await provider.checkStatus(payment.id);
         if (statusCheck.state === 'COMPLETED') {
           if (statusCheck.amountPaise === undefined || statusCheck.amountPaise !== payment.amountPaise) {
             logger.error({ paymentId, expected: payment.amountPaise, received: statusCheck.amountPaise }, 'Reconciliation amount mismatch');
@@ -885,6 +893,12 @@ export class CommerceService {
       await tx.$queryRaw`SELECT id FROM "payment_refunds" WHERE id = ${refundId}::uuid FOR UPDATE`;
       const refund = await tx.paymentRefund.findUnique({ where: { id: refundId } });
       if (!refund) throw new NotFoundError('Refund was not found.', 'REFUND_NOT_FOUND');
+      if (refund.status !== 'SUCCEEDED' && provider.refundMode !== refund.mode) {
+        throw new ConflictError('Refund mode does not match the configured provider.', 'REFUND_PROVIDER_MISMATCH');
+      }
+      if (refund.status === 'PENDING' && provider.checkRefundStatus) {
+        return { action: 'CHECK_STATUS' as const, refund };
+      }
       if (refund.status === 'SUCCEEDED' || refund.status === 'PENDING') {
         return { action: 'RETURN' as const, refund };
       }
@@ -896,17 +910,24 @@ export class CommerceService {
     });
     if (claim.action === 'RETURN') return claim.refund;
 
-    let providerResult: { providerReference: string };
+    let providerResult: RefundResult;
     try {
-      providerResult = await provider.refund({
+      providerResult = claim.action === 'CHECK_STATUS'
+        ? await provider.checkRefundStatus!(claim.refund.id)
+        : await provider.refund({
         refundId: claim.refund.id,
         paymentId: claim.refund.paymentId,
         amountPaise: claim.refund.amountPaise,
       });
+      if (providerResult.amountPaise !== claim.refund.amountPaise) {
+        throw new ProviderRefundError('Refund amount does not match the ledger.', 'REFUND_AMOUNT_MISMATCH', 'UNKNOWN');
+      }
     } catch (error) {
       const definite = error instanceof ProviderRefundError && error.outcome === 'DEFINITE_FAILURE';
       const failedRefund = await this.prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT id FROM "payment_refunds" WHERE id = ${refundId}::uuid FOR UPDATE`;
+        const current = await tx.paymentRefund.findUniqueOrThrow({ where: { id: refundId } });
+        if (current.status !== 'PENDING') return current;
         return tx.paymentRefund.update({
           where: { id: refundId },
           data: {
@@ -930,6 +951,14 @@ export class CommerceService {
       await tx.$queryRaw`SELECT id FROM "payment_refunds" WHERE id = ${refundId}::uuid FOR UPDATE`;
       const current = await tx.paymentRefund.findUniqueOrThrow({ where: { id: refundId } });
       if (current.status !== 'PENDING') return current;
+      if (providerResult.state !== 'COMPLETED') {
+        return tx.paymentRefund.update({ where: { id: refundId }, data: {
+          status: providerResult.state === 'FAILED' ? 'FAILED' : 'PENDING',
+          providerReference: providerResult.providerReference,
+          failureCode: providerResult.state === 'FAILED' ? 'PROVIDER_REFUND_FAILED' : null,
+          processedAt: providerResult.state === 'FAILED' ? new Date() : null,
+        } });
+      }
       const completed = await tx.paymentRefund.update({
         where: { id: refundId },
         data: {
@@ -1017,7 +1046,10 @@ export class CommerceService {
       if (order.status !== 'DELIVERED') {
         throw new ConflictError('Only delivered orders can be returned.', 'ORDER_NOT_RETURNABLE');
       }
-      const within7Days = Date.now() - new Date(order.updatedAt).getTime() <= 7 * 24 * 60 * 60 * 1000;
+      if (!order.deliveredAt) {
+        throw new ConflictError('Delivery time is unavailable for this order.', 'DELIVERY_TIME_MISSING');
+      }
+      const within7Days = isWithinReturnWindow(order.deliveredAt);
       if (!within7Days) {
         throw new ConflictError('The 7-day return window for this order has expired.', 'RETURN_WINDOW_EXPIRED');
       }

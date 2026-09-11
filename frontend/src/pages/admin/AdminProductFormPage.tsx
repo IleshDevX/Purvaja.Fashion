@@ -145,7 +145,7 @@ export function AdminProductFormPage() {
             className="inline-flex items-center gap-1 rounded-xl border border-ivory-300 px-3 py-2 text-xs font-bold text-charcoal-700 hover:bg-ivory-50 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Add URL</span>
+            <span>Add image URL</span>
           </button>
         </div>
       </div>

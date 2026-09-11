@@ -21,7 +21,6 @@ describe('Phase 10 — Production Launch, Disaster Recovery & Continuous Operati
     TRUST_PROXY: '1',
     DATABASE_URL: 'postgresql://prod_user:SuperSecretPassword123!@db.hostinger.com:5432/purvaja_prod?schema=public&sslmode=require',
     DIRECT_URL: 'postgresql://prod_user:SuperSecretPassword123!@db.hostinger.com:5432/purvaja_prod?schema=public&sslmode=require',
-    SESSION_SECRET: 'a-cryptographically-secure-32-character-secret-key-prod',
     CORS_ORIGIN: 'https://purvaja.fashion,https://www.purvaja.fashion',
     FRONTEND_URL: 'https://purvaja.fashion',
     PAYMENT_PROVIDER: 'phonepe',
@@ -31,6 +30,8 @@ describe('Phase 10 — Production Launch, Disaster Recovery & Continuous Operati
     PHONEPE_CLIENT_VERSION: '1',
     PHONEPE_ENVIRONMENT: 'production',
     PHONEPE_CALLBACK_URL: 'https://purvaja.fashion/api/v1/payments/webhook',
+    PHONEPE_WEBHOOK_USERNAME: 'purvaja-webhook',
+    PHONEPE_WEBHOOK_PASSWORD: 'secure-webhook-password',
     EMAIL_FROM: 'noreply@purvaja.fashion',
     RESEND_API_KEY: 're_live_resend_api_key_001',
   };
@@ -62,11 +63,6 @@ describe('Phase 10 — Production Launch, Disaster Recovery & Continuous Operati
     });
     expect(noVerify.isValid).toBe(false);
     expect(noVerify.errors.some(e => e.includes('sslmode=no-verify'))).toBe(true);
-
-    // Weak SESSION_SECRET
-    const weakSecret = validateProductionConfig({ ...validProductionEnv, SESSION_SECRET: 'too-short' });
-    expect(weakSecret.isValid).toBe(false);
-    expect(weakSecret.errors.some(e => e.includes('32 characters'))).toBe(true);
 
     // Localhost FRONTEND_URL in production
     const localhostFrontend = validateProductionConfig({ ...validProductionEnv, FRONTEND_URL: 'http://localhost:5174' });

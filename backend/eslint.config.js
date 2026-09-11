@@ -15,6 +15,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'ecosystem.config.cjs', '*.cjs'],
+    ignores: ['dist/**', 'node_modules/**', '.local/**', 'coverage/**', 'ecosystem.config.cjs', '*.cjs'],
   },
 );

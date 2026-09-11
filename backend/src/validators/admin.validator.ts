@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ValidationError } from '../utils/errors.js';
 export const uuid = z.string().uuid();
 export const pagination = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(25), search: z.string().trim().max(120).optional() });
+export const variantQuery = pagination.extend({ productId: uuid.optional() });
 export const inventoryQuery = pagination.extend({ filter: z.enum(['all', 'in_stock', 'low_stock', 'out_of_stock']).default('all') });
 const image = z.object({
   url: z.string().trim().min(1).max(2048).refine(value => /^\/(?![\\/])/.test(value) || /^https:\/\//i.test(value), 'Use a safe site-relative path or HTTPS URL.'),

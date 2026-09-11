@@ -238,9 +238,12 @@ export const adminService = {
     );
   },
 
-  async listVariants(search = '', page = 1): Promise<AdminPage<AdminVariant>> {
+  async listVariants(search = '', page = 1, productId?: string): Promise<AdminPage<AdminVariant>> {
+    const params = new URLSearchParams({ page: String(page), limit: '25' });
+    if (search) params.set('search', search);
+    if (productId) params.set('productId', productId);
     return read<AdminPage<AdminVariant>>(
-      await apiClient.get(`/admin/variants${query(page, 25, search)}`),
+      await apiClient.get(`/admin/variants?${params.toString()}`),
     );
   },
 

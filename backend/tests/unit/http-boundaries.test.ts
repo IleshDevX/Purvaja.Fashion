@@ -5,11 +5,22 @@ import { logger } from '../../src/utils/logger.js';
 import { createLimiter } from '../../src/middleware/rate-limit.middleware.js';
 import { errorHandler } from '../../src/middleware/error.middleware.js';
 import { env } from '../../src/config/env.js';
+import { applySecurityMiddleware } from '../../src/middleware/security.middleware.js';
 
 const originalEnvironment = env.NODE_ENV;
 afterEach(() => { env.NODE_ENV = originalEnvironment; vi.restoreAllMocks(); });
 
 describe('HTTP trust boundaries', () => {
+  it('keeps HTTPS upgrading on deployment environments while allowing local HTTP acceptance', async () => {
+    for (const environment of ['test', 'staging', 'production'] as const) {
+      env.NODE_ENV = environment;
+      const app = express();
+      applySecurityMiddleware(app);
+      app.get('/', (_req, res) => res.send('test'));
+      const response = await request(app).get('/');
+      expect(response.headers['content-security-policy'].includes('upgrade-insecure-requests')).toBe(environment !== 'test');
+    }
+  });
   it('never logs bearer query values or parser input', async () => {
     const log = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
     const app = express();

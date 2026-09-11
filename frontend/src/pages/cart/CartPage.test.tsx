@@ -4,6 +4,7 @@ import { CartPage } from './CartPage.js';
 import { renderWithProviders } from '../../test/testUtils.js';
 import { useCartStore } from '../../store/cartStore.js';
 import { useCheckoutStore } from '../../features/checkout/store/checkoutStore.js';
+import { useAuthStore } from '../../features/auth/store/authStore.js';
 
 vi.mock('../../features/products/hooks/useProducts.js', () => ({
   useProductsQuery: vi.fn().mockReturnValue({ data: [], isLoading: false }),
@@ -13,6 +14,7 @@ describe('CartPage', () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    useAuthStore.setState({ user: null, status: 'guest' });
     useCartStore.setState({ items: [] });
     useCheckoutStore.setState({ coupon: null, deliveryOptionId: 'standard' });
   });
@@ -39,6 +41,7 @@ describe('CartPage', () => {
           color: { name: 'Ivory White', hex: '#FFFFF0' },
           size: '40 (M)',
           quantity: 2,
+          stockQuantity: 10,
         },
       ],
     });
@@ -67,6 +70,7 @@ describe('CartPage', () => {
           color: { name: 'Ivory White', hex: '#FFFFF0' },
           size: '40 (M)',
           quantity: 1,
+          stockQuantity: 10,
         },
       ],
     });

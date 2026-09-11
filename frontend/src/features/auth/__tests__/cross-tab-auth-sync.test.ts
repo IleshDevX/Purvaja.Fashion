@@ -28,6 +28,7 @@ describe('AUD-007: Cross-Tab Auth Boundary Synchronization', () => {
     expect(parsed.type).toBe('AUTH_BOUNDARY');
     expect(parsed.userId).toBe('user-123');
     expect(parsed.status).toBe('authenticated');
+    expect(typeof parsed.sourceId).toBe('string');
     expect(typeof parsed.timestamp).toBe('number');
   });
 

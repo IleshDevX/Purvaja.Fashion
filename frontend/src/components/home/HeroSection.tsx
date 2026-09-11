@@ -3,100 +3,13 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import type { Shirt } from '../../features/products/types/product.js';
 
-// 4 Curated Luxury Menswear Hero Stories
-const HERO_SLIDES = [
-  {
-    id: 0,
-    tag: 'Autumn Winter 2026 · Menswear',
-    line1: 'Reflect',
-    line2: 'Fashion',
-    line3: 'Reframed.',
-    description:
-      'Sharp shirting, quieter luxury, tailored distinction. Purely menswear essentials crafted with 100% Egyptian cotton for the modern gentleman.',
-    stat1Label: 'Material',
-    stat1Val: '100% Egyptian Cotton',
-    stat2Label: 'Shipping',
-    stat2Val: 'Free Delivery ₹2,500+',
-    stat3Label: 'Tailoring',
-    stat3Val: 'Slim & Regular Cuts',
-    badgeTag: "Editor's Choice",
-    badgeTitle: 'Artisan Mandala Shirt',
-    badgePrice: '₹2,499',
-    badgeCompare: '₹3,299',
-    link: '/shop?category=formal',
-    image: '/images/products/artisan-mandala-brown-1.jpg',
-  },
-  {
-    id: 1,
-    tag: 'Resort & Leisure · Italian Weave',
-    line1: 'Bespoke',
-    line2: 'Linen',
-    line3: 'Essence.',
-    description:
-      'Lightweight Italian linen shirting engineered for warm-weather sophistication, unconstructed tailoring, and breezy elegance.',
-    stat1Label: 'Weave',
-    stat1Val: '100% Pure Italian Linen',
-    stat2Label: 'Comfort',
-    stat2Val: 'Breathable Open Weave',
-    stat3Label: 'Fit',
-    stat3Val: 'Relaxed & Tailored Cuts',
-    badgeTag: 'New In Season',
-    badgeTitle: 'Heritage Leaf Resort Shirt',
-    badgePrice: '₹2,899',
-    badgeCompare: '₹3,699',
-    link: '/shop?category=casual',
-    image: '/images/products/heritage-leaf-brown-1.jpg',
-  },
-  {
-    id: 2,
-    tag: 'Savile Row Precision · Evening Edit',
-    line1: 'Architectural',
-    line2: 'Collar',
-    line3: 'Distinction.',
-    description:
-      'Hand-finished semi-spread collars and mother-of-pearl buttons. Tailored for high-stakes boardrooms, formal galas, and timeless evenings.',
-    stat1Label: 'Fabric',
-    stat1Val: '2-Ply 100s Giza Cotton',
-    stat2Label: 'Collar',
-    stat2Val: 'Semi-Spread Stiffened',
-    stat3Label: 'Buttons',
-    stat3Val: 'Genuine Mother-of-Pearl',
-    badgeTag: 'Bespoke Formal',
-    badgeTitle: 'Monochrome Abstract Shirt',
-    badgePrice: '₹3,299',
-    badgeCompare: '₹4,099',
-    link: '/shop?category=formal',
-    image: '/images/products/monochrome-abstract-grey-1.jpg',
-  },
-  {
-    id: 3,
-    tag: 'Modern Signature · Autumn Palette',
-    line1: 'Understated',
-    line2: 'Quiet',
-    line3: 'Luxury.',
-    description:
-      'Rich botanical earth tones and tactile textures. Meticulously engineered for seamless transition from daytime business to midnight dinners.',
-    stat1Label: 'Palette',
-    stat1Val: 'Earthy Botanical Print',
-    stat2Label: 'Touch',
-    stat2Val: 'Silky Soft Cotton Poplin',
-    stat3Label: 'Finish',
-    stat3Val: 'Hand-Rolled Tailored Hem',
-    badgeTag: 'Atelier Signature',
-    badgeTitle: 'Forest Floral Green Shirt',
-    badgePrice: '₹3,699',
-    badgeCompare: '₹4,499',
-    link: '/shop?category=casual',
-    image: '/images/products/forest-floral-green-1.jpg',
-  },
-] as const;
-
 interface HeroSectionProps {
-  featuredProduct?: Shirt;
+  featuredProducts: Shirt[];
 }
 
-export function HeroSection({ featuredProduct }: HeroSectionProps) {
+export function HeroSection({ featuredProducts }: HeroSectionProps) {
   const rootRef = useRef<HTMLElement>(null);
+  const slides = featuredProducts.slice(0, 4);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(() => {
     return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -108,23 +21,23 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
     if (isPaused || prefersReducedMotion) return;
 
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % Math.max(1, slides.length));
     }, 2500);
 
     return () => clearInterval(timer);
-  }, [isPaused]);
+  }, [isPaused, slides.length]);
 
-  const slide = HERO_SLIDES[currentSlide];
-  const activeBadgeTitle = currentSlide === 0 && featuredProduct ? featuredProduct.name : slide.badgeTitle;
-  const activeLink = currentSlide === 0 && featuredProduct ? `/product/${featuredProduct.slug}` : slide.link;
-  const activeImage = currentSlide === 0 && featuredProduct && featuredProduct.images?.[0] ? featuredProduct.images[0] : slide.image;
+  const activeProduct = slides[currentSlide] ?? slides[0];
+  if (!activeProduct) return null;
+  const activeLink = `/shirts/${activeProduct.slug}`;
+  const activeImage = activeProduct.images[0] ?? '';
 
   const handlePrev = () => {
-    setCurrentSlide((prev) => (prev === 0 ? HERO_SLIDES.length - 1 : prev - 1));
+    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
   return (
@@ -144,27 +57,26 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               {/* Season Tag */}
               <div className="mb-4 inline-flex items-center gap-2">
                 <span
-                  key={`tag-${slide.id}`}
+                  key={`tag-${activeProduct.id}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-white/90 px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.26em] text-gold-700 shadow-sm backdrop-blur-sm transition-all duration-500 animate-fade-in"
                 >
                   <Sparkles className="h-3 w-3 text-gold-600" />
-                  {slide.tag}
+                  {activeProduct.isNewArrival ? 'New arrival' : 'Current collection'}
                 </span>
               </div>
 
               {/* Sophisticated Luxury Serif Title with Smooth Transition */}
-              <h1 key={`title-${slide.id}`} className="space-y-0 font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] tracking-tight text-charcoal-950 break-words animate-fade-in">
-                <span className="block overflow-hidden">{slide.line1}</span>
-                <span className="block overflow-hidden">{slide.line2}</span>
-                <span className="block overflow-hidden italic text-gold-700">{slide.line3}</span>
+              <h1 key={`title-${activeProduct.id}`} className="space-y-0 font-serif text-[2.6rem] xs:text-[3.2rem] sm:text-[4.4rem] md:text-[5.2rem] lg:text-[5.8rem] xl:text-[6.6rem] font-light leading-[0.92] tracking-tight text-charcoal-950 break-words animate-fade-in">
+                <span className="block overflow-hidden">Discover</span>
+                <span className="block overflow-hidden italic text-gold-700">{activeProduct.name}</span>
               </h1>
 
               {/* Description Paragraph */}
               <p
-                key={`desc-${slide.id}`}
+                key={`desc-${activeProduct.id}`}
                 className="mt-4 sm:mt-5 max-w-lg text-xs xs:text-sm leading-relaxed text-charcoal-600 sm:text-base animate-fade-in"
               >
-                {slide.description}
+                {activeProduct.description}
               </p>
 
               {/* Action Buttons & Slide Progress Indicators */}
@@ -178,7 +90,7 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
                   </Link>
 
                   <Link
-                    to={slide.link}
+                    to={activeLink}
                     className="group inline-flex items-center justify-center rounded-full border border-charcoal-900/25 bg-white/80 px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-charcoal-900 transition-all duration-300 hover:border-gold-500 hover:bg-charcoal-950 hover:text-white active:scale-95 text-center"
                   >
                     Featured Piece
@@ -187,11 +99,11 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
 
                 {/* 4 Interactive Slide Progress Pills with Accessible Hit Targets */}
                 <div className="flex items-center gap-1 pt-1 xs:pt-0" role="tablist" aria-label="Hero carousel slide navigation">
-                  {HERO_SLIDES.map((s, idx) => {
+                  {slides.map((product, idx) => {
                     const isActive = currentSlide === idx;
                     return (
                       <button
-                        key={s.id}
+                        key={product.id}
                         type="button"
                         onClick={() => setCurrentSlide(idx)}
                         aria-label={`Go to slide ${idx + 1}`}
@@ -213,28 +125,28 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
 
               {/* Quick Feature Badges */}
               <div
-                key={`stats-${slide.id}`}
+                key={`stats-${activeProduct.id}`}
                 className="mt-6 sm:mt-8 grid grid-cols-3 sm:flex sm:items-center gap-3 sm:gap-6 border-t border-charcoal-900/10 pt-4 sm:pt-5 text-xs text-charcoal-600 sm:gap-8 animate-fade-in"
               >
                 <div>
                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
-                    {slide.stat1Label}
+                    Fabric
                   </p>
-                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat1Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{activeProduct.fabric}</p>
                 </div>
                 <div className="hidden sm:block h-7 w-px bg-charcoal-900/10" />
                 <div>
                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
-                    {slide.stat2Label}
+                    Fit
                   </p>
-                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat2Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{activeProduct.fit}</p>
                 </div>
                 <div className="hidden sm:block h-7 w-px bg-charcoal-900/10" />
                 <div>
                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-charcoal-400">
-                    {slide.stat3Label}
+                    From
                   </p>
-                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">{slide.stat3Val}</p>
+                  <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs font-semibold text-charcoal-900 truncate">₹{activeProduct.price.toLocaleString('en-IN')}</p>
                 </div>
               </div>
             </div>
@@ -245,9 +157,9 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
             <div className="relative h-full w-full overflow-hidden rounded-[28px] bg-charcoal-200 shadow-[0_20px_50px_rgba(26,26,26,0.1)] lg:rounded-[34px]">
               {/* Cycling Image */}
               <img
-                key={`img-${slide.id}`}
+                key={`img-${activeProduct.id}`}
                 src={activeImage}
-                alt={activeBadgeTitle}
+                alt={activeProduct.name}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -289,12 +201,12 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               <div className="absolute bottom-5 left-5 right-5 sm:bottom-6 sm:left-6 sm:right-6">
                 <Link
                   to={activeLink}
-                  key={`badge-${slide.id}`}
+                  key={`badge-${activeProduct.id}`}
                   className="flex items-center justify-between gap-4 rounded-2xl border border-white/20 bg-black/50 px-5 py-3.5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-black/70 group/badge animate-fade-in"
                 >
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-serif text-lg font-bold text-ivory-100 sm:text-xl group-hover/badge:text-gold-300 transition-colors">
-                      {activeBadgeTitle}
+                      {activeProduct.name}
                     </h3>
                   </div>
 
@@ -321,9 +233,9 @@ export function HeroSection({ featuredProduct }: HeroSectionProps) {
               <span className="text-gold-400">✦</span>
               <span className="font-serif tracking-[0.2em] text-sm">PURVAJA ATELIER</span>
               <span className="text-gold-400">✦</span>
-              <span className="font-serif tracking-[0.2em] text-sm">100% EGYPTIAN COTTON</span>
+              <span className="font-serif tracking-[0.2em] text-sm">CURRENT COLLECTION</span>
               <span className="text-gold-400">✦</span>
-              <span className="font-serif tracking-[0.2em] text-sm">AUTUMN WINTER 2026</span>
+              <span className="font-serif tracking-[0.2em] text-sm">ONLINE CATALOGUE</span>
               <span className="text-gold-400">✦</span>
               <span className="font-serif tracking-[0.2em] text-sm">QUIET LUXURY SHIRTING</span>
             </span>

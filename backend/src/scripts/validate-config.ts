@@ -133,21 +133,7 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
     }
   }
 
-  // 4. Session Secret
-  const sessionSecret = rawEnv.SESSION_SECRET;
-  if (!sessionSecret) {
-    if (isEnforced) {
-      errors.push('SESSION_SECRET is required and must be at least 32 characters long in production/staging.');
-    } else {
-      warnings.push('SESSION_SECRET is optional in development; runtime uses cryptographically secure opaque PostgreSQL session tokens.');
-    }
-  } else if (sessionSecret.length < 32) {
-    errors.push(`SESSION_SECRET must be at least 32 characters long (received: ${sessionSecret.length} characters).`);
-  } else {
-    summary.SESSION_SECRET = `present (${sessionSecret.length} chars)`;
-  }
-
-  // 5. Frontend URL
+  // 4. Frontend URL
   const frontendUrl = rawEnv.FRONTEND_URL ?? 'http://localhost:5174';
   const frontendParsed = z.string().url().safeParse(frontendUrl);
   if (!frontendParsed.success) {
@@ -200,6 +186,8 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
       'PHONEPE_CLIENT_SECRET',
       'PHONEPE_CLIENT_VERSION',
       'PHONEPE_CALLBACK_URL',
+      'PHONEPE_WEBHOOK_USERNAME',
+      'PHONEPE_WEBHOOK_PASSWORD',
     ];
     const missingKeys = requiredPhonePeKeys.filter(k => !rawEnv[k]);
     if (missingKeys.length > 0) {

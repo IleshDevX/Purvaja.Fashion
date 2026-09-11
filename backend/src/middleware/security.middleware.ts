@@ -22,7 +22,11 @@ function isDevOrigin(origin: string): boolean {
 
 export function applySecurityMiddleware(app: Express): void {
   // Security HTTP Headers
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: { directives: {
+    // Local HTTP is used for development and isolated browser acceptance.
+    // Keep HTTPS upgrading enabled in both staging and production.
+    'upgrade-insecure-requests': ['development', 'test'].includes(env.NODE_ENV) ? null : [],
+  } } }));
 
   // CORS Configuration
   const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean);

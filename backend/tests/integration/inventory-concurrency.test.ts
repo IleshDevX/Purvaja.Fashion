@@ -631,6 +631,7 @@ describe('Phase 2: Inventory, Orders, Coupons & Returns Integrity', { timeout: 2
         subtotalPaise: 300000,
         totalPaise: 300000,
         status: 'DELIVERED',
+        deliveredAt: new Date(),
         paymentStatus: 'SUCCESS',
         items: {
           create: {
@@ -703,6 +704,7 @@ describe('Phase 2: Inventory, Orders, Coupons & Returns Integrity', { timeout: 2
         subtotalPaise: 300000,
         totalPaise: 300000,
         status: 'RETURN_REQUESTED',
+        deliveredAt: new Date(),
         paymentStatus: 'SUCCESS',
         items: {
           create: {

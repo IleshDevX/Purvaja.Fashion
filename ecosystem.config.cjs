@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'purvaja-api',
+      name: `purvaja-api-${process.env.NODE_ENV || 'production'}`,
       script: 'backend/dist/server.js',
       instances: 'max',
       exec_mode: 'cluster',
@@ -19,6 +19,9 @@ module.exports = {
         HOST: '127.0.0.1',
         // RATE_LIMIT_REDIS_URL must be supplied by the process environment;
         // startup validation rejects this clustered deployment without it.
+      },
+      env_staging: {
+        NODE_ENV: 'staging', PORT: 5001, HOST: '127.0.0.1',
       },
     },
   ],

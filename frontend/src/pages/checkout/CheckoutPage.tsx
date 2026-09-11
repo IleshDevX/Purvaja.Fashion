@@ -186,7 +186,10 @@ export function CheckoutPage() {
                       isCompleted ? 'bg-gold-500' : 'bg-ivory-300'
                     }`}
                   />
-                )}
+              )}
+              {pricing.couponEligibilityError && (
+                <p role="alert" className="mt-2 text-xs text-error">{pricing.couponEligibilityError}</p>
+              )}
               </div>
             );
           })}

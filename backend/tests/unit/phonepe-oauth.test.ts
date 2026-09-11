@@ -1,182 +1,148 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
+import { env } from '../../src/config/env.js';
 import { PhonePeProvider } from '../../src/services/payment-provider.service.js';
 
-describe('PhonePe Standard Checkout OAuth Integration', () => {
+describe('PhonePe Standard Checkout OAuth contract', () => {
   const originalFetch = globalThis.fetch;
+  const original = {
+    environment: env.PHONEPE_ENVIRONMENT,
+    clientId: env.PHONEPE_CLIENT_ID,
+    clientSecret: env.PHONEPE_CLIENT_SECRET,
+    clientVersion: env.PHONEPE_CLIENT_VERSION,
+    webhookUsername: env.PHONEPE_WEBHOOK_USERNAME,
+    webhookPassword: env.PHONEPE_WEBHOOK_PASSWORD,
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    Object.assign(env, {
+      PHONEPE_ENVIRONMENT: 'sandbox',
+      PHONEPE_CLIENT_ID: 'sandbox-client-id',
+      PHONEPE_CLIENT_SECRET: 'sandbox-client-secret',
+      PHONEPE_CLIENT_VERSION: '1',
+      PHONEPE_WEBHOOK_USERNAME: 'sandbox-webhook-user',
+      PHONEPE_WEBHOOK_PASSWORD: 'sandbox-webhook-password',
+    });
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    Object.assign(env, {
+      PHONEPE_ENVIRONMENT: original.environment,
+      PHONEPE_CLIENT_ID: original.clientId,
+      PHONEPE_CLIENT_SECRET: original.clientSecret,
+      PHONEPE_CLIENT_VERSION: original.clientVersion,
+      PHONEPE_WEBHOOK_USERNAME: original.webhookUsername,
+      PHONEPE_WEBHOOK_PASSWORD: original.webhookPassword,
+    });
   });
 
-  it('acquires and caches OAuth access token using client_credentials grant', async () => {
+  it('uses the official sandbox OAuth and checkout v2 contracts and caches the token', async () => {
     let tokenRequests = 0;
     let paymentRequests = 0;
-
     globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes('/v1/oauth/token')) {
+      if (url === 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token') {
         tokenRequests++;
-        expect(init?.method).toBe('POST');
-        expect(init?.headers).toMatchObject({ 'Content-Type': 'application/x-www-form-urlencoded' });
-        const body = init?.body as string;
-        expect(body).toContain('grant_type=client_credentials');
-        expect(body).toContain('client_id=');
-        expect(body).toContain('client_secret=');
+        expect(init?.headers).toEqual({ 'Content-Type': 'application/x-www-form-urlencoded' });
+        expect(String(init?.body)).toContain('grant_type=client_credentials');
         return new Response(JSON.stringify({
-          access_token: 'mock-oauth-jwt-token-12345',
-          expires_in: 3600,
-          token_type: 'Bearer',
+          access_token: 'sandbox-oauth-token',
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: 'O-Bearer',
         }), { status: 200 });
       }
-
-      if (url.includes('/pg/v1/pay')) {
+      if (url === 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay') {
         paymentRequests++;
-        expect(init?.headers).toMatchObject({
-          'Authorization': 'Bearer mock-oauth-jwt-token-12345',
-          'Content-Type': 'application/json',
+        expect(init?.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'O-Bearer sandbox-oauth-token' });
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+          merchantOrderId: 'pay-test-1',
+          amount: 49900,
+          paymentFlow: { type: 'PG_CHECKOUT' },
         });
         return new Response(JSON.stringify({
-          success: true,
-          code: 'PAYMENT_INITIATED',
-          data: {
-            merchantTransactionId: 'pay-tx-123',
-            instrumentResponse: {
-              redirectInfo: {
-                url: 'https://mercury-uat.phonepe.com/transact?token=123',
-              },
-            },
-          },
+          orderId: 'OMO-provider-order', state: 'PENDING', expireAt: Date.now() + 600_000,
+          redirectUrl: 'https://mercury-uat.phonepe.com/transact/uat_v2?token=123',
         }), { status: 200 });
       }
-
       throw new Error(`Unexpected fetch to ${url}`);
     });
 
     const provider = new PhonePeProvider();
-
-    // First call: requests token then initiates payment
-    const res1 = await provider.initiate({
-      paymentId: 'pay-test-1',
-      amountPaise: 49900,
-      orderNumber: 'ORD-TEST-1',
-    });
-    expect(res1.providerReference).toBe('pay-tx-123');
-    expect(res1.redirectUrl).toContain('mercury-uat.phonepe.com');
+    const first = await provider.initiate({ paymentId: 'pay-test-1', amountPaise: 49900, orderNumber: 'ORD-TEST-1' });
+    expect(first.providerReference).toBe('OMO-provider-order');
+    await provider.initiate({ paymentId: 'pay-test-1', amountPaise: 49900, orderNumber: 'ORD-TEST-1' });
     expect(tokenRequests).toBe(1);
-    expect(paymentRequests).toBe(1);
-
-    // Second call: reuses cached token, does not call /v1/oauth/token again
-    const res2 = await provider.initiate({
-      paymentId: 'pay-test-2',
-      amountPaise: 79900,
-      orderNumber: 'ORD-TEST-2',
-    });
-    expect(res2.providerReference).toBe('pay-tx-123');
-    expect(tokenRequests).toBe(1); // Cached!
     expect(paymentRequests).toBe(2);
   });
 
-  it('checkStatus attaches Authorization Bearer token to status queries', async () => {
-    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes('/v1/oauth/token')) {
-        return new Response(JSON.stringify({
-          access_token: 'mock-status-token',
-          expires_in: 3600,
-        }), { status: 200 });
-      }
-
-      if (url.includes('/pg/v1/status/')) {
-        expect(init?.headers).toMatchObject({
-          'Authorization': 'Bearer mock-status-token',
-        });
-        return new Response(JSON.stringify({
-          success: true,
-          code: 'PAYMENT_SUCCESS',
-          data: {
-            merchantId: 'MOCK_MERCHANT',
-            merchantTransactionId: 'tx-status-check',
-            transactionId: 'provider-ref-123',
-            amount: 249900,
-            state: 'COMPLETED',
-          },
-        }), { status: 200 });
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`);
-    });
-
+  it('coalesces concurrent authorization and rejects tokens without provider expiry', async () => {
+    const fetchToken = vi.fn().mockResolvedValue(new Response(JSON.stringify({ access_token: 'shared-token', expires_in: 3600 })));
+    globalThis.fetch = fetchToken;
     const provider = new PhonePeProvider();
-    const status = await provider.checkStatus('tx-status-check');
-    expect(status.success).toBe(true);
-    expect(status.state).toBe('COMPLETED');
-    expect(status.amountPaise).toBe(249900);
+    expect(await Promise.all([provider.getAccessToken(), provider.getAccessToken(), provider.getAccessToken()]))
+      .toEqual(['shared-token', 'shared-token', 'shared-token']);
+    expect(fetchToken).toHaveBeenCalledTimes(1);
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ access_token: 'no-expiry-token' })));
+    await expect(new PhonePeProvider().getAccessToken()).rejects.toMatchObject({ code: 'PHONEPE_OAUTH_FAILED' });
   });
 
-  it('classifies 4xx OAuth failure as DEFINITE_FAILURE ProviderInitiationError', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      error: 'invalid_client',
-      error_description: 'Client credentials invalid',
-    }), { status: 401 }));
-
-    const provider = new PhonePeProvider();
-    await expect(
-      provider.initiate({
-        paymentId: 'pay-fail',
-        amountPaise: 1000,
-        orderNumber: 'ORD-FAIL',
-      }),
-    ).rejects.toMatchObject({
-      code: 'PHONEPE_OAUTH_FAILED',
-      outcome: 'DEFINITE_FAILURE',
+  it('maps the official checkout v2 status response', async () => {
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/v1/oauth/token')) {
+        return new Response(JSON.stringify({ access_token: 'status-token', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'O-Bearer' }));
+      }
+      expect(url).toBe('https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/merchant-order-1/status?details=false&errorContext=true');
+      expect(init?.headers).toMatchObject({ Authorization: 'O-Bearer status-token' });
+      return new Response(JSON.stringify({
+        orderId: 'OMO-1', state: 'COMPLETED', amount: 249900,
+        paymentDetails: [{ transactionId: 'OM-transaction-1', amount: 249900, state: 'COMPLETED' }],
+      }));
+    });
+    await expect(new PhonePeProvider().checkStatus('merchant-order-1')).resolves.toEqual({
+      success: true, state: 'COMPLETED', amountPaise: 249900, providerReference: 'OM-transaction-1',
     });
   });
 
-  it('executes automated refund and returns provider reference on completion', async () => {
+  it('uses the official payments v2 refund contract', async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes('/v1/oauth/token')) {
-        return new Response(JSON.stringify({
-          access_token: 'mock-oauth-jwt-token-refund',
-          expires_in: 3600,
-          token_type: 'Bearer',
-        }), { status: 200 });
+      if (url.endsWith('/v1/oauth/token')) {
+        return new Response(JSON.stringify({ access_token: 'refund-token', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'O-Bearer' }));
       }
-
-      if (url.includes('/pg/v1/refund')) {
-        expect(init?.method).toBe('POST');
-        expect(init?.headers).toMatchObject({
-          'Authorization': 'Bearer mock-oauth-jwt-token-refund',
-          'Content-Type': 'application/json',
-        });
-        const body = JSON.parse(init?.body as string);
-        const decodedPayload = JSON.parse(Buffer.from(body.request, 'base64').toString('utf-8'));
-        expect(decodedPayload.originalTransactionId).toBe('pay-orig-123');
-        expect(decodedPayload.amount).toBe(50000);
-        return new Response(JSON.stringify({
-          success: true,
-          code: 'PAYMENT_SUCCESS',
-          data: {
-            merchantTransactionId: 'ref-req-456',
-            transactionId: 'phonepe-ref-tx-789',
-            amount: 50000,
-            state: 'COMPLETED',
-          },
-        }), { status: 200 });
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`);
+      expect(url).toBe('https://api-preprod.phonepe.com/apis/pg-sandbox/payments/v2/refund');
+      expect(init?.headers).toMatchObject({ Authorization: 'O-Bearer refund-token' });
+      expect(JSON.parse(String(init?.body))).toEqual({
+        merchantRefundId: 'merchant-refund-1', originalMerchantOrderId: 'merchant-order-1', amount: 50000,
+      });
+      return new Response(JSON.stringify({ refundId: 'OMR-provider-refund', amount: 50000, state: 'PENDING' }));
     });
+    await expect(new PhonePeProvider().refund({ refundId: 'merchant-refund-1', paymentId: 'merchant-order-1', amountPaise: 50000 }))
+      .resolves.toEqual({ providerReference: 'OMR-provider-refund', state: 'PENDING', amountPaise: 50000 });
+  });
 
+  it('retrieves refund status by merchant refund identity', async () => {
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/v1/oauth/token')) return new Response(JSON.stringify({ access_token: 'status-token', expires_in: 3600 }));
+      expect(url).toBe('https://api-preprod.phonepe.com/apis/pg-sandbox/payments/v2/refund/merchant-refund/status');
+      expect(init?.headers).toMatchObject({ Authorization: 'O-Bearer status-token' });
+      return new Response(JSON.stringify({ refundId: 'provider-refund', amount: 50000, state: 'COMPLETED' }));
+    });
+    await expect(new PhonePeProvider().checkRefundStatus('merchant-refund')).resolves.toEqual({
+      providerReference: 'provider-refund', amountPaise: 50000, state: 'COMPLETED',
+    });
+  });
+
+  it('fails closed without credentials and validates configured SHA webhook authorization', async () => {
     const provider = new PhonePeProvider();
-    const result = await provider.refund({
-      refundId: 'ref-req-456',
-      paymentId: 'pay-orig-123',
-      amountPaise: 50000,
-    });
+    const authorization = createHash('sha256').update('sandbox-webhook-user:sandbox-webhook-password').digest('hex');
+    expect(provider.verifyWebhookAuthorization(authorization)).toBe(true);
+    expect(provider.verifyWebhookAuthorization('wrong')).toBe(false);
+    Object.assign(env, { PHONEPE_CLIENT_SECRET: undefined });
+    await expect(provider.getAccessToken()).rejects.toMatchObject({ code: 'PHONEPE_CONFIG_MISSING', outcome: 'DEFINITE_FAILURE' });
+  });
 
-    expect(result.providerReference).toBe('phonepe-ref-tx-789');
+  it('classifies OAuth client rejection as a definite failure', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'invalid_client' }), { status: 401 }));
+    await expect(new PhonePeProvider().getAccessToken()).rejects.toMatchObject({ code: 'PHONEPE_OAUTH_FAILED', outcome: 'DEFINITE_FAILURE' });
   });
 });
-
