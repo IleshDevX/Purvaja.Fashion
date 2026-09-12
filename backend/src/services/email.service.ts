@@ -58,7 +58,7 @@ export class ResendAuthEmailSender implements AuthEmailSender {
         `<p>Thank you for your order with Purvaja Fashion.</p>` +
         `<p><strong>Order ID:</strong> ${orderRef}</p>` +
         (formattedAmount ? `<p><strong>Total Amount:</strong> ${formattedAmount}</p>` : '') +
-        `<p>We will notify you once your bespoke pieces are prepared and dispatched.</p>` +
+        `<p>We will notify you when your order status changes.</p>` +
         `</div>`,
       );
     } catch (err) {
@@ -92,7 +92,7 @@ export class ResendAuthEmailSender implements AuthEmailSender {
         `Order Delivered #${orderRef} - Purvaja Fashion`,
         `<div style="font-family: sans-serif; color: #1a1a1a;">` +
         `<h2>Your Order Has Arrived</h2>` +
-        `<p>Your bespoke Purvaja Fashion package for order #${orderRef} has been delivered.</p>` +
+        `<p>Your Purvaja Fashion order #${orderRef} has been delivered.</p>` +
         `<p>We hope you cherish your garments. You can share your feedback on <a href="${env.FRONTEND_URL}/orders/${details.id}">your orders page</a>.</p>` +
         `</div>`,
       );

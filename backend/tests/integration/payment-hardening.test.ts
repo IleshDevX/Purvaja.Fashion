@@ -40,20 +40,20 @@ const shippingAddress2 = {
 
 function createSignedPhonePePayload(
   payloadObj: Record<string, unknown>,
-  saltKey = env.PHONEPE_CLIENT_SECRET || 'mock_salt_key_default',
-  saltIndex = env.PHONEPE_CLIENT_VERSION || '1',
 ) {
-  const jsonStr = JSON.stringify(payloadObj);
-  const base64Payload = Buffer.from(jsonStr).toString('base64');
-  const sha256 = createHash('sha256').update(base64Payload + saltKey).digest('hex');
-  const xVerify = `${sha256}###${saltIndex}`;
+  const username = env.PHONEPE_WEBHOOK_USERNAME!;
+  const password = env.PHONEPE_WEBHOOK_PASSWORD!;
   return {
-    body: { response: base64Payload },
-    xVerify,
+    body: payloadObj,
+    authorization: createHash('sha256').update(`${username}:${password}`).digest('hex'),
   };
 }
 
 beforeAll(async () => {
+  Object.assign(env, {
+    PHONEPE_WEBHOOK_USERNAME: 'integration-webhook-user',
+    PHONEPE_WEBHOOK_PASSWORD: 'integration-webhook-password',
+  });
   // Own the stock fixture: payment tests must not depend on seed quantities or
   // consume catalogue records owned by another suite.
   const product = await prisma.product.create({ data: {
@@ -233,25 +233,22 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
 
     const callbackPayload = {
-      success: true,
-      code: 'PAYMENT_SUCCESS',
-      message: 'Payment completed successfully',
-      data: {
-        merchantId: env.PHONEPE_MERCHANT_ID || 'MOCK_MERCHANT',
-        merchantTransactionId: paymentId,
+      event: 'checkout.order.completed',
+      payload: {
+        merchantOrderId: paymentId,
         transactionId: `TXN_${randomUUID()}`,
         amount: payment.amountPaise,
         state: 'COMPLETED',
-        responseCode: 'SUCCESS',
+        paymentDetails: [{ transactionId: `TXN_${randomUUID()}`, state: 'COMPLETED' }],
       },
     };
 
-    const { body, xVerify } = createSignedPhonePePayload(callbackPayload);
+    const { body, authorization } = createSignedPhonePePayload(callbackPayload);
 
     // 1st callback
     const cb1 = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
     expect(cb1.status).toBe(200);
 
@@ -264,7 +261,7 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     // 2nd duplicate callback
     const cb2 = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
     expect(cb2.status).toBe(200);
 
@@ -293,25 +290,23 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     const stockAfterCheckout = (await prisma.productVariant.findUniqueOrThrow({ where: { id: variantId } })).stockQuantity;
 
     const callbackPayload = {
-      success: false,
-      code: 'PAYMENT_ERROR',
-      message: 'Payment declined by bank',
-      data: {
-        merchantId: env.PHONEPE_MERCHANT_ID || 'MOCK_MERCHANT',
-        merchantTransactionId: paymentId,
+      event: 'checkout.order.failed',
+      payload: {
+        merchantOrderId: paymentId,
         transactionId: `TXN_${randomUUID()}`,
         amount: payment.amountPaise,
         state: 'FAILED',
-        responseCode: 'PAYMENT_DECLINED',
+        errorCode: 'PAYMENT_DECLINED',
+        paymentDetails: [{ transactionId: `TXN_${randomUUID()}`, state: 'FAILED' }],
       },
     };
 
-    const { body, xVerify } = createSignedPhonePePayload(callbackPayload);
+    const { body, authorization } = createSignedPhonePePayload(callbackPayload);
 
     // 1st failed callback
     const failRes1 = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
     expect(failRes1.status).toBe(200);
 
@@ -321,7 +316,7 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     // 2nd duplicate failed callback
     const failRes2 = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
     expect(failRes2.status).toBe(200);
 
@@ -350,10 +345,9 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
 
     const callbackPayload = {
-      success: true,
-      code: 'PAYMENT_SUCCESS',
-      data: {
-        merchantTransactionId: paymentId,
+      event: 'checkout.order.completed',
+      payload: {
+        merchantOrderId: paymentId,
         amount: payment.amountPaise,
         state: 'COMPLETED',
       },
@@ -362,10 +356,10 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     const { body } = createSignedPhonePePayload(callbackPayload);
 
     // Send with forged signature
-    const forgedXVerify = `forged_${randomUUID().replace(/-/g, '')}###1`;
+    const forgedAuthorization = `forged_${randomUUID().replace(/-/g, '')}`;
     const res = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', forgedXVerify)
+      .set('Authorization', forgedAuthorization)
       .send(body);
 
     expect(res.status).toBe(401);
@@ -382,20 +376,19 @@ describe('Phase 1: Payment Security and Idempotency', () => {
   it('7. Invalid payment/order identifier in callback returns 404', async () => {
     const nonExistentId = randomUUID();
     const callbackPayload = {
-      success: true,
-      code: 'PAYMENT_SUCCESS',
-      data: {
-        merchantTransactionId: nonExistentId,
+      event: 'checkout.order.completed',
+      payload: {
+        merchantOrderId: nonExistentId,
         amount: 50000,
         state: 'COMPLETED',
       },
     };
 
-    const { body, xVerify } = createSignedPhonePePayload(callbackPayload);
+    const { body, authorization } = createSignedPhonePePayload(callbackPayload);
 
     const res = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
 
     expect(res.status).toBe(404);
@@ -420,20 +413,19 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     // Report amount that differs from payment.amountPaise
     const tamperedAmount = payment.amountPaise - 10000;
     const callbackPayload = {
-      success: true,
-      code: 'PAYMENT_SUCCESS',
-      data: {
-        merchantTransactionId: paymentId,
+      event: 'checkout.order.completed',
+      payload: {
+        merchantOrderId: paymentId,
         amount: tamperedAmount, // Mismatch!
         state: 'COMPLETED',
       },
     };
 
-    const { body, xVerify } = createSignedPhonePePayload(callbackPayload);
+    const { body, authorization } = createSignedPhonePePayload(callbackPayload);
 
     const res = await request(app)
       .post('/api/v1/payments/phonepe-callback')
-      .set('X-VERIFY', xVerify)
+      .set('Authorization', authorization)
       .send(body);
 
     expect(res.status).toBe(409);
@@ -527,16 +519,15 @@ describe('Phase 1: Payment Security and Idempotency', () => {
     // Complete as SUCCESS via demo result or callback
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
     const callbackPayload = {
-      success: true,
-      code: 'PAYMENT_SUCCESS',
-      data: {
-        merchantTransactionId: paymentId,
+      event: 'checkout.order.completed',
+      payload: {
+        merchantOrderId: paymentId,
         amount: payment.amountPaise,
         state: 'COMPLETED',
       },
     };
-    const { body, xVerify } = createSignedPhonePePayload(callbackPayload);
-    await request(app).post('/api/v1/payments/phonepe-callback').set('X-VERIFY', xVerify).send(body).expect(200);
+    const { body, authorization } = createSignedPhonePePayload(callbackPayload);
+    await request(app).post('/api/v1/payments/phonepe-callback').set('Authorization', authorization).send(body).expect(200);
 
     // A stale failure can arrive after capture. It must be recorded and ignored.
     const commerceModule = await import('../../src/services/commerce.service.js');

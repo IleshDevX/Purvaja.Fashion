@@ -11,6 +11,7 @@ const email = `review-return-${randomUUID()}@example.invalid`;
 let userId = '';
 let productId = '';
 let orderId = '';
+let expiredOrderId = '';
 let agent: ReturnType<typeof request.agent>;
 let csrf = '';
 
@@ -58,6 +59,7 @@ beforeAll(async () => {
       subtotalPaise: 299900,
       totalPaise: 299900,
       status: 'DELIVERED',
+      deliveredAt: new Date(),
       paymentStatus: 'SUCCESS',
       items: {
         create: {
@@ -93,6 +95,7 @@ afterAll(async () => {
     await prisma.orderReturn.deleteMany({ where: { orderId } }).catch(() => {});
     await prisma.orderItem.deleteMany({ where: { orderId } }).catch(() => {});
     await prisma.order.deleteMany({ where: { id: orderId } }).catch(() => {});
+    await prisma.order.deleteMany({ where: { id: expiredOrderId } }).catch(() => {});
     await prisma.session.deleteMany({ where: { userId } }).catch(() => {});
     await prisma.user.delete({ where: { id: userId } }).catch(() => {});
   }
@@ -142,5 +145,36 @@ describe('Product Review & Order Return APIs', () => {
 
     const updated = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
     expect(updated.status).toBe('RETURN_REQUESTED');
+  });
+
+  it('rejects returns after seven days using the delivery timestamp', async () => {
+    const variant = await prisma.productVariant.findFirstOrThrow({ where: { productId } });
+    const expired = await prisma.order.create({
+      data: {
+        orderNumber: `PF-EXPIRED-${randomUUID().slice(0, 8)}`,
+        userId,
+        shippingAddress: { recipientName: 'Test Customer', phone: '9999999999', line1: '1 Test Road', city: 'Mumbai', state: 'Maharashtra', postalCode: '400001', country: 'IN' },
+        subtotalPaise: 299900,
+        totalPaise: 299900,
+        status: 'DELIVERED',
+        deliveredAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        paymentStatus: 'SUCCESS',
+        items: { create: { variantId: variant.id, productName: 'Expired Return Shirt', sku: variant.sku, size: variant.size, colorName: variant.colorName, unitPricePaise: 299900, quantity: 1, lineTotalPaise: 299900 } },
+      },
+    });
+    expiredOrderId = expired.id;
+    await prisma.order.update({ where: { id: expired.id }, data: { updatedAt: new Date() } });
+    const detail = await agent.get(`/api/v1/orders/${expired.id}`);
+    expect(detail.body.data.availableActions.canReturn).toBe(false);
+    await expect(prisma.order.update({ where: { id: expired.id }, data: { deliveredAt: new Date() } }))
+      .rejects.toThrow(/immutable/);
+
+    const response = await agent
+      .post(`/api/v1/orders/${expired.id}/returns`)
+      .set('X-CSRF-Token', csrf)
+      .send({ reason: 'Outside the return window.' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('RETURN_WINDOW_EXPIRED');
   });
 });

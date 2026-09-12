@@ -12,6 +12,7 @@ import {
   input,
   inventoryQuery,
   orderStatus,
+  variantQuery,
   pagination,
   product,
   stockCorrection,
@@ -101,7 +102,7 @@ export const updateCategory: RequestHandler = async (req, res, next) => {
 
 export const variants: RequestHandler = async (req, res, next) => {
   try {
-    send(res, await admin.variants(input(pagination, req.query)));
+    send(res, await admin.variants(input(variantQuery, req.query)));
   } catch (e) {
     next(e);
   }

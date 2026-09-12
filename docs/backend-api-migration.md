@@ -81,7 +81,7 @@ All API endpoints follow the standardized response envelope:
 | POST | `/api/v1/payments/:paymentId/demo-result` | Customer Owner | Apply a simulated success/failure result (DEV/TEST demo mode only) |
 | POST | `/api/v1/payments/:paymentId/initiate` | Customer Owner | Idempotently claim or resume the durable payment-initiation workflow |
 | GET | `/api/v1/payments/:paymentId/status` | Customer Owner | Return the authoritative order/payment state |
-| POST | `/api/v1/payments/phonepe/callback` | Public (Signed) | PhonePe server-to-server webhook callback with X-VERIFY checksum validation |
+| POST | `/api/v1/payments/phonepe-callback` | Public (Authenticated) | PhonePe Standard Checkout webhook authenticated with SHA-256 of the configured webhook username and password in the `Authorization` header |
 
 ### 9. Administration (`/api/v1/admin`)
 | Method | Path | Auth / Role | Description |

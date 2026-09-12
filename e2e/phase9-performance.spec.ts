@@ -10,7 +10,12 @@ test('representative catalog workload records bounded latency and correct respon
   for (let offset = 0; offset < total; offset += concurrency) {
     await Promise.all(Array.from({ length: Math.min(concurrency, total - offset) }, async (_, index) => {
       const before = performance.now();
-      const response = await request.get(`http://127.0.0.1:5001/api/v1/products?page=${(offset + index) % 3 + 1}&limit=12`);
+      const response = await request.get(`/api/v1/products?page=${(offset + index) % 3 + 1}&limit=12`, {
+        headers: {
+          'X-Test-Rate-Limit-Max': '50000',
+          'X-Test-Client-Id': `phase9-perf-${testInfo.project.name}-${offset}-${index}`,
+        },
+      });
       durations.push(performance.now() - before);
       if (response.ok()) {
         const body = await response.json() as { success?: boolean; data?: { items?: unknown[] } };

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import compression from 'compression';
@@ -55,6 +56,19 @@ export function createApp(): Express {
 
   // Routes
   app.use(routes);
+
+  // A production release contains the frontend beside the backend. Serving both
+  // from one process gives every SPA route and /api/v1 the same origin while
+  // still allowing a reverse proxy to serve the same immutable files directly.
+  const frontendDir = join(fileURLToPath(new URL('../../', import.meta.url)), 'frontend', 'dist');
+  const frontendIndex = join(frontendDir, 'index.html');
+  if (existsSync(frontendIndex)) {
+    app.use(express.static(frontendDir, { index: false }));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
+      res.sendFile(frontendIndex);
+    });
+  }
 
   // 404 handler
   app.use(notFoundHandler);

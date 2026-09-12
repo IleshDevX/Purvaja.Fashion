@@ -192,6 +192,7 @@ export function AdminVariantsPage() {
   });
 
   const [productSearch, setProductSearch] = useState('');
+  const scopedProductId = params.get('productId') ?? undefined;
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -206,13 +207,13 @@ export function AdminVariantsPage() {
     try {
       setError('');
       const [variants, productPage] = await Promise.all([
-        adminService.listVariants(query,page), adminService.listProducts('',1,100),
+        adminService.listVariants(query,page,scopedProductId), adminService.listProducts('',1,100),
       ]);
       setData(variants); setProducts(productPage.items);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to load variants.');
     }
-  }, []);
+  }, [scopedProductId]);
 
   useEffect(() => {
     void load();
@@ -240,16 +241,16 @@ export function AdminVariantsPage() {
   return (
     <div className="space-y-6">
       <Header eyebrow="SKU catalogue" title="Variants">
-        <div className="flex gap-2">
-          <button type="button" onClick={openCreate} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white"><Plus className="mr-1 inline h-4 w-4" />Add variant</button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button type="button" onClick={openCreate} className="rounded-lg bg-charcoal-950 px-3 py-2 text-xs font-bold text-white shrink-0"><Plus className="mr-1 inline h-4 w-4" />Add variant</button>
           <input
-            aria-label="Search SKU, colour or product"
+            aria-label="Filter variants by search query"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="SKU, colour or product"
-            className="rounded-lg border p-2 text-xs"
+            className="flex-1 min-w-[140px] rounded-lg border p-2 text-xs"
           />
-          <button type="button" aria-label="Refresh variants" onClick={() => void load(search, 1)} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border p-2">
+          <button type="button" aria-label="Refresh variants" onClick={() => void load(search, 1)} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border p-2 shrink-0">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
@@ -276,6 +277,10 @@ export function AdminVariantsPage() {
               className="w-full rounded-lg border border-ivory-300 p-2 text-xs"
             >
               <option value="">Select product ({products.length} available)</option>
+              {/* A selected ID remains valid while options load or searches/pages exclude it. */}
+              {form.productId && !products.some(product => product.id === form.productId) && (
+                <option value={form.productId}>Selected product ({form.productId})</option>
+              )}
               {products.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -297,7 +302,7 @@ export function AdminVariantsPage() {
       {!data ? (
         !error && <PageState>Loading variants…</PageState>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-ivory-300 bg-white">
+        <div className="overflow-x-auto min-w-0 max-w-full rounded-2xl border border-ivory-300 bg-white">
           <table className="w-full text-left text-xs">
             <thead className="bg-ivory-50 text-charcoal-500">
               <tr>
@@ -403,7 +408,7 @@ export function AdminCouponsPage() {
         </form>
       )}
       {error && <PageState>{error}</PageState>}
-      <div className="overflow-x-auto rounded-2xl border border-ivory-300 bg-white">
+      <div className="overflow-x-auto min-w-0 max-w-full rounded-2xl border border-ivory-300 bg-white">
         <table className="w-full text-left text-xs">
           <thead className="bg-ivory-50 text-charcoal-500">
             <tr>

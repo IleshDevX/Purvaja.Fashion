@@ -1,8 +1,11 @@
-import { cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from './LoginPage.js';
 import { renderWithProviders } from '../../test/testUtils.js';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { GuestRoute } from '../../features/auth/components/GuestRoute.js';
+import { AppProviders } from '../../app/providers.js';
 
 describe('LoginPage', () => {
   afterEach(cleanup);
@@ -12,6 +15,7 @@ describe('LoginPage', () => {
       user: null,
       status: 'guest',
       isLoading: false,
+      isInitializing: false,
       error: null,
     });
   });
@@ -56,5 +60,25 @@ describe('LoginPage', () => {
         rememberMe: true,
       });
     });
+  });
+
+  it('does not redirect an already navigated page when login completes after the auth boundary', async () => {
+    let finish!: (value: boolean) => void;
+    const completion = new Promise<boolean>(resolve => { finish = resolve; });
+    useAuthStore.setState({ login: vi.fn(async () => {
+      useAuthStore.setState({ status: 'authenticated', user: { id: 'owner' } as NonNullable<ReturnType<typeof useAuthStore.getState>['user']> });
+      return completion;
+    }) });
+    render(<MemoryRouter initialEntries={['/auth/login']}><AppProviders><Routes>
+      <Route path="/auth/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/account" element={<Link to="/cart">Open cart</Link>} />
+      <Route path="/cart" element={<h1>Cart destination</h1>} />
+    </Routes></AppProviders></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'client@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'Secret123!' } });
+    fireEvent.click(screen.getByRole('button', { name: /SIGN IN/i }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Open cart' }));
+    await act(async () => { finish(true); await completion; });
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Cart destination' })).toBeInTheDocument());
   });
 });

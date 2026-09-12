@@ -100,7 +100,6 @@ Phase 8 concludes the production hardening of the Purvaja Fashion application. T
 | `TRUST_PROXY` | Yes | Public | Express trust proxy setting (`1` for Nginx/Cloudflare, `loopback` for local) | `1` |
 | `DATABASE_URL` | Yes | **Secret** | Connection-pooled PostgreSQL connection string | `postgresql://[REDACTED_SECRET]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require` |
 | `DIRECT_URL` | Yes | **Secret** | Direct non-pooled PostgreSQL URL for Prisma migrations | `postgresql://[REDACTED_SECRET]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require` |
-| `SESSION_SECRET` | Yes | **Secret** | Minimum 32-character high-entropy secret for session signing | `[REDACTED_SECRET]` |
 | `FRONTEND_URL` | Yes | Public | Customer frontend URL (used in email links and CORS defaults) | `https://purvaja.fashion` |
 | `CORS_ORIGIN` | Yes | Public | Comma-separated list of allowed origins (no wildcards allowed) | `https://purvaja.fashion` |
 | `COOKIE_DOMAIN` | Optional | Public | Cookie domain scope (e.g. `.purvaja.fashion` if subdomains used) | `[REDACTED_SECRET]` |
@@ -111,6 +110,8 @@ Phase 8 concludes the production hardening of the Purvaja Fashion application. T
 | `PHONEPE_CLIENT_VERSION`| Yes (if PhonePe) | Public | PhonePe API client version | `1` |
 | `PHONEPE_ENVIRONMENT` | Yes (if PhonePe) | Public | PhonePe gateway mode (`sandbox` or `production`) | `sandbox` |
 | `PHONEPE_CALLBACK_URL` | Yes (if PhonePe) | Public | Webhook endpoint for server-to-server transaction callbacks | `https://purvaja.fashion/api/v1/payments/phonepe-callback` |
+| `PHONEPE_WEBHOOK_USERNAME` | Yes (if PhonePe) | **Secret** | Username configured for PhonePe webhook authorization | `[REDACTED_SECRET]` |
+| `PHONEPE_WEBHOOK_PASSWORD` | Yes (if PhonePe) | **Secret** | Password configured for PhonePe webhook authorization | `[REDACTED_SECRET]` |
 | `RESEND_API_KEY` | Optional | **Secret** | Transactional email provider API key (`re_...`) | `[REDACTED_SECRET]` |
 | `EMAIL_FROM` | Yes (if email) | Public | Verified sender email address | `noreply@purvaja.fashion` |
 | `REDIS_URL` | Optional | **Secret** | Optional Redis cache instance URL (fallback to PostgreSQL active) | `[REDACTED_SECRET]` |

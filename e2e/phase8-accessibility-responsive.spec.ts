@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { reloadDocument } from './browser-navigation.js';
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440] as const;
 const customerPassword = 'Phase8Browser123!';
@@ -59,7 +60,9 @@ async function registerCustomer(page: Page, email: string) {
 
 test('public journeys and dialogs remain usable at every required viewport', async ({ page }, testInfo) => {
   test.setTimeout(180_000);
-  const catalogResponse = await page.request.get('http://localhost:5001/api/v1/products?limit=1&inStock=true');
+  const catalogResponse = await page.request.get('/api/v1/products?limit=1&inStock=true', {
+    headers: { 'X-Test-Rate-Limit-Max': '50000', 'X-Test-Client-Id': 'phase8-public-catalog' },
+  });
   expect(catalogResponse.ok()).toBe(true);
   const catalog = await catalogResponse.json() as { data: { items: Array<{ id: string }> } };
   const productId = catalog.data.items[0]?.id;
@@ -98,15 +101,15 @@ test('customer routes deny admin access and survive refresh, history, and respon
       await verifyViewport(page, route, width, testInfo);
     }
   }
-  await page.reload();
+  await reloadDocument(page);
   await expect(page.locator('main').first()).toBeVisible();
-  await page.goBack();
-  await page.goForward();
+  await page.goBack({ waitUntil: 'domcontentloaded' });
+  await page.goForward({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('main').first()).toBeVisible();
   await verifyAccessibleControls(page);
 });
 
-test('admin tables and forms remain contained at every required viewport', async ({ page }, testInfo) => {
+for (const width of widths) test(`admin tables and forms remain contained at ${width}px`, async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const password = process.env.INITIAL_ADMIN_PASSWORD;
   if (!password) throw new Error('INITIAL_ADMIN_PASSWORD is required by the isolated browser harness.');
@@ -121,9 +124,7 @@ test('admin tables and forms remain contained at every required viewport', async
     '/admin/categories', '/admin/variants', '/admin/inventory', '/admin/inventory/movements',
     '/admin/inventory/reservations', '/admin/coupons', '/admin/audit-logs',
   ];
-  for (const width of widths) {
-    for (const route of routes) await verifyViewport(page, route, width, testInfo);
-  }
+  for (const route of routes) await verifyViewport(page, route, width, testInfo);
   await verifyAccessibleControls(page);
 });
 

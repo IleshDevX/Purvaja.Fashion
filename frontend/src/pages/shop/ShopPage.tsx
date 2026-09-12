@@ -56,7 +56,15 @@ export function ShopPage({
   const sortRef = useRef<HTMLDivElement>(null);
 
   const updateCatalog = (change: Partial<CatalogUrlState>, resetPage=true) => {
-    setSearchParams(serializeCatalogUrlState({...catalog,...change,page:resetPage?1:(change.page??catalog.page)},defaults));
+    const current = parseCatalogUrlState(new URLSearchParams(window.location.search), defaults);
+    const next = serializeCatalogUrlState({
+      ...current,
+      ...change,
+      page: resetPage ? 1 : (change.page ?? current.page),
+    }, defaults);
+    if (next.toString() !== new URLSearchParams(window.location.search).toString()) {
+      setSearchParams(next, { replace: false });
+    }
   };
 
   // Click outside to close sort dropdown
@@ -101,11 +109,9 @@ export function ShopPage({
 
   useEffect(() => {
     if (paginationResult && currentPage > Math.max(1, paginationResult.totalPages)) {
-      setSearchParams(previous => {
-        const routeDefaults={newArrivals:defaultNewArrivalsOnly,deals:defaultDealsOnly};
-        const current=parseCatalogUrlState(previous,routeDefaults);
-        return serializeCatalogUrlState({...current,page:Math.max(1,paginationResult.totalPages)},routeDefaults);
-      });
+      const routeDefaults={newArrivals:defaultNewArrivalsOnly,deals:defaultDealsOnly};
+      const current=parseCatalogUrlState(new URLSearchParams(window.location.search),routeDefaults);
+      setSearchParams(serializeCatalogUrlState({...current,page:Math.max(1,paginationResult.totalPages)},routeDefaults), { replace: true });
     }
   }, [currentPage, paginationResult, setSearchParams, defaultNewArrivalsOnly, defaultDealsOnly]);
 
@@ -154,7 +160,7 @@ export function ShopPage({
             <div>
               <h1 className="font-serif text-3xl font-light tracking-tight text-charcoal-950 sm:text-4xl lg:text-5xl">
                 {defaultNewArrivalsOnly
-                  ? 'New Arrivals 2026'
+                  ? 'New Arrivals'
                   : defaultDealsOnly
                   ? 'Curated Offers & Deals'
                   : searchQuery
@@ -162,7 +168,7 @@ export function ShopPage({
                   : 'Menswear Collection'}
               </h1>
               <p className="mt-2 max-w-xl text-xs leading-relaxed text-charcoal-500 sm:text-sm">
-                Impeccably tailored shirts woven with premium Egyptian cotton, European linen, and structured collars for an effortless sartorial presence.
+                Browse the current catalogue and filter by fabric, fit, size, price, and availability.
               </p>
             </div>
 
@@ -414,7 +420,7 @@ export function ShopPage({
                   </>
                 ) : (
                   <p className="font-serif text-xs sm:text-sm text-charcoal-600 font-medium">
-                    Showing all handcrafted menswear shirting ({filteredShirts.length})
+                    Showing all catalogue products ({filteredShirts.length})
                   </p>
                 )}
               </div>

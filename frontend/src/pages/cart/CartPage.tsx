@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
 import { useCheckoutStore } from '../../features/checkout/store/checkoutStore.js';
-import { calculateOrderPricing, FREE_SHIPPING_THRESHOLD } from '../../features/checkout/utils/pricing.js';
+import { calculateOrderPricing } from '../../features/checkout/utils/pricing.js';
 import { useProductsQuery } from '../../features/products/hooks/useProducts.js';
 import { useToast } from '../../app/providers.js';
 
@@ -71,8 +71,7 @@ export function CartPage() {
             </div>
             <h2 className="font-serif text-display text-charcoal-900 mb-2">Your Bag is Empty</h2>
             <p className="text-body text-charcoal-500 mb-8">
-              Explore our new seasonal arrivals and discover bespoke menswear crafted from the world's
-              finest cotton and linen.
+              Explore the current catalogue and add an available product to your cart.
             </p>
             <Link
               to="/shop"
@@ -98,12 +97,15 @@ export function CartPage() {
                       Add <strong className="text-charcoal-900">₹{pricing.remainingForFreeShipping.toLocaleString('en-IN')}</strong> more for complimentary shipping.
                     </span>
                   )}
+                  {pricing.couponEligibilityError && (
+                    <p role="alert" className="mt-2 text-xs text-error">{pricing.couponEligibilityError}</p>
+                  )}
                 </div>
                 <div className="w-full bg-ivory-200 h-1.5 rounded-full overflow-hidden">
                   <div
                     className="bg-gold-500 h-full transition-all duration-500 rounded-full"
                     style={{
-                      width: `${Math.min(100, (pricing.subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%`,
+                      width: `${Math.min(100, ((pricing.subtotalPaise - pricing.couponDiscountPaise) / pricing.freeShippingThresholdPaise) * 100)}%`,
                     }}
                   />
                 </div>

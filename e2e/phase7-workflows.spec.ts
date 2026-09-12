@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { reloadDocument } from './browser-navigation.js';
 
 test('admin creates a publishable product, verifies storefront visibility, and archives it',async({page})=>{
   const password=process.env.INITIAL_ADMIN_PASSWORD;
@@ -22,7 +23,7 @@ test('admin creates a publishable product, verifies storefront visibility, and a
 
   await page.getByRole('link',{name:/Manage Variants/i}).click();
   await expect(page).toHaveURL(new RegExp(`/admin/variants\\?productId=${productId}`));
-  await page.getByLabel('SKU').fill(`P7B-${suffix}`);
+  await page.getByLabel('SKU', { exact: true }).fill(`P7B-${suffix}`);
   await page.getByLabel('Size').fill('42 (L)');
   await page.getByLabel('Colour name').fill('Midnight');
   await page.getByLabel('Stock',{exact:true}).fill('8');
@@ -55,7 +56,11 @@ test('catalog filters survive reload and browser history',async({page})=>{
   await expect(page).toHaveURL(/fit=Regular/);
   await page.getByRole('button',{name:/In Stock Only/i}).first().click();
   await expect(page).toHaveURL(/inStock=1/);
-  await page.reload();
+  const historyLength = await page.evaluate(() => history.length);
+  // Exercise the browser's reload operation. Firefox's automation protocol
+  // reload appends a history entry even on a bare HTML page (Playwright #22640).
+  await reloadDocument(page);
+  expect(await page.evaluate(() => history.length)).toBe(historyLength);
   await expect(page).toHaveURL(/fit=Regular/);
   await page.goBack();
   await expect(page).not.toHaveURL(/inStock=1/);

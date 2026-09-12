@@ -13,7 +13,6 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5174'),
   DATABASE_URL: z.string().optional(),
   DIRECT_URL: z.string().optional(),
-  SESSION_SECRET: z.string().min(32).optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().email().optional(),
   FRONTEND_URL: z.string().url().default('http://localhost:5174'),
@@ -29,6 +28,8 @@ const envSchema = z.object({
   PHONEPE_CLIENT_VERSION: z.string().optional(),
   PHONEPE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
   PHONEPE_CALLBACK_URL: z.string().url().optional(),
+  PHONEPE_WEBHOOK_USERNAME: z.string().min(1).optional(),
+  PHONEPE_WEBHOOK_PASSWORD: z.string().min(16).optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -51,7 +52,7 @@ if ((env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') && !env.OPERAT
 }
 
 if (env.PAYMENT_PROVIDER === 'phonepe') {
-  const missing = ['PHONEPE_MERCHANT_ID', 'PHONEPE_CLIENT_ID', 'PHONEPE_CLIENT_SECRET', 'PHONEPE_CLIENT_VERSION', 'PHONEPE_CALLBACK_URL']
+  const missing = ['PHONEPE_MERCHANT_ID', 'PHONEPE_CLIENT_ID', 'PHONEPE_CLIENT_SECRET', 'PHONEPE_CLIENT_VERSION', 'PHONEPE_CALLBACK_URL', 'PHONEPE_WEBHOOK_USERNAME', 'PHONEPE_WEBHOOK_PASSWORD']
     .filter(key => !env[key as keyof typeof env]);
   if (missing.length > 0) throw new Error(`PAYMENT_PROVIDER=phonepe requires: ${missing.join(', ')}`);
   if (env.NODE_ENV === 'production' && process.env.PHONEPE_ENVIRONMENT !== 'production') {

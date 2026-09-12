@@ -443,6 +443,7 @@ model Order {
   totalPaise          Int           @map("total_paise")
   status              OrderStatus   @default(PENDING)
   paymentStatus       PaymentStatus @default(PENDING) @map("payment_status")
+  deliveredAt         DateTime?     @map("delivered_at") @db.Timestamptz(6)
   createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   couponRedemptions   CouponRedemption[]

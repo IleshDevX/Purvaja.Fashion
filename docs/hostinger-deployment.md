@@ -1,5 +1,7 @@
 # Purvaja Fashion Atelier — Hostinger Production Deployment Runbook
 
+For the active workflow, environment-specific paths and secrets, unified routing, and release smoke gate, follow [Release environments](release-environments.md). That document supersedes legacy single-directory setup examples below.
+
 > **Target Platform**: Hostinger (Portable between **Hostinger VPS** and **Hostinger Cloud / Web Hosting with Node.js**).  
 > **Architecture**: React 19 / Vite SPA → Express API → Prisma ORM → PostgreSQL.  
 > **Phase Objective**: Prepare complete production deployment readiness, hardening, configuration contracts, and operational procedures **WITHOUT** launching live production instances or enabling real PhonePe payments.
@@ -164,9 +166,6 @@ COOKIE_DOMAIN=
 DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/<DB_NAME>?schema=public&sslmode=require
 DIRECT_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/<DB_NAME>?schema=public&sslmode=require
 
-# Authentication Security (Minimum 32 random characters)
-SESSION_SECRET=<CRYPTOGRAPHICALLY_RANDOM_64_HEX_STRING>
-
 # Transactional Email (Resend)
 RESEND_API_KEY=re_live_<YOUR_ACTUAL_KEY>
 EMAIL_FROM=noreply@example.com
@@ -182,6 +181,8 @@ PHONEPE_CLIENT_ID=
 PHONEPE_CLIENT_SECRET=
 PHONEPE_CLIENT_VERSION=
 PHONEPE_CALLBACK_URL=
+PHONEPE_WEBHOOK_USERNAME=
+PHONEPE_WEBHOOK_PASSWORD=
 ```
 
 ### Frontend Production Environment (`frontend/.env.production`)
@@ -480,7 +481,7 @@ pg_restore --clean --if-exists -v -d "$TEST_DATABASE_URL" /var/backups/purvaja-p
 - **Secret Redaction**: Production logs automatically redact:
   - Passwords and password hashes (`password`, `passwordHash`)
   - Tokens and hashes (`token`, `tokenHash`, `csrfToken`)
-  - Session secrets (`SESSION_SECRET`, `session`)
+  - Session tokens and hashes (`session`, `tokenHash`)
   - Database credentials (`DATABASE_URL`, `DIRECT_URL`)
   - API keys (`RESEND_API_KEY`, `phonepeClientSecret`)
   - Cookie headers (`cookie`, `set-cookie`)
@@ -561,7 +562,6 @@ Complete every check before cutting DNS over to production:
 - [ ] `pnpm validate:config` completes with configuration contract validation passed.
 - [ ] `pnpm db:migrate:deploy` applies all pending migrations without error.
 - [ ] Production database has **NOT** been seeded with demo fixtures (`pnpm db:seed` blocked).
-- [ ] `SESSION_SECRET` is at least 32 cryptographically random characters.
 - [ ] `CORS_ORIGIN` matches exact production domains without wildcards.
 - [ ] `FRONTEND_URL` is set to canonical production HTTPS URL.
 - [ ] Resend sender domain is verified with SPF, DKIM, and DMARC.

@@ -1,4 +1,5 @@
 import { CartItem } from '../../../store/cartStore.js';
+import { commercePolicy } from '@purvaja/commerce-policy';
 import {
   DeliveryOption,
   DeliveryOptionId,
@@ -7,26 +8,26 @@ import {
   OrderPricing,
 } from '../types/checkout.js';
 
-export const FREE_SHIPPING_THRESHOLD = 2500;
+export const FREE_SHIPPING_THRESHOLD = commercePolicy.freeShippingThresholdPaise / 100;
 export const FREE_SHIPPING_THRESHOLD_PAISE = FREE_SHIPPING_THRESHOLD * 100;
 
 export const AVAILABLE_DELIVERY_OPTIONS: Record<DeliveryOptionId, DeliveryOption> = {
   standard: {
     id: 'standard',
     name: 'Standard Ground Delivery',
-    description: 'Tracked ground transit with SMS & WhatsApp updates',
-    estimatedDelivery: '3 - 5 Business Days',
-    pricePaise: 19900,
-    price: 199,
+    description: 'Standard delivery for supported Indian addresses',
+    estimatedDelivery: 'Delivery date confirmed after dispatch',
+    pricePaise: commercePolicy.standardShippingPaise,
+    price: commercePolicy.standardShippingPaise / 100,
     freeThreshold: FREE_SHIPPING_THRESHOLD,
   },
   express: {
     id: 'express',
     name: 'Air Express Priority Delivery',
-    description: 'Priority air dispatch within 24h with door-to-door tracking',
-    estimatedDelivery: '1 - 2 Business Days',
-    pricePaise: 29900,
-    price: 299,
+    description: 'Faster delivery for supported Indian addresses',
+    estimatedDelivery: 'Delivery date confirmed after dispatch',
+    pricePaise: commercePolicy.expressShippingPaise,
+    price: commercePolicy.expressShippingPaise / 100,
   },
 };
 
@@ -52,16 +53,17 @@ export function calculateOrderPricing(
   const productSavings = productSavingsPaise / 100;
 
   let couponDiscountPaise = 0;
-  if (coupon && subtotalPaise > 0) {
-    if (coupon.percentOff) {
-      couponDiscountPaise = Math.floor((subtotalPaise * coupon.percentOff) / 100);
-    } else if (coupon.discountPaise !== undefined) {
-      couponDiscountPaise = coupon.discountPaise;
-    } else if (coupon.fixedOff) {
-      couponDiscountPaise = Math.round(coupon.fixedOff * 100);
+  const couponEligibilityError = coupon?.minimumOrderPaise && subtotalPaise < coupon.minimumOrderPaise
+    ? `Coupon requires a bag subtotal of ₹${(coupon.minimumOrderPaise / 100).toLocaleString('en-IN')}.`
+    : null;
+  if (coupon && subtotalPaise > 0 && !couponEligibilityError) {
+    couponDiscountPaise = coupon.discountType === 'PERCENTAGE'
+      ? Math.floor((subtotalPaise * coupon.discountValue) / 100)
+      : coupon.discountValue;
+    if (coupon.maximumDiscountPaise !== null) {
+      couponDiscountPaise = Math.min(couponDiscountPaise, coupon.maximumDiscountPaise);
     }
     couponDiscountPaise = Math.min(couponDiscountPaise, subtotalPaise);
-
   }
   const couponDiscount = couponDiscountPaise / 100;
 
@@ -101,5 +103,6 @@ export function calculateOrderPricing(
     isFreeShipping,
     remainingForFreeShippingPaise,
     remainingForFreeShipping,
+    couponEligibilityError,
   };
 }

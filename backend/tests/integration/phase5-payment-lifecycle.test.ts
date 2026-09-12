@@ -125,6 +125,7 @@ describe('Phase 5 authoritative payment lifecycle', () => {
     const { payment } = await paymentFixture();
     let checks = 0;
     const provider: PaymentProviderAdapter = {
+      refundMode: 'LIVE',
       async initiate() { throw new Error('not used'); },
       async checkStatus() {
         checks += 1;
@@ -137,6 +138,36 @@ describe('Phase 5 authoritative payment lifecycle', () => {
     expect(result).toMatchObject({ previousStatus: 'PENDING', newStatus: 'SUCCESS', reconciled: true });
     expect(await prisma.paymentObservation.findFirst({ where: { paymentId: payment.id } }))
       .toMatchObject({ source: 'RECONCILIATION', observedState: 'SUCCESS', disposition: 'APPLIED' });
+  });
+
+  it('settles pending refunds only after exact-amount completion, without resubmitting money movement', async () => {
+    const { payment } = await paymentFixture('SUCCESS', 'SHIPPED');
+    const refund = await prisma.paymentRefund.create({ data: {
+      paymentId: payment.id, amountPaise: payment.amountPaise, reason: 'ORDER_CANCELLED',
+      mode: 'LIVE', status: 'REQUESTED', idempotencyKey: randomUUID(),
+    } });
+    let submissions = 0;
+    let amount = payment.amountPaise - 1;
+    const provider: PaymentProviderAdapter = {
+      refundMode: 'LIVE',
+      async initiate() { throw new Error('unused'); },
+      async refund() {
+        submissions++;
+        return { providerReference: 'provider-refund', amountPaise: payment.amountPaise, state: 'PENDING' };
+      },
+      async checkRefundStatus() {
+        return { providerReference: 'provider-refund', amountPaise: amount, state: 'COMPLETED' };
+      },
+    };
+    await expect(new CommerceService().processRefund(refund.id)).rejects.toMatchObject({ code: 'REFUND_PROVIDER_MISMATCH' });
+    const service = new CommerceService(undefined, () => provider);
+    expect(await service.processRefund(refund.id)).toMatchObject({ status: 'PENDING', processedAt: null });
+    expect(await service.processRefund(refund.id)).toMatchObject({ status: 'PENDING', failureCode: 'REFUND_AMOUNT_MISMATCH' });
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe('SUCCESS');
+    amount = payment.amountPaise;
+    expect(await service.processRefund(refund.id)).toMatchObject({ status: 'SUCCEEDED' });
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe('REFUNDED');
+    expect(submissions).toBe(1);
   });
 
   it('retries a definite refund rejection but does not blindly retry an unknown outcome', async () => {
@@ -153,11 +184,12 @@ describe('Phase 5 authoritative payment lifecycle', () => {
 
     let attempts = 0;
     const rejectedThenSuccessful: PaymentProviderAdapter = {
+      refundMode: 'LIVE',
       async initiate() { throw new Error('not used'); },
       async refund() {
         attempts += 1;
         if (attempts === 1) throw new ProviderRefundError('Rejected.', 'REFUND_REJECTED', 'DEFINITE_FAILURE');
-        return { providerReference: `refund-${refund.id}` };
+        return { providerReference: `refund-${refund.id}`, state: 'COMPLETED', amountPaise: refund.amountPaise };
       },
     };
     const service = new CommerceService(undefined, () => rejectedThenSuccessful);
@@ -176,6 +208,7 @@ describe('Phase 5 authoritative payment lifecycle', () => {
     (env as { PAYMENT_PROVIDER: 'demo' | 'phonepe' }).PAYMENT_PROVIDER = original;
     let unknownAttempts = 0;
     const unknownProvider: PaymentProviderAdapter = {
+      refundMode: 'LIVE',
       async initiate() { throw new Error('not used'); },
       async refund() {
         unknownAttempts += 1;

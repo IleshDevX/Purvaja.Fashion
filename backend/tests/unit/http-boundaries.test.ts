@@ -5,11 +5,22 @@ import { logger } from '../../src/utils/logger.js';
 import { createLimiter } from '../../src/middleware/rate-limit.middleware.js';
 import { errorHandler } from '../../src/middleware/error.middleware.js';
 import { env } from '../../src/config/env.js';
+import { applySecurityMiddleware } from '../../src/middleware/security.middleware.js';
 
 const originalEnvironment = env.NODE_ENV;
 afterEach(() => { env.NODE_ENV = originalEnvironment; vi.restoreAllMocks(); });
 
 describe('HTTP trust boundaries', () => {
+  it('keeps HTTPS upgrading on deployment environments while allowing local HTTP acceptance', async () => {
+    for (const environment of ['test', 'staging', 'production'] as const) {
+      env.NODE_ENV = environment;
+      const app = express();
+      applySecurityMiddleware(app);
+      app.get('/', (_req, res) => res.send('test'));
+      const response = await request(app).get('/');
+      expect(response.headers['content-security-policy'].includes('upgrade-insecure-requests')).toBe(environment !== 'test');
+    }
+  });
   it('never logs bearer query values or parser input', async () => {
     const log = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
     const app = express();
@@ -58,5 +69,41 @@ describe('HTTP trust boundaries', () => {
     expect(JSON.stringify(invalid.body)).not.toContain('secret');
     const large = await request(app).post('/').send({ value: 'a'.repeat(100) });
     expect(large.status).toBe(413);
+  });
+
+  it('preserves route-specific rate limiter error codes when global limiter sets allowTestLimitOverride: false', async () => {
+    env.NODE_ENV = 'test';
+    const app = express();
+    const globalLimiter = createLimiter({
+      windowMs: 60000,
+      prodMax: 100,
+      testMax: 50000,
+      allowTestLimitOverride: false,
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Global limited',
+    });
+    const authLimiter = createLimiter({
+      windowMs: 60000,
+      prodMax: 5,
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: 'Auth limited',
+    });
+    app.use('/api', globalLimiter);
+    app.post('/api/auth/login', authLimiter, (_req, res) => res.sendStatus(200));
+
+    const clientId = 'route-limiter-precedence-test';
+    for (let i = 0; i < 3; i++) {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .set('X-Test-Rate-Limit-Max', '3')
+        .set('X-Test-Client-Id', clientId);
+      expect(res.status).toBe(200);
+    }
+    const fourth = await request(app)
+      .post('/api/auth/login')
+      .set('X-Test-Rate-Limit-Max', '3')
+      .set('X-Test-Client-Id', clientId);
+    expect(fourth.status).toBe(429);
+    expect(fourth.body.error.code).toBe('AUTH_RATE_LIMIT_EXCEEDED');
   });
 });

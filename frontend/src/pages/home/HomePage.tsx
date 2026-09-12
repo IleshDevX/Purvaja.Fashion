@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { commercePolicy } from '@purvaja/commerce-policy';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -11,36 +12,6 @@ import { useWishlistStore } from '../../store/wishlistStore.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const TESTIMONIALS = [
-  {
-    id: 1,
-    rating: 5,
-    quote:
-      'The Supima luxury dress shirt fits like it was custom made by a Savile Row tailor. Clean collars that stay sharp all day during client meetings.',
-    author: 'Vikram Malhotra',
-    initials: 'VM',
-    role: 'Managing Director, Apex Capital',
-  },
-  {
-    id: 2,
-    rating: 5,
-    quote:
-      'The fabric quality is unreal. 100s Egyptian cotton feels exceptionally breathable in humid weather, and the mother-of-pearl buttons are a magnificent touch.',
-    author: 'Rohan Mehta',
-    initials: 'RM',
-    role: 'Partner, McKinsey & Co.',
-  },
-  {
-    id: 3,
-    rating: 5,
-    quote:
-      'Finally a brand that focuses 100% on premium men\'s shirts without filler. Ordering process was smooth, and delivery arrived in luxury packaging within 48 hours.',
-    author: 'Aditya Sharma',
-    initials: 'AS',
-    role: 'Creative Lead, Design Studio',
-  },
-] as const;
-
 const categoryCard1 = '/images/products/artisan-mandala-brown-1.jpg';
 const categoryCard2 = '/images/products/forest-floral-green-1.jpg';
 const categoryCard3Top = '/images/products/heritage-leaf-brown-1.jpg';
@@ -49,22 +20,20 @@ const categoryCard3Bottom = '/images/products/monochrome-abstract-grey-1.jpg';
 const ATELIER_STANDARDS = [
   {
     id: 0,
-    pill: 'Global Express Shipping',
-    question: 'Do you offer international shipping?',
-    answer:
-      'Yes. Most global destinations are fully supported. Domestic delivery across India is complimentary on all orders above ₹2,500.',
+    pill: 'Delivery Coverage',
+    question: 'Where do you deliver?',
+    answer: 'Checkout currently supports delivery addresses in India.',
     tag: 'Logistics & Delivery',
-    badgeTitle: 'Global Express & Tracking',
+    badgeTitle: 'Delivery Across India',
     image: '/images/products/egyptian-linen-ivory-1.jpg',
   },
   {
     id: 1,
-    pill: '7-Day Easy Returns',
+    pill: `${commercePolicy.returnWindowDays}-Day Return Requests`,
     question: 'What is your return policy?',
-    answer:
-      'Unworn pieces with original tags can be returned within 7 days with complimentary doorstep pickup.',
+    answer: `Eligible delivered orders can be requested for return within ${commercePolicy.returnWindowDays} days of verified delivery.`,
     tag: 'Client Assurance',
-    badgeTitle: '7-Day Doorstep Returns',
+    badgeTitle: `${commercePolicy.returnWindowDays}-Day Return Requests`,
     image: '/images/products/natural-linen-cream-1.jpg',
   },
   {
@@ -72,7 +41,7 @@ const ATELIER_STANDARDS = [
     pill: 'Precision Fit Guide',
     question: 'How do I choose the right size?',
     answer:
-      'Each product page includes our exact collar and chest reference matrix tailored for our Slim and Regular fit silhouettes.',
+      'Select from the sizes listed on the product page and check the product fit and details before ordering.',
     tag: 'Tailoring Matrix',
     badgeTitle: 'Collar & Sizing Precision',
     image: '/images/products/terra-striped-brown-1.jpg',
@@ -96,11 +65,13 @@ function ProductCard({ shirt, className = '' }: { shirt: Shirt; className?: stri
             />
             
             {/* Badges */}
-            <div className="absolute left-3 top-3 flex gap-2">
-              <span className="rounded-full bg-charcoal-950/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ivory-100 backdrop-blur-sm">
-                NEW IN 20%
-              </span>
-            </div>
+            {(shirt.isNewArrival || (shirt.compareAtPrice && shirt.compareAtPrice > shirt.price)) && (
+              <div className="absolute left-3 top-3 flex gap-2">
+                <span className="rounded-full bg-charcoal-950/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ivory-100 backdrop-blur-sm">
+                  {shirt.isNewArrival ? 'New' : 'Sale'}
+                </span>
+              </div>
+            )}
           </div>
         </Link>
 
@@ -191,7 +162,7 @@ export function HomePage() {
 
   return (
     <div ref={rootRef} className="bg-ivory-100 text-charcoal-900">
-      <HeroSection featuredProduct={heroProduct} />
+      <HeroSection featuredProducts={products} />
 
       {/* 3-Column Curated Menswear Categories Matching Atelier Theme */}
       <section ref={addRevealRef} className="px-4 py-8 sm:py-12 lg:px-10 lg:py-16">
@@ -214,7 +185,7 @@ export function HomePage() {
                 The Formal Classic
               </h3>
               <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm line-clamp-2">
-                Sharp wingtip and spread collars for evening distinction.
+                Browse formal shirts currently available in the catalogue.
               </p>
               <Link
                 to="/shop?category=formal"
@@ -240,10 +211,10 @@ export function HomePage() {
                 Leisure & Resort
               </span>
               <h3 className="mt-1.5 font-serif text-2xl font-light text-ivory-100 sm:text-3xl">
-                Italian Linen Edit
+                Browse by Fabric
               </h3>
               <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-ivory-200/75 sm:text-sm line-clamp-2">
-                Breathable Egyptian weaves engineered for warmer days.
+                Filter the current catalogue by fabric and fit.
               </p>
               <Link
                 to="/shop?category=casual"
@@ -261,11 +232,11 @@ export function HomePage() {
               <div className="z-10 flex-1 pr-3 max-w-[62%]">
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Menswear Classic</p>
                 <h3 className="mt-1 font-serif text-lg sm:text-xl lg:text-2xl font-medium leading-tight text-charcoal-950">
-                  Tailored Oxford
+                  Browse by Fabric
                 </h3>
-                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Structured collar & slim fit</p>
+                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Compare current fabrics and fits</p>
                 <Link
-                  to="/shop?fabric=Oxford"
+                  to="/shop"
                   className="mt-3 sm:mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
                 >
                   Shop Now
@@ -274,7 +245,7 @@ export function HomePage() {
               <div className="absolute -bottom-2 right-2 h-[88%] w-[38%] overflow-hidden rounded-[18px] sm:rounded-[20px]">
                 <img
                   src={categoryCard3Top}
-                  alt="Tailored Oxford Shirt for Men"
+                  alt="Shirt from the current collection"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
@@ -286,11 +257,11 @@ export function HomePage() {
               <div className="z-10 flex-1 pr-3 max-w-[62%]">
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.24em] text-gold-700">Casual Luxury</p>
                 <h3 className="mt-1 font-serif text-lg sm:text-xl lg:text-2xl font-medium leading-tight text-charcoal-950">
-                  Egyptian Cotton
+                  Current Collection
                 </h3>
-                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Unmatched softness & sheen</p>
+                <p className="mt-1 text-xs text-charcoal-500 line-clamp-1">Available fabrics and variants</p>
                 <Link
-                  to="/shop?fabric=Poplin"
+                  to="/shop"
                   className="mt-3 sm:mt-4 inline-flex items-center justify-center rounded-full border border-charcoal-900/15 bg-ivory-100 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-900 shadow-sm transition-colors hover:border-charcoal-950 hover:bg-charcoal-950 hover:text-white"
                 >
                   Shop Now
@@ -299,7 +270,7 @@ export function HomePage() {
               <div className="absolute -bottom-2 right-2 h-[88%] w-[38%] overflow-hidden rounded-[18px] sm:rounded-[20px]">
                 <img
                   src={categoryCard3Bottom}
-                  alt="Egyptian Cotton Shirt for Men"
+                  alt="Current shirt collection"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
@@ -321,7 +292,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center gap-4">
               <p className="hidden max-w-sm text-xs leading-relaxed text-charcoal-500 sm:block">
-                Continuous rotation of bestselling 100% Egyptian cotton menswear shirting. Hover on any piece to pause and explore.
+                Continuous rotation of current catalogue products. Hover on any piece to pause and explore.
               </p>
               <Link
                 to="/shop"
@@ -370,7 +341,7 @@ export function HomePage() {
                   <span className="ml-3 italic text-gold-700">premium too</span>
                 </h2>
                 <p className="mt-3 max-w-lg text-xs leading-relaxed text-charcoal-600 sm:text-sm">
-                  Every Purvaja shirt is crafted with bespoke precision. Explore our fabric integrity, quick fit guidance, and client-first delivery commitments.
+                  Review the current delivery coverage, return window, and fit information before ordering.
                 </p>
 
                 {/* Interactive Feature Category Pills (Accurately synchronized) */}
@@ -447,7 +418,7 @@ export function HomePage() {
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold-500/20 text-gold-700">
                     <Check className="h-3 w-3" />
                   </span>
-                  <span>Free doorstep returns across India</span>
+                  <span>Eligible return requests within {commercePolicy.returnWindowDays} days of verified delivery</span>
                 </div>
                 <Link
                   to="/shop"
@@ -496,59 +467,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* COMMUNITY & REVIEWS SECTION */}
-      <section ref={addRevealRef} className="px-4 py-12 sm:px-6 lg:px-10 lg:py-16">
-        <div className="mx-auto max-w-editorial">
-          <div className="mb-10 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-gold-700">
-              Community & Reviews
-            </p>
-            <h2 className="mt-2 font-serif text-3xl font-light tracking-tight text-charcoal-950 sm:text-4xl lg:text-5xl">
-              Trusted by Leaders <span className="italic text-gold-700">& Creatives</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-xs leading-relaxed text-charcoal-600 sm:text-sm">
-              Hear what our customers say about the fit, feel, and day-to-night versatility of our shirts.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.id}
-                className="flex flex-col justify-between rounded-[26px] border border-ivory-300 bg-white p-7 shadow-[0_12px_32px_rgba(26,26,26,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-gold-500/40 hover:shadow-[0_20px_50px_rgba(26,26,26,0.08)] sm:p-8"
-              >
-                <div>
-                  {/* 5 Gold Stars */}
-                  <div className="flex items-center gap-1">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-gold-500 text-gold-500" />
-                    ))}
-                  </div>
-
-                  {/* Review Quote */}
-                  <p className="mt-5 font-serif text-sm leading-relaxed text-charcoal-800 sm:text-base">
-                    "{t.quote}"
-                  </p>
-                </div>
-
-                {/* Reviewer Meta */}
-                <div className="mt-8 flex items-center gap-3.5 border-t border-ivory-300/80 pt-5">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-charcoal-950 font-serif text-xs font-bold tracking-wider text-gold-300 ring-2 ring-gold-500/30 shrink-0">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-charcoal-950">
-                      {t.author}
-                    </h3>
-                    <p className="text-[11px] text-charcoal-500">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* VIP WARDROBE CALL TO ACTION BANNER */}
       <section ref={addRevealRef} className="px-4 pb-16 pt-4 sm:px-6 lg:px-10 lg:pb-24">
         <div className="mx-auto max-w-editorial overflow-hidden rounded-[32px] border border-charcoal-900/20 bg-charcoal-950 px-6 py-12 text-center text-ivory-100 shadow-2xl sm:px-10 sm:py-16 lg:py-20">
@@ -556,7 +474,7 @@ export function HomePage() {
             {/* VIP Badge */}
             <div className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/30 bg-gold-400/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.26em] text-gold-300 shadow-sm">
               <Sparkles className="h-3 w-3 text-gold-400" />
-              Join the VIP Club
+              Explore the Collection
             </div>
 
             {/* Headline */}
@@ -567,7 +485,7 @@ export function HomePage() {
 
             {/* Subtitle */}
             <p className="mx-auto mt-4 max-w-lg text-xs leading-relaxed text-ivory-200/80 sm:text-sm md:text-base">
-              Experience the distinction of 100s 2-Ply Egyptian Giza Cotton. Enjoy free express delivery and complimentary returns across India.
+              Browse the current catalogue, compare available variants, and review delivery options at checkout.
             </p>
 
             {/* CTA Buttons */}

@@ -27,6 +27,7 @@ COPY backend/package.json ./backend/package.json
 COPY backend/prisma ./backend/prisma
 COPY backend/prisma.config.ts ./backend/prisma.config.ts
 COPY frontend/package.json ./frontend/package.json
+COPY shared ./shared
 
 RUN pnpm install --frozen-lockfile
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm --filter @ecommerce/prototype-b-backend db:generate
@@ -64,6 +65,7 @@ RUN groupadd --system --gid 1001 nodejs && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=deps /app/shared ./shared
 
 # Copy backend dependencies, compiled dist, and prisma
 COPY --from=deps /app/backend/node_modules ./backend/node_modules

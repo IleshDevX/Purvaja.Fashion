@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { commercePolicy } from '@purvaja/commerce-policy';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Star,
@@ -186,7 +187,7 @@ export function ProductDetailsPage() {
         title: 'Customer review',
         comment: newReviewComment.trim(),
       });
-      addToast('Your review was submitted for moderation.', 'success');
+      addToast('Your review was published.', 'success');
       setReviewModalOpen(false);
       setNewReviewComment('');
     } catch (error) {
@@ -415,14 +416,14 @@ export function ProductDetailsPage() {
                 <Truck className="w-4 h-4 text-gold-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold text-charcoal-900 block">Complimentary Shipping</span>
-                  <span>On orders above ₹2,500</span>
+                  <span>Standard delivery from ₹{(commercePolicy.freeShippingThresholdPaise / 100).toLocaleString('en-IN')} after discounts</span>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
                 <RotateCcw className="w-4 h-4 text-gold-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-charcoal-900 block">7-Day Easy Returns</span>
-                  <span>Doorstep pickup & swap</span>
+                  <span className="font-semibold text-charcoal-900 block">{commercePolicy.returnWindowDays}-Day Return Requests</span>
+                  <span>Return requests subject to eligibility</span>
                 </div>
               </div>
             </div>

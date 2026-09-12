@@ -68,7 +68,7 @@ export function AdminLayout() {
   const pathSegments = location.pathname.split('/').filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-ivory-100 text-charcoal-900 flex flex-col lg:flex-row antialiased selection:bg-gold-500 selection:text-charcoal-950 font-sans">
+    <div className="min-h-screen bg-ivory-100 text-charcoal-900 flex flex-col lg:flex-row antialiased selection:bg-gold-500 selection:text-charcoal-950 font-sans min-w-0 max-w-full overflow-x-hidden">
       <a href="#admin-main-content" className="skip-link">
         Skip to main content
       </a>
@@ -234,9 +234,9 @@ export function AdminLayout() {
       </Dialog>
 
       {/* ── MAIN CONTENT AREA ── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-ivory-100">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden bg-ivory-100">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-ivory-300 bg-white/95 px-4 sm:px-8 backdrop-blur-md shadow-2xs">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-ivory-300 bg-white/95 px-4 sm:px-8 backdrop-blur-md shadow-2xs max-w-full">
           {/* Left: Mobile Trigger & Breadcrumbs */}
           <div className="flex items-center gap-3 sm:gap-4">
             <button
@@ -273,7 +273,7 @@ export function AdminLayout() {
         </header>
 
         {/* Page Main Content */}
-        <main id="admin-main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-10 max-w-[1600px] w-full mx-auto outline-none">
+        <main id="admin-main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-10 max-w-[1600px] w-full mx-auto outline-none min-w-0 max-w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>

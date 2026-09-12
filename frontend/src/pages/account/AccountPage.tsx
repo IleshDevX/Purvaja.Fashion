@@ -285,7 +285,7 @@ export function AccountPage() {
                     <div>
                       <h3 className="font-serif text-2xl font-bold text-charcoal-950">Personal Details</h3>
                       <p className="text-xs text-charcoal-500 mt-1">
-                        Manage your contact details, bespoke shirting profile, and sartorial preferences.
+                        Manage your contact details and account information.
                       </p>
                     </div>
 

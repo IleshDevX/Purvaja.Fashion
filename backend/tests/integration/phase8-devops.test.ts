@@ -76,7 +76,6 @@ describe('Phase 8 — DevOps & Production Readiness Verification', () => {
       expect(REDACTED_PATHS).toContain('PHONEPE_CLIENT_SECRET');
       expect(REDACTED_PATHS).toContain('creditCard');
       expect(REDACTED_PATHS).toContain('DATABASE_URL');
-      expect(REDACTED_PATHS).toContain('SESSION_SECRET');
       expect(REDACTED_PATHS).toContain('req.headers.cookie');
       expect(REDACTED_PATHS).toContain('req.headers.authorization');
       expect(['info', 'debug']).toContain(logger.level);
@@ -89,14 +88,13 @@ describe('Phase 8 — DevOps & Production Readiness Verification', () => {
         NODE_ENV: 'production',
         PORT: '5001',
         DATABASE_URL: 'postgresql://usr:pwd@host:5432/db?sslmode=require',
-        // Missing SESSION_SECRET and FRONTEND_URL is localhost
+        // FRONTEND_URL is localhost and demo payments are forbidden in production
         FRONTEND_URL: 'http://localhost:5174',
         PAYMENT_PROVIDER: 'demo', // Forbidden in production
       };
 
       const result = validateProductionConfig(incompleteConfig);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('SESSION_SECRET'))).toBe(true);
       expect(result.errors.some(e => e.includes('PAYMENT_PROVIDER=demo is not permitted'))).toBe(true);
       expect(result.errors.some(e => e.includes('FRONTEND_URL must not point to localhost'))).toBe(true);
     });
@@ -108,7 +106,6 @@ describe('Phase 8 — DevOps & Production Readiness Verification', () => {
         HOST: '0.0.0.0',
         TRUST_PROXY: '1',
         DATABASE_URL: 'postgresql://prod_user:strong_pwd@db.purvaja.fashion:5432/purvaja_prod?sslmode=require',
-        SESSION_SECRET: 'a-secure-production-random-key-with-at-least-32-characters',
         FRONTEND_URL: 'https://purvaja.fashion',
         CORS_ORIGIN: 'https://purvaja.fashion',
         PAYMENT_PROVIDER: 'phonepe',
@@ -118,6 +115,8 @@ describe('Phase 8 — DevOps & Production Readiness Verification', () => {
         PHONEPE_CLIENT_SECRET: 'SECRET123',
         PHONEPE_CLIENT_VERSION: '1',
         PHONEPE_CALLBACK_URL: 'https://api.purvaja.fashion/api/v1/payments/phonepe-callback',
+        PHONEPE_WEBHOOK_USERNAME: 'purvaja-webhook',
+        PHONEPE_WEBHOOK_PASSWORD: 'secure-webhook-password',
         RESEND_API_KEY: 're_production_key_12345',
         EMAIL_FROM: 'orders@purvaja.fashion',
         RATE_LIMIT_REDIS_URL: 'rediss://quota.purvaja.fashion:6380/1',

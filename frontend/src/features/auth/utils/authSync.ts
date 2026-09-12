@@ -12,9 +12,13 @@ export interface AuthSyncPayload {
   userId: string | null;
   status: string;
   timestamp: number;
+  sourceId: string;
 }
 
 let lastBroadcast: { userId: string | null; status: string } | null = null;
+const sourceId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+  ? crypto.randomUUID()
+  : `auth-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export function broadcastAuthBoundary(userId: string | null, status: string): void {
   if (typeof window === 'undefined') return;
@@ -29,6 +33,7 @@ export function broadcastAuthBoundary(userId: string | null, status: string): vo
     userId,
     status,
     timestamp: Date.now(),
+    sourceId,
   };
 
   try {
@@ -60,7 +65,7 @@ export function setupCrossTabAuthSync(
       channel = new BroadcastChannel(AUTH_SYNC_CHANNEL_NAME);
       channel.onmessage = (event: MessageEvent<unknown>) => {
         const data = event.data as Partial<AuthSyncPayload> | null;
-        if (data && data.type === 'AUTH_BOUNDARY' && typeof data.status === 'string') {
+        if (data && data.type === 'AUTH_BOUNDARY' && data.sourceId !== sourceId && typeof data.status === 'string') {
           lastBroadcast = { userId: data.userId ?? null, status: data.status };
           onBoundaryChange(data.userId ?? null, data.status);
         }
@@ -74,7 +79,7 @@ export function setupCrossTabAuthSync(
     if (event.key !== AUTH_SYNC_STORAGE_KEY || !event.newValue) return;
     try {
       const data = JSON.parse(event.newValue) as Partial<AuthSyncPayload>;
-      if (data && data.type === 'AUTH_BOUNDARY' && typeof data.status === 'string') {
+      if (data && data.type === 'AUTH_BOUNDARY' && data.sourceId !== sourceId && typeof data.status === 'string') {
         lastBroadcast = { userId: data.userId ?? null, status: data.status };
         onBoundaryChange(data.userId ?? null, data.status);
       }

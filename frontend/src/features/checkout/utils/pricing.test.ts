@@ -51,7 +51,10 @@ describe('calculateOrderPricing', () => {
   it('calculates coupon percent discount properly', () => {
     const pricing = calculateOrderPricing(items, 'standard', {
       code: 'WELCOME10',
-      percentOff: 10,
+      discountType: 'PERCENTAGE',
+      discountValue: 10,
+      minimumOrderPaise: null,
+      maximumDiscountPaise: null,
       description: '10% Welcome Discount',
     });
 
@@ -64,7 +67,10 @@ describe('calculateOrderPricing', () => {
   it('caps coupon discount at subtotal to prevent negative prices', () => {
     const pricing = calculateOrderPricing(items, 'standard', {
       code: 'MEGA5000',
-      fixedOff: 5000,
+      discountType: 'FIXED',
+      discountValue: 500000,
+      minimumOrderPaise: null,
+      maximumDiscountPaise: null,
       description: 'Mega Discount',
     });
 
@@ -91,7 +97,10 @@ describe('calculateOrderPricing', () => {
     }];
     const pricing = calculateOrderPricing(fractionalItems, 'express', {
       code: 'ONEPAISE',
-      discountPaise: 1,
+      discountType: 'FIXED',
+      discountValue: 1,
+      minimumOrderPaise: null,
+      maximumDiscountPaise: null,
       description: 'One paise exact discount',
     });
 
@@ -101,5 +110,17 @@ describe('calculateOrderPricing', () => {
     expect(pricing.deliveryFeePaise).toBe(29900);
     expect(pricing.grandTotalPaise).toBe(60046);
     expect(pricing.grandTotal).toBe(600.46);
+  });
+
+  it('recalculates fixed discounts and minimum eligibility from current cart inputs', () => {
+    const coupon = {
+      code: 'FIXED500', discountType: 'FIXED' as const, discountValue: 50000,
+      minimumOrderPaise: 200000, maximumDiscountPaise: null, description: '₹500 off',
+    };
+    expect(calculateOrderPricing(items, 'standard', coupon).couponDiscountPaise).toBe(50000);
+    const smallerCart = [{ ...items[0], pricePaise: 100000, price: 1000 }];
+    const recalculated = calculateOrderPricing(smallerCart, 'standard', coupon);
+    expect(recalculated.couponDiscountPaise).toBe(0);
+    expect(recalculated.couponEligibilityError).toContain('₹2,000');
   });
 });

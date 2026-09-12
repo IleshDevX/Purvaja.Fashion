@@ -19,6 +19,18 @@ export function validateTestDatabaseUrl(value: string): URL {
   return target;
 }
 
+function isLocalOrPrivateAddress(address?: string | null): boolean {
+  if (!address) return true;
+  if (['127.0.0.1', '::1'].includes(address) || address.startsWith('127.')) return true;
+  // RFC 1918 private IPv4 ranges (Docker bridge networks in CI/local, LAN)
+  if (/^10\./.test(address)) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(address)) return true;
+  if (/^192\.168\./.test(address)) return true;
+  // RFC 4193 IPv6 unique local addresses
+  if (/^[fF][cCdD]/.test(address)) return true;
+  return false;
+}
+
 export async function verifyTestDatabase(value: string): Promise<void> {
   const target = validateTestDatabaseUrl(value);
   const schema = target.searchParams.get('schema') ?? 'public';
@@ -34,7 +46,7 @@ export async function verifyTestDatabase(value: string): Promise<void> {
       throw new Error('Test database identity or role privileges are unsafe.');
     }
     if (schema === 'public') {
-      if (!['127.0.0.1', '::1'].includes(row.address)) throw new Error('Local test target did not resolve to loopback.');
+      if (!isLocalOrPrivateAddress(row.address)) throw new Error('Local test target did not resolve to loopback or private network.');
       return;
     }
     if (row.role !== schema) throw new Error('Test role must own only its isolated schema.');

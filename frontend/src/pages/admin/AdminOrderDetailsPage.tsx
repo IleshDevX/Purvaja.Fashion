@@ -406,13 +406,13 @@ export function AdminOrderDetailsPage() {
                         <span>Refund ₹{(rf.amountPaise / 100).toLocaleString('en-IN')}</span>
                         <span className="uppercase">{rf.status}</span>
                       </div>
-                      {rf.status === 'REQUESTED' && (
+                      {['REQUESTED', 'FAILED', 'PENDING'].includes(rf.status) && (
                         <button
                           type="button"
                           onClick={async () => {
                             try {
                               await adminService.processRefund(rf.id);
-                              addToast('Refund executed successfully.', 'success');
+                              addToast('Refund status updated. Check the ledger result below.', 'success');
                               const refreshed = await adminService.getOrder(order.id);
                               setOrder(refreshed);
                             } catch (err) {
@@ -421,7 +421,7 @@ export function AdminOrderDetailsPage() {
                           }}
                           className="w-full rounded bg-charcoal-900 text-white py-1 text-[10px] font-bold hover:bg-gold-600 transition-colors"
                         >
-                          Execute Demo Refund
+                          {rf.status === 'PENDING' ? 'Check refund status' : rf.status === 'FAILED' ? 'Retry refund' : 'Process refund'}
                         </button>
                       )}
                     </div>

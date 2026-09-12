@@ -358,17 +358,18 @@ export class AdminService {
     }
   }
 
-  async variants(q: { page: number; limit: number; search?: string }) {
-    const where = q.search
-      ? {
+  async variants(q: { page: number; limit: number; search?: string; productId?: string }) {
+    const where: Prisma.ProductVariantWhereInput = {
+      ...(q.productId ? { productId: q.productId } : {}),
+      ...(q.search ? {
           OR: [
             { sku: { contains: q.search, mode: 'insensitive' as const } },
             { size: { contains: q.search, mode: 'insensitive' as const } },
             { colorName: { contains: q.search, mode: 'insensitive' as const } },
             { product: { name: { contains: q.search, mode: 'insensitive' as const } } },
           ],
-        }
-      : {};
+      } : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.productVariant.findMany({
         where,
@@ -742,9 +743,7 @@ export class AdminService {
 
       const updated = await tx.order.update({
         where: { id },
-        data: {
-          status,
-        },
+          data: { status },
         include: {
           user: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
           items: true,
