@@ -27,7 +27,11 @@ test('admin creates a publishable product, verifies storefront visibility, and a
   await page.getByLabel('Size').fill('42 (L)');
   await page.getByLabel('Colour name').fill('Midnight');
   await page.getByLabel('Stock',{exact:true}).fill('8');
+  const variantWrite = page.waitForResponse(response =>
+    response.url().endsWith('/api/v1/admin/variants') && response.request().method() === 'POST',
+  );
   await page.getByRole('button',{name:'Save',exact:true}).click();
+  expect((await variantWrite).ok()).toBe(true);
   await expect(page.getByText(`P7B-${suffix}`,{exact:true})).toBeVisible();
 
   await page.goto(`/admin/products/${productId}/edit`);

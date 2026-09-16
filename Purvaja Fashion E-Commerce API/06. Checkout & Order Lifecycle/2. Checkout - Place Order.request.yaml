@@ -1,0 +1,29 @@
+$kind: http-request
+name: 2. Checkout / Place Order
+url: "{{baseUrl}}/api/v1/checkout"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+  Idempotency-Key: idem-{{$guid}}
+body:
+  type: text
+  content: |-
+    {
+      "addressId": "{{addressId}}",
+      "paymentMethod": "UPI",
+      "deliveryOptionId": "standard",
+      "couponCode": "WELCOME10"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          var json = pm.response.json();
+          if (json.data && json.data.orderId) {
+              pm.collectionVariables.set('orderId', json.data.orderId);
+              pm.collectionVariables.set('paymentId', json.data.paymentId);
+          }
+      }
+    language: text/javascript
+order: 2000

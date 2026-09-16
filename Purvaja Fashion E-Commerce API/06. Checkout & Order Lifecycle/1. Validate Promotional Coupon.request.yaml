@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/coupons/validate"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "code": "WELCOME10",
+      "subtotalPaise": 499900
+    }
+order: 1000

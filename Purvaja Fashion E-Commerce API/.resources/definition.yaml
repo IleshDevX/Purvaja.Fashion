@@ -1,0 +1,11 @@
+$kind: collection
+description: Complete Postman collection for testing all public, customer, and admin APIs of the Purvaja Fashion E-Commerce platform.
+variables:
+  baseUrl: http://localhost:5001
+  csrfToken: ""
+  productId: ""
+  variantId: ""
+  cartItemId: ""
+  addressId: ""
+  orderId: ""
+  paymentId: ""

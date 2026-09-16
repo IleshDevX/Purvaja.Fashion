@@ -21,6 +21,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default('http://localhost:5174'),
   REDIS_URL: z.string().url().optional(),
   RATE_LIMIT_REDIS_URL: z.string().url().optional(),
+  PAYMENT_STATUS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   WEB_CONCURRENCY: z.coerce.number().int().positive().default(1),
   OPERATIONAL_ALERT_WEBHOOK_URL: z.string().url().optional(),
   OPERATIONAL_ALERT_WEBHOOK_TOKEN: z.string().min(16).optional(),

@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/addresses"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          var json = pm.response.json();
+          if (json.data && json.data.length > 0) {
+              pm.collectionVariables.set('addressId', json.data[0].id);
+          }
+      }
+    language: text/javascript
+order: 1000

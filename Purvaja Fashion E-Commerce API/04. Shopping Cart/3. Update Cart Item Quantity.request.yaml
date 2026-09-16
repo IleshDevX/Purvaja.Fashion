@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/cart/items/{{cartItemId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "quantity": 2
+    }
+order: 3000

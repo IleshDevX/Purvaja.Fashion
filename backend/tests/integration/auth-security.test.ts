@@ -446,6 +446,29 @@ describe('Phase 3: Auth & Account Security Integrity', { timeout: 25000 }, () =>
 
     expect(limitedRes.status).toBe(429);
     expect(limitedRes.body.error.code).toBe('PAYMENT_RATE_LIMIT_EXCEEDED');
+
+    // Status polling has an independent quota, so exhausting initiation does
+    // not lock a customer out of observing the payment outcome.
+    const agent = request.agent(app);
+    expect((await agent.post('/api/v1/auth/login').send({ email: testUserEmail, password })).status).toBe(200);
+    const firstStatus = await agent
+      .get(`/api/v1/payments/${randomUUID()}/status`)
+      .set('X-Test-Rate-Limit-Max', '3')
+      .set('X-Test-Client-Id', testClientId);
+    expect(firstStatus.status).toBe(404);
+
+    for (let i = 0; i < 2; i++) {
+      expect((await agent
+        .get(`/api/v1/payments/${randomUUID()}/status`)
+        .set('X-Test-Rate-Limit-Max', '3')
+        .set('X-Test-Client-Id', testClientId)).status).toBe(404);
+    }
+    const statusLimited = await agent
+      .get(`/api/v1/payments/${randomUUID()}/status`)
+      .set('X-Test-Rate-Limit-Max', '3')
+      .set('X-Test-Client-Id', testClientId);
+    expect(statusLimited.status).toBe(429);
+    expect(statusLimited.body.error.code).toBe('PAYMENT_STATUS_RATE_LIMIT_EXCEEDED');
   });
 
   // --------------------------------------------------------------------------

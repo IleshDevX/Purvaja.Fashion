@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products/{{productId}}/reviews"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "rating": 5,
+      "title": "Impeccable Tailoring",
+      "content": "The Egyptian Giza cotton has an extraordinary drape and lustrous finish."
+    }
+order: 4000

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/wishlist"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "productId": "{{productId}}"
+    }
+order: 2000

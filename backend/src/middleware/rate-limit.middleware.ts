@@ -121,6 +121,18 @@ export const paymentLimiter = createLimiter({
 });
 
 /**
+ * 5b. Payment Status Polling Limiter
+ * Status reads have a separate, higher allowance so a normal checkout polling
+ * loop cannot exhaust the stricter quota for money-moving operations.
+ */
+export const paymentStatusLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  prodMax: env.PAYMENT_STATUS_RATE_LIMIT_MAX,
+  code: 'PAYMENT_STATUS_RATE_LIMIT_EXCEEDED',
+  message: 'Too many payment status checks. Please wait before checking again.',
+});
+
+/**
  * 6. Coupon Validation Limiter
  * 15 validations per 15 minutes per IP
  */

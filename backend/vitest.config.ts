@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.local/**', '**/coverage/**'],
     // Integration files share disposable fixtures; avoid cross-file races.
     fileParallelism: false,
     setupFiles: ['./tests/setup.ts'],

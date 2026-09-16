@@ -4,6 +4,39 @@ import { ConflictError } from '../../src/utils/errors.js';
 import type { Prisma } from '@prisma/client';
 
 describe('AUD-001: Payment Authority & Capture Evidence Validation', () => {
+  it('locks the cart owner before the payment row', async () => {
+    const queryRaw = vi.fn().mockResolvedValue([]);
+    const payment = {
+      id: 'pay-1',
+      amountPaise: 249900,
+      status: 'PENDING',
+      orderId: 'order-1',
+      order: { id: 'order-1', userId: 'user-1', status: 'PENDING', user: null },
+    };
+    const mockTx = {
+      $queryRaw: queryRaw,
+      payment: {
+        findUnique: vi.fn().mockResolvedValue(payment),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(payment),
+      },
+      paymentObservation: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({ id: 'obs-1' }),
+      },
+    } as unknown as Prisma.TransactionClient;
+
+    await applyPaymentObservation(mockTx, 'pay-1', {
+      source: 'STATUS_POLL',
+      state: 'PENDING',
+      deduplicationKey: 'lock-order-test',
+      amountPaise: 249900,
+    });
+
+    const statements = queryRaw.mock.calls.map(([strings]) => (strings as TemplateStringsArray).join(''));
+    expect(statements[0]).toContain('FROM "users"');
+    expect(statements[1]).toContain('FROM "payments"');
+  });
+
   it('applyPaymentObservation strictly rejects SUCCESS observation when amountPaise is undefined', async () => {
     const mockTx = {
       $queryRaw: vi.fn().mockResolvedValue([]),

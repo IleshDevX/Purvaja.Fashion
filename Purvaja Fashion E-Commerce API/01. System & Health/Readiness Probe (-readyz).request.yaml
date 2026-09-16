@@ -1,0 +1,6 @@
+$kind: http-request
+name: Readiness Probe (/readyz)
+description: Deep readiness check verifying database connectivity.
+url: "{{baseUrl}}/readyz"
+method: GET
+order: 2000

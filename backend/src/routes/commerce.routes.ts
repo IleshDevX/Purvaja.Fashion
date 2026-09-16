@@ -23,7 +23,7 @@ import {
   validateCoupon,
 } from '../controllers/commerce.controller.js';
 import { requireAuth, requireCsrf } from '../middleware/auth.middleware.js';
-import { couponLimiter, paymentLimiter } from '../middleware/rate-limit.middleware.js';
+import { couponLimiter, paymentLimiter, paymentStatusLimiter } from '../middleware/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -58,7 +58,7 @@ router.post('/coupons/validate', requireCsrf, validateCoupon);
 router.post('/checkout', requireCsrf, checkout);
 
 router.post('/payments/:paymentId/initiate', requireCsrf, initiatePayment);
-router.get('/payments/:paymentId/status', paymentStatus);
+router.get('/payments/:paymentId/status', paymentStatusLimiter, paymentStatus);
 
 if (env.PAYMENT_PROVIDER === 'demo' && env.NODE_ENV !== 'production') {
   router.post('/payments/:paymentId/demo-result', requireCsrf, demoResult);

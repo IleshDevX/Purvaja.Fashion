@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/wishlist/{{productId}}"
+method: DELETE
+headers:
+  X-CSRF-Token: "{{csrfToken}}"
+order: 3000

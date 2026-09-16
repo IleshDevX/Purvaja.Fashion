@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/addresses"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "recipientName": "Vikram Mehta",
+      "phone": "+919876543210",
+      "line1": "A-402, Imperial Heights, Worli Sea Face",
+      "line2": "Near Landmark Tower",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "postalCode": "400018",
+      "country": "IN",
+      "isDefault": true
+    }
+order: 2000

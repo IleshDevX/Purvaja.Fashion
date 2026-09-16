@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/newsletter/subscriptions"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "patron.subscriber@example.com",
+      "consentSource": "postman_test"
+    }
+order: 1000

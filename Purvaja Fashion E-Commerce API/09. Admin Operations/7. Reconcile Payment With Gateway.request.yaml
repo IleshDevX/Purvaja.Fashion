@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/admin/payments/{{paymentId}}/reconcile"
+method: POST
+headers:
+  X-CSRF-Token: "{{csrfToken}}"
+order: 7000

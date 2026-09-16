@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/cart/items/{{cartItemId}}"
+method: DELETE
+headers:
+  X-CSRF-Token: "{{csrfToken}}"
+order: 4000

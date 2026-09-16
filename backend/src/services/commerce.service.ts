@@ -575,7 +575,7 @@ export class CommerceService {
 
   async complete(userId: string, paymentId: string, result: 'SUCCESS' | 'FAILED' | 'EXPIRED' | 'CANCELLED') {
     const outcome = await this.prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId}::uuid FOR KEY SHARE`;
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${userId}::uuid FOR UPDATE`;
       const owned = await tx.payment.findFirst({ where: { id: paymentId, order: { userId } } });
       if (!owned) throw new NotFoundError('Payment was not found.', 'PAYMENT_NOT_FOUND');
       const transition = await applyPaymentObservation(tx, paymentId, {
@@ -1142,13 +1142,15 @@ export class CommerceService {
       let releasedCount = 0;
 
       for (const orderId of orderIds) {
-        // Lock payment first, exactly as complete(), then re-check every
-        // state inside the same transaction before expiring the reservation.
+        // Settlement and cart writes serialize in user -> payment order.
         const payment = await tx.payment.findFirst({ where: { orderId }, orderBy: { createdAt: 'desc' } });
-        if (payment) await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${payment.id}::uuid FOR UPDATE`;
         const order = await tx.order.findUnique({ where: { id: orderId } });
         if (!order || order.status !== 'PENDING' || !payment || !['PENDING', 'INITIATED'].includes(payment.status)) continue;
-        if (payment.expiresAt && payment.expiresAt > now) continue;
+        await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${order.userId}::uuid FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${payment.id}::uuid FOR UPDATE`;
+        const currentPayment = await tx.payment.findUnique({ where: { id: payment.id } });
+        if (!currentPayment || !['PENDING', 'INITIATED'].includes(currentPayment.status)) continue;
+        if (currentPayment.expiresAt && currentPayment.expiresAt > now) continue;
 
         const activeCount = await tx.inventoryReservation.count({ where: { orderId, status: 'ACTIVE' } });
         const transition = await applyPaymentObservation(tx, payment.id, {

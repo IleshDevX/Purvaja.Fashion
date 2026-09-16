@@ -113,6 +113,15 @@ export async function applyPaymentObservation(
   observation: PaymentObservation,
 ) {
   const deduplicationKey = boundedKey(observation.deduplicationKey);
+  // Cart mutations and checkout both serialize on the owning user. Resolve the
+  // owner without a lock, then acquire the same user -> payment lock order used
+  // by commerce writes before changing payment, inventory, order, or cart state.
+  const owner = await tx.payment.findUnique({
+    where: { id: paymentId },
+    select: { order: { select: { userId: true } } },
+  });
+  if (!owner) throw new NotFoundError('Payment was not found.', 'PAYMENT_NOT_FOUND');
+  await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${owner.order.userId}::uuid FOR UPDATE`;
   await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${paymentId}::uuid FOR UPDATE`;
   const payment = await tx.payment.findUnique({
     where: { id: paymentId },

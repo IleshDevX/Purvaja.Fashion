@@ -71,7 +71,11 @@ test('completes a demo purchase through the UI and persists one authoritative se
   await page.getByLabel('PIN Code *').fill('411001');
   await page.getByRole('button', { name: /CONTINUE TO DELIVERY & REVIEW/ }).click();
   await page.getByRole('button', { name: /PROCEED TO PAYMENT/ }).click();
+  const checkoutWrite = page.waitForResponse(response =>
+    response.url().endsWith('/api/v1/checkout') && response.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: /CONFIRM & PAY/ }).click();
+  expect((await checkoutWrite).ok()).toBe(true);
 
   await expect(page).toHaveURL(/\/checkout\/payment\?paymentId=/);
   await expect(page.getByText('DEMO GATEWAY · NO REAL MONEY WILL BE CHARGED')).toBeVisible();

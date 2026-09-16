@@ -1,0 +1,5 @@
+$kind: http-request
+name: Health Readiness (/health/ready)
+url: "{{baseUrl}}/health/ready"
+method: GET
+order: 4000

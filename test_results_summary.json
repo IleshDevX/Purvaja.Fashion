@@ -1,0 +1,1098 @@
+{
+  "timestamp": "2026-09-16T09:46:24.133Z",
+  "baseUrl": "http://localhost:5001",
+  "totalTests": 69,
+  "passedTests": 30,
+  "failedTests": 39,
+  "passRate": "43.5%",
+  "averageLatencyMs": 169,
+  "results": [
+    {
+      "name": "1. Fast Liveness Probe",
+      "method": "GET",
+      "path": "/healthz",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 74,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Deep Readiness Probe (DB & Redis)",
+      "method": "GET",
+      "path": "/readyz",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 297,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Router Base Health Check",
+      "method": "GET",
+      "path": "/health",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 3,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Router Health Readiness Check",
+      "method": "GET",
+      "path": "/health/ready",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 65,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Acquire CSRF Token and Set pf_csrf Cookie",
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 32,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Access /me without session (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 32,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "UNAUTHORIZED"
+      }
+    },
+    {
+      "name": "3. Register New Customer Account",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 793,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Resend Verification Code",
+      "method": "POST",
+      "path": "/api/v1/auth/resend-verification",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 70,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "VERIFICATION_RESEND_RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "5. Verify Email with 6-digit OTP",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 391,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. Patron Login (Issues pf_session cookie)",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 341,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "7. Get Current Patron Profile (/me)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 136,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "8. Update Profile without CSRF (Security 403 check)",
+      "method": "PATCH",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        403
+      ],
+      "actualStatus": 403,
+      "durationMs": 96,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "CSRF_INVALID"
+      }
+    },
+    {
+      "name": "9. Update Patron Profile & Tailoring Preferences",
+      "method": "PATCH",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 158,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "10. Forgot Password Request",
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 1017,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "11. Reset Password with Secret Token",
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 389,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "12. Re-login Patron after Password Reset",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 311,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. List Products with Multi-Facet Filters",
+      "method": "GET",
+      "path": "/api/v1/products?limit=10&page=1&inStock=true&category=shirts&sort=featured",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 339,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Get Product Detail by Slug",
+      "method": "GET",
+      "path": "/api/v1/products/pure-normandy-cream-linen-shirt",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 229,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Get Product Detail by UUID",
+      "method": "GET",
+      "path": "/api/v1/products/9dafff31-67e3-4ac5-9ff5-891705c019e6",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 219,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. List Reviews for Product",
+      "method": "GET",
+      "path": "/api/v1/products/9dafff31-67e3-4ac5-9ff5-891705c019e6/reviews?limit=5",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 217,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Submit Customer Review (Auth + CSRF)",
+      "method": "POST",
+      "path": "/api/v1/products/9dafff31-67e3-4ac5-9ff5-891705c019e6/reviews",
+      "expectedStatus": [
+        201,
+        200
+      ],
+      "actualStatus": 403,
+      "durationMs": 308,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "VERIFIED_PURCHASE_REQUIRED"
+      }
+    },
+    {
+      "name": "1. Get Current Patron Cart",
+      "method": "GET",
+      "path": "/api/v1/cart",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 367,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Add Garment Variant to Cart",
+      "method": "POST",
+      "path": "/api/v1/cart/items",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 610,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Update Line Item Quantity in Cart",
+      "method": "PATCH",
+      "path": "/api/v1/cart/items/97a98a76-8337-4538-9ae3-3e238d3c8a62",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 602,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Merge Guest Bag into Customer Account",
+      "method": "POST",
+      "path": "/api/v1/cart/merge",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 698,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Remove Line Item from Cart",
+      "method": "DELETE",
+      "path": "/api/v1/cart/items/97a98a76-8337-4538-9ae3-3e238d3c8a62",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 489,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. Clear Shopping Cart",
+      "method": "DELETE",
+      "path": "/api/v1/cart",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 540,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "7. Re-add Item to Bag for Order Placement",
+      "method": "POST",
+      "path": "/api/v1/cart/items",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 599,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. List Patron Addresses",
+      "method": "GET",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 135,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Create Shipping Address",
+      "method": "POST",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 263,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Update Address Details",
+      "method": "PATCH",
+      "path": "/api/v1/addresses/a74c61ea-3d2c-45ab-b2d8-984eea6b6586",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 570,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Create Secondary Address for Deletion Test",
+      "method": "POST",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "1. Validate Promotional Coupon Code",
+      "method": "POST",
+      "path": "/api/v1/coupons/validate",
+      "expectedStatus": [
+        200,
+        404,
+        400
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "2. Execute Checkout / Place Order (Atomic Inventory Lock)",
+      "method": "POST",
+      "path": "/api/v1/checkout",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 36,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "6. List Customer Orders",
+      "method": "GET",
+      "path": "/api/v1/orders?limit=10&page=1",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "1. Get Customer Wishlist",
+      "method": "GET",
+      "path": "/api/v1/wishlist",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "2. Add Garment to Wishlist",
+      "method": "POST",
+      "path": "/api/v1/wishlist",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 36,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "3. Remove Garment from Wishlist",
+      "method": "DELETE",
+      "path": "/api/v1/wishlist/9dafff31-67e3-4ac5-9ff5-891705c019e6",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "4. Sync Guest Wishlist on Authentication",
+      "method": "POST",
+      "path": "/api/v1/wishlist/sync",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 32,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "1. Public Newsletter Subscription",
+      "method": "POST",
+      "path": "/api/v1/newsletter/subscriptions",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "1. Customer Role Access to Admin Dashboard (Security 403 check)",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        403
+      ],
+      "actualStatus": 429,
+      "durationMs": 31,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "2. Unauthenticated Access to Admin Dashboard (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 429,
+      "durationMs": 32,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "3. Admin Dashboard Business KPI Metrics",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 31,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "4. Admin Catalog List",
+      "method": "GET",
+      "path": "/api/v1/admin/products?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 30,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "5. Admin Create Garment Product",
+      "method": "POST",
+      "path": "/api/v1/admin/products",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 429,
+      "durationMs": 31,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "6. Admin Product Detail View",
+      "method": "GET",
+      "path": "/api/v1/admin/products/",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "7. Admin Update Product Specifications",
+      "method": "PATCH",
+      "path": "/api/v1/admin/products/",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 33,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "8. Admin List Categories",
+      "method": "GET",
+      "path": "/api/v1/admin/categories",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 39,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "9. Admin Create Category",
+      "method": "POST",
+      "path": "/api/v1/admin/categories",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "11. Admin List SKU Variants",
+      "method": "GET",
+      "path": "/api/v1/admin/variants?limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 37,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "12. Admin Create SKU Variant",
+      "method": "POST",
+      "path": "/api/v1/admin/variants",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "14. Admin Inventory Stock Overview",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory?filter=all",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "15. Admin Inventory Movement Audit Log",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory/movements?limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 39,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "16. Admin Inspect Active Stock Holds / Reservations",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory/reservations",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 39,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "17. Admin Adjust Inventory Stock (RESTOCK)",
+      "method": "POST",
+      "path": "/api/v1/admin/inventory/adjustments",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 33,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "18. Admin Direct Stock Quantity Calibration",
+      "method": "PATCH",
+      "path": "/api/v1/admin/inventory/",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "19. Admin List Store Orders",
+      "method": "GET",
+      "path": "/api/v1/admin/orders?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 32,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "24. Admin List Customer Accounts",
+      "method": "GET",
+      "path": "/api/v1/admin/customers?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "25. Admin Customer Profile Detail",
+      "method": "GET",
+      "path": "/api/v1/admin/customers/9b723220-538e-4459-91d6-0a584f6f68d5",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 34,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "26. Admin List Promotional Coupons",
+      "method": "GET",
+      "path": "/api/v1/admin/coupons",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "27. Admin Create Promotional Coupon",
+      "method": "POST",
+      "path": "/api/v1/admin/coupons",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 429,
+      "durationMs": 31,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "29. Admin Audit Logs Immutable Trail",
+      "method": "GET",
+      "path": "/api/v1/admin/audit-logs?limit=50",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 30,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "30. Admin System Telemetry & Worker Status",
+      "method": "GET",
+      "path": "/api/v1/admin/metrics",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 33,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "31. Admin Presigned Upload Mode Check",
+      "method": "POST",
+      "path": "/api/v1/admin/uploads/presigned",
+      "expectedStatus": [
+        200,
+        400
+      ],
+      "actualStatus": 429,
+      "durationMs": 35,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "32. Admin Direct Image Upload & Processing",
+      "method": "POST",
+      "path": "/api/v1/admin/uploads/direct",
+      "expectedStatus": [
+        201,
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 33,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "1. Shipping Logistics Webhook (Unconfigured/Unsigned Check)",
+      "method": "POST",
+      "path": "/api/v1/webhooks/shipping",
+      "expectedStatus": [
+        200,
+        401,
+        403,
+        503
+      ],
+      "actualStatus": 429,
+      "durationMs": 32,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "2. PhonePe Payment Gateway Callback",
+      "method": "POST",
+      "path": "/api/v1/payments/phonepe/callback",
+      "expectedStatus": [
+        200,
+        400,
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 3,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "MISSING_SIGNATURE"
+      }
+    },
+    {
+      "name": "Patron Logout & Session Invalidation",
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 429,
+      "durationMs": 30,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    },
+    {
+      "name": "Verify Patron Session Revoked after Logout (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 429,
+      "durationMs": 33,
+      "passed": false,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "RATE_LIMIT_EXCEEDED"
+      }
+    }
+  ]
+}

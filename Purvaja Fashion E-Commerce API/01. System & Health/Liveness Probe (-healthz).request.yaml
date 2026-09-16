@@ -1,0 +1,6 @@
+$kind: http-request
+name: Liveness Probe (/healthz)
+description: Fast liveness check for reverse proxies and orchestrators.
+url: "{{baseUrl}}/healthz"
+method: GET
+order: 1000

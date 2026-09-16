@@ -1,0 +1,14 @@
+$kind: http-request
+name: 5. Complete Demo Payment (Dev/Staging)
+url: "{{baseUrl}}/api/v1/payments/{{paymentId}}/demo-result"
+method: POST
+headers:
+  Content-Type: application/json
+  X-CSRF-Token: "{{csrfToken}}"
+body:
+  type: text
+  content: |-
+    {
+      "result": "SUCCESS"
+    }
+order: 5000

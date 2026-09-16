@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/admin/audit-logs"
+method: GET
+order: 9000

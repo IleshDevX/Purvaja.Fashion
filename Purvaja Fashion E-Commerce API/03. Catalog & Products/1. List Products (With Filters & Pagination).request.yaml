@@ -1,0 +1,36 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products?limit=10&page=1&inStock=true"
+method: GET
+queryParams:
+  - key: limit
+    value: "10"
+  - key: page
+    value: "1"
+  - key: inStock
+    value: "true"
+  - key: category
+    value: shirts
+    disabled: true
+  - key: fit
+    value: Slim
+    disabled: true
+  - key: size
+    value: "40"
+    disabled: true
+  - key: search
+    value: Oxford
+    disabled: true
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          var json = pm.response.json();
+          if (json.data && json.data.items && json.data.items.length > 0) {
+              pm.collectionVariables.set('productId', json.data.items[0].id);
+              if (json.data.items[0].variants && json.data.items[0].variants.length > 0) {
+                  pm.collectionVariables.set('variantId', json.data.items[0].variants[0].id);
+              }
+          }
+      }
+    language: text/javascript
+order: 1000

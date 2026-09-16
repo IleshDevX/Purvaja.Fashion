@@ -1,0 +1,1170 @@
+{
+  "timestamp": "2026-09-16T09:50:27.331Z",
+  "baseUrl": "http://localhost:5001",
+  "totalTests": 76,
+  "passedTests": 76,
+  "failedTests": 0,
+  "passRate": "100.0%",
+  "averageLatencyMs": 354,
+  "results": [
+    {
+      "name": "1. Fast Liveness Probe",
+      "method": "GET",
+      "path": "/healthz",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 67,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Deep Readiness Probe (DB & Redis)",
+      "method": "GET",
+      "path": "/readyz",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 70,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Router Base Health Check",
+      "method": "GET",
+      "path": "/health",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 5,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Router Health Readiness Check",
+      "method": "GET",
+      "path": "/health/ready",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 65,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Acquire CSRF Token and Set pf_csrf Cookie",
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 35,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Access /me without session (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 38,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "UNAUTHORIZED"
+      }
+    },
+    {
+      "name": "3. Register New Customer Account",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 1714,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Resend Verification Code",
+      "method": "POST",
+      "path": "/api/v1/auth/resend-verification",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 1654,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Verify Email with 6-digit OTP",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 395,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. Patron Login (Issues pf_session cookie)",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 347,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "7. Get Current Patron Profile (/me)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 136,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "8. Update Profile without CSRF (Security 403 check)",
+      "method": "PATCH",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        403
+      ],
+      "actualStatus": 403,
+      "durationMs": 98,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "CSRF_INVALID"
+      }
+    },
+    {
+      "name": "9. Update Patron Profile & Tailoring Preferences",
+      "method": "PATCH",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 1224,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "10. Forgot Password Request",
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 570,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "11. Reset Password with Secret Token",
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 416,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "12. Re-login Patron after Password Reset",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 315,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. List Products with Multi-Facet Filters",
+      "method": "GET",
+      "path": "/api/v1/products?limit=10&page=1&inStock=true&category=shirts&sort=featured",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 402,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Get Product Detail by Slug",
+      "method": "GET",
+      "path": "/api/v1/products/emerald-botanical-floral-poplin-shirt",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 235,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Get Product Detail by UUID",
+      "method": "GET",
+      "path": "/api/v1/products/2c15635f-7c64-4432-af65-170e511a8c34",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 250,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. List Reviews for Product",
+      "method": "GET",
+      "path": "/api/v1/products/2c15635f-7c64-4432-af65-170e511a8c34/reviews?limit=5",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 216,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Submit Review Unverified Check (Verified Purchase Policy 403)",
+      "method": "POST",
+      "path": "/api/v1/products/2c15635f-7c64-4432-af65-170e511a8c34/reviews",
+      "expectedStatus": [
+        403
+      ],
+      "actualStatus": 403,
+      "durationMs": 274,
+      "passed": true,
+      "notes": "Correctly blocked by VERIFIED_PURCHASE_REQUIRED guard",
+      "responseSummary": {
+        "success": false,
+        "code": "VERIFIED_PURCHASE_REQUIRED"
+      }
+    },
+    {
+      "name": "1. Get Current Patron Cart",
+      "method": "GET",
+      "path": "/api/v1/cart",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 373,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Add Garment Variant to Cart",
+      "method": "POST",
+      "path": "/api/v1/cart/items",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 592,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Update Line Item Quantity in Cart",
+      "method": "PATCH",
+      "path": "/api/v1/cart/items/02477a44-2cd0-485c-a423-bac22a0ccf0d",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 1034,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Merge Guest Bag into Customer Account",
+      "method": "POST",
+      "path": "/api/v1/cart/merge",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 651,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Remove Line Item from Cart",
+      "method": "DELETE",
+      "path": "/api/v1/cart/items/02477a44-2cd0-485c-a423-bac22a0ccf0d",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 519,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. Clear Shopping Cart",
+      "method": "DELETE",
+      "path": "/api/v1/cart",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 504,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "7. Re-add Item to Bag for Order Placement",
+      "method": "POST",
+      "path": "/api/v1/cart/items",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 632,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. List Patron Addresses",
+      "method": "GET",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 131,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Create Shipping Address",
+      "method": "POST",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 276,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Update Address Details",
+      "method": "PATCH",
+      "path": "/api/v1/addresses/93c4c4f7-aa0f-489e-b38e-2e4645039ebc",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 284,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Create Secondary Address for Deletion Test",
+      "method": "POST",
+      "path": "/api/v1/addresses",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 237,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Delete Address",
+      "method": "DELETE",
+      "path": "/api/v1/addresses/3a640835-e064-4776-b36a-c989c451d25b",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 274,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Validate Promotional Coupon Code",
+      "method": "POST",
+      "path": "/api/v1/coupons/validate",
+      "expectedStatus": [
+        200,
+        404,
+        400
+      ],
+      "actualStatus": 200,
+      "durationMs": 197,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Execute Checkout / Place Order (Atomic Inventory Lock)",
+      "method": "POST",
+      "path": "/api/v1/checkout",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 2407,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. List Customer Orders",
+      "method": "GET",
+      "path": "/api/v1/orders?limit=10&page=1",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 256,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Get Customer Wishlist",
+      "method": "GET",
+      "path": "/api/v1/wishlist",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 121,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "2. Add Garment to Wishlist",
+      "method": "POST",
+      "path": "/api/v1/wishlist",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 339,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "3. Remove Garment from Wishlist",
+      "method": "DELETE",
+      "path": "/api/v1/wishlist/2c15635f-7c64-4432-af65-170e511a8c34",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 159,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Sync Guest Wishlist on Authentication",
+      "method": "POST",
+      "path": "/api/v1/wishlist/sync",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 300,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Public Newsletter Subscription",
+      "method": "POST",
+      "path": "/api/v1/newsletter/subscriptions",
+      "expectedStatus": [
+        201,
+        200
+      ],
+      "actualStatus": 201,
+      "durationMs": 99,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Customer Role Access to Admin Dashboard (Security 403 check)",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        403
+      ],
+      "actualStatus": 403,
+      "durationMs": 124,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "FORBIDDEN"
+      }
+    },
+    {
+      "name": "2. Unauthenticated Access to Admin Dashboard (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 56,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "UNAUTHORIZED"
+      }
+    },
+    {
+      "name": "3. Admin Dashboard Business KPI Metrics",
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 171,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "4. Admin Catalog List",
+      "method": "GET",
+      "path": "/api/v1/admin/products?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 232,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "5. Admin Create Garment Product",
+      "method": "POST",
+      "path": "/api/v1/admin/products",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 398,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "6. Admin Product Detail View",
+      "method": "GET",
+      "path": "/api/v1/admin/products/a84a4243-4e10-460d-bc2a-836fec868ea2",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 195,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "7. Admin Update Product Specifications",
+      "method": "PATCH",
+      "path": "/api/v1/admin/products/a84a4243-4e10-460d-bc2a-836fec868ea2",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 938,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "8. Admin List Categories",
+      "method": "GET",
+      "path": "/api/v1/admin/categories",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 128,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "9. Admin Create Category",
+      "method": "POST",
+      "path": "/api/v1/admin/categories",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 252,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "10. Admin Update Category",
+      "method": "PATCH",
+      "path": "/api/v1/admin/categories/0aca5856-7e2e-4ad7-8f10-76aa4dcc2ca1",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 249,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "11. Admin List SKU Variants",
+      "method": "GET",
+      "path": "/api/v1/admin/variants?limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 183,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "12. Admin Create SKU Variant",
+      "method": "POST",
+      "path": "/api/v1/admin/variants",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 383,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "13. Admin Update SKU Variant",
+      "method": "PATCH",
+      "path": "/api/v1/admin/variants/0fc67680-a64e-4872-8ed0-ea0df6b570d2",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 436,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "14. Admin Inventory Stock Overview",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory?filter=all",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 181,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "15. Admin Inventory Movement Audit Log",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory/movements?limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 180,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "16. Admin Inspect Active Stock Holds / Reservations",
+      "method": "GET",
+      "path": "/api/v1/admin/inventory/reservations",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 181,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "17. Admin Adjust Inventory Stock (RESTOCK)",
+      "method": "POST",
+      "path": "/api/v1/admin/inventory/adjustments",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 315,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "18. Admin Direct Stock Quantity Calibration",
+      "method": "PATCH",
+      "path": "/api/v1/admin/inventory/0fc67680-a64e-4872-8ed0-ea0df6b570d2",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 337,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "19. Admin List Store Orders",
+      "method": "GET",
+      "path": "/api/v1/admin/orders?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 156,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "20. Admin Get Order Detail",
+      "method": "GET",
+      "path": "/api/v1/admin/orders/14a7358e-09d2-440f-b846-3bfa50b539f8",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 406,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "21. Admin Update Order State Machine (CONFIRMED -> PROCESSING)",
+      "method": "PATCH",
+      "path": "/api/v1/admin/orders/14a7358e-09d2-440f-b846-3bfa50b539f8/status",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 544,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "22. Admin Manifest Order Shipment (PROCESSING -> SHIPPED)",
+      "method": "POST",
+      "path": "/api/v1/admin/orders/14a7358e-09d2-440f-b846-3bfa50b539f8/ship",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 1160,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "24. Admin List Customer Accounts",
+      "method": "GET",
+      "path": "/api/v1/admin/customers?page=1&limit=25",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 137,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "25. Admin Customer Profile Detail",
+      "method": "GET",
+      "path": "/api/v1/admin/customers/441a6813-f262-417b-9dfa-947767e19102",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 161,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "26. Admin List Promotional Coupons",
+      "method": "GET",
+      "path": "/api/v1/admin/coupons",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 155,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "27. Admin Create Promotional Coupon",
+      "method": "POST",
+      "path": "/api/v1/admin/coupons",
+      "expectedStatus": [
+        201
+      ],
+      "actualStatus": 201,
+      "durationMs": 256,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "28. Admin Update Promotional Coupon",
+      "method": "PATCH",
+      "path": "/api/v1/admin/coupons/cda31ac1-41b0-4956-a2c0-0875d24b6e89",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 274,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "29. Admin Audit Logs Immutable Trail",
+      "method": "GET",
+      "path": "/api/v1/admin/audit-logs?limit=50",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 194,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "30. Admin System Telemetry & Worker Status",
+      "method": "GET",
+      "path": "/api/v1/admin/metrics",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 231,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "31. Admin Presigned Upload Mode Check",
+      "method": "POST",
+      "path": "/api/v1/admin/uploads/presigned",
+      "expectedStatus": [
+        200,
+        400
+      ],
+      "actualStatus": 400,
+      "durationMs": 100,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "PRESIGNED_UPLOAD_UNAVAILABLE"
+      }
+    },
+    {
+      "name": "32. Admin Direct Image Upload & Processing",
+      "method": "POST",
+      "path": "/api/v1/admin/uploads/direct",
+      "expectedStatus": [
+        201,
+        200
+      ],
+      "actualStatus": 201,
+      "durationMs": 105,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "1. Shipping Logistics Webhook (Unconfigured/Unsigned Safeguard)",
+      "method": "POST",
+      "path": "/api/v1/webhooks/shipping",
+      "expectedStatus": [
+        200,
+        401,
+        403,
+        503
+      ],
+      "actualStatus": 503,
+      "durationMs": 37,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "SHIPPING_WEBHOOK_UNAVAILABLE"
+      }
+    },
+    {
+      "name": "2. PhonePe Payment Gateway Callback",
+      "method": "POST",
+      "path": "/api/v1/payments/phonepe/callback",
+      "expectedStatus": [
+        200,
+        400,
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 3,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "MISSING_SIGNATURE"
+      }
+    },
+    {
+      "name": "Patron Logout & Session Invalidation",
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "expectedStatus": [
+        200
+      ],
+      "actualStatus": 200,
+      "durationMs": 131,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": true
+      }
+    },
+    {
+      "name": "Verify Patron Session Revoked after Logout (Security 401 check)",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "expectedStatus": [
+        401
+      ],
+      "actualStatus": 401,
+      "durationMs": 30,
+      "passed": true,
+      "notes": "",
+      "responseSummary": {
+        "success": false,
+        "code": "UNAUTHORIZED"
+      }
+    }
+  ]
+}

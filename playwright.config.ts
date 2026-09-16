@@ -7,6 +7,11 @@ const apiWorkload = /representative catalog workload/;
 
 export default defineConfig({
   testDir: './e2e',
+  // Browser workflows use the isolated hosted PostgreSQL target and can span
+  // several authenticated writes. Keep the default above individual locator
+  // deadlines so a slow network round trip is reported at its real assertion.
+  timeout: 90_000,
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,

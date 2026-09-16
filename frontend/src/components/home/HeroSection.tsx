@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play, Sparkles } from 'lucide-react';
 import type { Shirt } from '../../features/products/types/product.js';
 
 interface HeroSectionProps {
@@ -11,14 +11,15 @@ export function HeroSection({ featuredProducts }: HeroSectionProps) {
   const rootRef = useRef<HTMLElement>(null);
   const slides = featuredProducts.slice(0, 4);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(() => {
+  const [isUserPaused, setIsUserPaused] = useState<boolean>(() => {
     return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
+  const [isPointerPaused, setIsPointerPaused] = useState(false);
+  const isPaused = isUserPaused || isPointerPaused;
 
   // Auto-slide interval: Cycles every 2.5 seconds
   useEffect(() => {
-    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (isPaused || prefersReducedMotion) return;
+    if (isPaused) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % Math.max(1, slides.length));
@@ -43,8 +44,8 @@ export function HeroSection({ featuredProducts }: HeroSectionProps) {
   return (
     <section
       ref={rootRef}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => setIsPointerPaused(true)}
+      onMouseLeave={() => setIsPointerPaused(false)}
       className="relative w-full overflow-hidden bg-ivory-100 pt-16 lg:pt-22"
     >
       {/* Main Container */}
@@ -173,11 +174,12 @@ export function HeroSection({ featuredProducts }: HeroSectionProps) {
               <div className="absolute right-5 top-5 flex items-center gap-2 z-10">
                 <button
                   type="button"
-                  onClick={() => setIsPaused(p => !p)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95 text-xs font-bold"
-                  aria-label={isPaused ? "Play hero carousel" : "Pause hero carousel"}
+                  onClick={() => setIsUserPaused(paused => !paused)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/20 transition-all duration-300 hover:bg-gold-400 hover:text-charcoal-950 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  aria-label={isUserPaused ? 'Play hero carousel' : 'Pause hero carousel'}
+                  aria-pressed={isUserPaused}
                 >
-                  {isPaused ? '▶' : '⏸'}
+                  {isUserPaused ? <Play className="h-5 w-5" aria-hidden="true" /> : <Pause className="h-5 w-5" aria-hidden="true" />}
                 </button>
                 <button
                   type="button"
