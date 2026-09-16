@@ -2,6 +2,7 @@ import {
   User,
   LoginCredentials,
   RegisterCredentials,
+  RegistrationResult,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ProfileUpdate,
@@ -29,9 +30,10 @@ export const authService = {
     return responseUser(unwrapApiData(response.data));
   },
 
-  async register(credentials: RegisterCredentials): Promise<User> {
+  async register(credentials: RegisterCredentials): Promise<RegistrationResult> {
     const response = await apiClient.post('/auth/register', credentials);
-    return responseUser(unwrapApiData(response.data));
+    const payload = unwrapApiData<{ user: User; emailSent: boolean }>(response.data);
+    return { user: responseUser(payload), emailSent: payload.emailSent };
   },
 
   async forgotPassword(request: ForgotPasswordRequest): Promise<void> {

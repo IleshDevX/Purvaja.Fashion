@@ -30,7 +30,10 @@ describe('RegisterPage', () => {
   });
 
   it('submits registration form with provided input data', async () => {
-    const mockRegister = vi.fn().mockResolvedValue(true);
+    const mockRegister = vi.fn().mockResolvedValue({
+      user: { id: 'customer-1', firstName: 'Meera', lastName: 'Patel', email: 'meera@example.com', role: 'customer' },
+      emailSent: true,
+    });
     useAuthStore.setState({ register: mockRegister });
 
     renderWithProviders(<RegisterPage />);
@@ -54,5 +57,6 @@ describe('RegisterPage', () => {
         confirmPassword: 'Password123!Aa',
       });
     });
+    expect(await screen.findByText(/We sent a verification code/i)).toBeInTheDocument();
   });
 });

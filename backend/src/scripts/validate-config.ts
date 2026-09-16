@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -301,6 +302,9 @@ export function runValidationCLI(): void {
   console.log('✅ Configuration contract validation PASSED. Deployment evidence is still required.\n');
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]).toLowerCase() === resolve(fileURLToPath(import.meta.url)).toLowerCase()
+) {
   runValidationCLI();
 }

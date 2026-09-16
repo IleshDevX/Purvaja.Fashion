@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import type { Server } from 'node:http';
 import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
@@ -87,6 +88,9 @@ async function run(): Promise<void> {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]).toLowerCase() === resolve(fileURLToPath(import.meta.url)).toLowerCase()
+) {
   void run();
 }

@@ -31,6 +31,11 @@ export interface RegisterCredentials {
   phone?: string;
 }
 
+export interface RegistrationResult {
+  user: User;
+  emailSent: boolean;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -49,7 +54,7 @@ export interface AuthState {
   error: string | null;
   fieldErrors?: Record<string, string[]> | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (credentials: RegisterCredentials) => Promise<boolean>;
+  register: (credentials: RegisterCredentials) => Promise<RegistrationResult | null>;
   forgotPassword: (request: ForgotPasswordRequest) => Promise<boolean>;
   resetPassword: (request: ResetPasswordRequest) => Promise<boolean>;
   logout: () => Promise<boolean>;
