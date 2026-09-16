@@ -29,6 +29,7 @@ export interface ShirtVariant {
   color: ShirtColor;
   size: ShirtSize;
   sku: string;
+  imageUrl?: string;
   inStock: boolean;
   stockCount: number;
 }

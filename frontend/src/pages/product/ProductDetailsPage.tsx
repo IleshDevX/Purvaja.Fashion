@@ -119,6 +119,9 @@ export function ProductDetailsPage() {
   );
   const currentPrice = currentVariant?.price ?? shirt.price;
   const currentPricePaise = currentVariant?.pricePaise ?? shirt.pricePaise;
+  const displayImages = currentVariant?.imageUrl
+    ? [currentVariant.imageUrl, ...shirt.images.filter(image => image !== currentVariant.imageUrl)]
+    : shirt.images;
 
   const discount = shirt.compareAtPrice
     ? Math.max(0, Math.round(((shirt.compareAtPrice - currentPrice) / shirt.compareAtPrice) * 100))
@@ -135,7 +138,7 @@ export function ProductDetailsPage() {
         variantId: currentVariant.id,
         name: shirt.name,
         slug: shirt.slug,
-        image: shirt.images[0] || '',
+        image: displayImages[0] || '',
         pricePaise: currentPricePaise,
         compareAtPricePaise: shirt.compareAtPricePaise,
         price: currentPrice,
@@ -162,7 +165,7 @@ export function ProductDetailsPage() {
         variantId: currentVariant.id,
         name: shirt.name,
         slug: shirt.slug,
-        image: shirt.images[0] || '',
+        image: displayImages[0] || '',
         pricePaise: currentPricePaise,
         compareAtPricePaise: shirt.compareAtPricePaise,
         price: currentPrice,
@@ -219,7 +222,7 @@ export function ProductDetailsPage() {
           <div className="lg:col-span-6 flex flex-col-reverse lg:flex-row gap-3 sm:gap-4 items-start">
             {/* Thumbnails */}
             <div className="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-visible no-scrollbar pb-1 lg:pb-0 shrink-0">
-              {shirt.images.map((img, idx) => (
+              {displayImages.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -237,7 +240,7 @@ export function ProductDetailsPage() {
             {/* Hero Stage Image with Contrained Viewport Height */}
             <div className="flex-1 w-full relative aspect-[3/4] max-h-[58vh] sm:max-h-[62vh] lg:max-h-[65vh] bg-ivory-200 rounded-2xl overflow-hidden shadow-subtle flex items-center justify-center">
               <img
-                src={shirt.images[selectedImageIndex] || shirt.images[0]}
+                src={displayImages[selectedImageIndex] || displayImages[0]}
                 alt={shirt.name}
                 className="w-full h-full object-cover object-top"
               />
@@ -296,7 +299,7 @@ export function ProductDetailsPage() {
                     <button
                       type="button"
                       key={color.name}
-                      onClick={() => setSelectedColor(color)}
+                      onClick={() => { setSelectedColor(color); setSelectedImageIndex(0); }}
                       className={`w-7 h-7 rounded-full border-2 transition-all p-0.5 ${
                         currentColor.name === color.name
                           ? 'border-charcoal-900 scale-110 shadow-2xs'

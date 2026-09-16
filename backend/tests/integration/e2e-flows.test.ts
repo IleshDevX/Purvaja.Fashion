@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -53,10 +53,15 @@ describe('Phase 8 E2E Critical Business Flows', () => {
     });
 
     it('2. Authenticates and obtains session and CSRF credentials', async () => {
-      const res = await customerAgent.post('/api/v1/auth/login').send({
-        email: customerEmail,
-        password,
-      });
+      const otp = '482913';
+      await prisma.emailVerificationToken.create({ data: {
+        userId: customerUserId,
+        tokenHash: createHash('sha256').update(`${customerUserId}:${otp}`).digest('hex'),
+        purpose: 'REGISTRATION',
+        targetEmail: customerEmail,
+        expiresAt: new Date(Date.now() + 60_000),
+      } });
+      const res = await customerAgent.post('/api/v1/auth/verify-email').send({ email: customerEmail, otp });
       expect(res.status).toBe(200);
       const cookies = (res.headers['set-cookie'] as unknown as string[]) || [];
       const csrfMatch = cookies.find(c => c.startsWith(`${CSRF_COOKIE}=`));

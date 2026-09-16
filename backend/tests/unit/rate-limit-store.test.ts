@@ -1,18 +1,21 @@
 import express from 'express';
 import request from 'supertest';
 import { afterEach, expect, it, vi } from 'vitest';
-import { env } from '../../src/config/env.js';
 import { SharedRateLimitStore } from '../../src/services/rate-limit-store.js';
 import { createLimiter } from '../../src/middleware/rate-limit.middleware.js';
 
-const original = env.RATE_LIMIT_REDIS_URL;
-afterEach(() => { env.RATE_LIMIT_REDIS_URL = original; vi.restoreAllMocks(); });
+afterEach(() => vi.restoreAllMocks());
 
 it('fails closed when the configured shared store is unavailable', async () => {
-  env.RATE_LIMIT_REDIS_URL = 'redis://127.0.0.1:1';
   vi.spyOn(SharedRateLimitStore.prototype, 'increment').mockRejectedValue(new Error('Store unavailable'));
   const app = express();
-  app.use(createLimiter({ windowMs: 60000, prodMax: 2, code: 'TEST_QUOTA', message: 'Limited' }));
+  app.use(createLimiter({
+    windowMs: 60000,
+    prodMax: 2,
+    code: 'TEST_QUOTA',
+    message: 'Limited',
+    store: new SharedRateLimitStore('TEST_QUOTA', 60000),
+  }));
   const handler = vi.fn((_req, res) => res.sendStatus(204));
   app.get('/', handler);
   expect((await request(app).get('/')).status).toBe(500);

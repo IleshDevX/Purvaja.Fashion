@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { AccountStatus, EmailVerificationPurpose, UserRole } from '../generated/prisma/client.js';
 import { getPrismaClient } from '../config/database.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
-import { createSecret, hashSecret, normalizeEmail, RESET_TOKEN_TTL_MS, TOKEN_TTL_MS } from '../utils/auth.js';
+import { createRegistrationOtp, createSecret, hashSecret, normalizeEmail, REGISTRATION_OTP_TTL_MS, RESET_TOKEN_TTL_MS, TOKEN_TTL_MS } from '../utils/auth.js';
 import type { AuthEmailSender } from './email.service.js';
 import { ResendAuthEmailSender } from './email.service.js';
 
@@ -26,7 +26,8 @@ export type PublicUser = ReturnType<typeof publicUser>;
 export class AuthService {
   constructor(private readonly emailSender: AuthEmailSender = new ResendAuthEmailSender()) {}
   private async verification(userId: string, purpose: EmailVerificationPurpose, email: string): Promise<void> {
-    const raw = createSecret();
+    const isRegistration = purpose === EmailVerificationPurpose.REGISTRATION;
+    const raw = isRegistration ? createRegistrationOtp() : createSecret();
     const id = randomUUID();
     const prisma = getPrismaClient();
     await prisma.$transaction(async tx => {
@@ -35,12 +36,13 @@ export class AuthService {
       const expected = purpose === EmailVerificationPurpose.EMAIL_CHANGE ? user?.pendingEmail : user?.email;
       if (!user || user.status !== AccountStatus.ACTIVE || expected !== email) throw new UnauthorizedError();
       await tx.emailVerificationToken.create({ data: {
-        id, userId, tokenHash: hashSecret(raw), purpose, targetEmail: email,
-        deliveryPending: true, expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
+        id, userId, tokenHash: hashSecret(isRegistration ? `${userId}:${raw}` : raw), purpose, targetEmail: email,
+        deliveryPending: true, expiresAt: new Date(Date.now() + (isRegistration ? REGISTRATION_OTP_TTL_MS : TOKEN_TTL_MS)),
       } });
     });
     try {
-      await this.emailSender.sendVerification(email, raw, `auth-verification/${id}`);
+      if (isRegistration) await this.emailSender.sendRegistrationOtp(email, raw, `auth-registration-otp/${id}`);
+      else await this.emailSender.sendVerification(email, raw, `auth-email-change/${id}`);
     } catch (error) {
       await prisma.emailVerificationToken.deleteMany({ where: { id, deliveryPending: true } });
       throw error;
@@ -71,7 +73,23 @@ export class AuthService {
   }
   async register(input: { firstName: string; lastName: string; email: string; password: string; phone?: string }) {
     const prisma = getPrismaClient(); const email = normalizeEmail(input.email);
-    if (await prisma.user.findUnique({ where: { email } })) throw new ConflictError('Unable to create account.', 'EMAIL_ALREADY_REGISTERED');
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      // A provider outage or lost message must not strand an account after its
+      // first successful database insert. Only the owner, proven by the same
+      // password, can resume this unverified registration and request a fresh
+      // OTP; all other duplicate attempts retain the generic conflict response.
+      if (existing.status === AccountStatus.ACTIVE && !existing.emailVerifiedAt &&
+          await argon2.verify(existing.passwordHash, input.password)) {
+        try {
+          await this.verification(existing.id, EmailVerificationPurpose.REGISTRATION, existing.email);
+          return { user: publicUser(existing), emailSent: true };
+        } catch {
+          return { user: publicUser(existing), emailSent: false };
+        }
+      }
+      throw new ConflictError('Unable to create account.', 'EMAIL_ALREADY_REGISTERED');
+    }
     const user = await prisma.user.create({ data: { firstName: input.firstName, lastName: input.lastName, phone: input.phone, email, passwordHash: await argon2.hash(input.password, hashOptions), role: UserRole.CUSTOMER } });
     try { await this.verification(user.id, EmailVerificationPurpose.REGISTRATION, user.email); } catch { return { user: publicUser(user), emailSent: false }; }
     return { user: publicUser(user), emailSent: true };
@@ -80,6 +98,7 @@ export class AuthService {
     const user = await getPrismaClient().user.findUnique({ where: { email: normalizeEmail(input.email) } });
     if (!user || !(await argon2.verify(user.passwordHash, input.password))) throw new UnauthorizedError('Invalid email or password.', 'INVALID_CREDENTIALS');
     if (user.status !== AccountStatus.ACTIVE) throw new ForbiddenError('This account is not available.', 'ACCOUNT_UNAVAILABLE');
+    if (!user.emailVerifiedAt) throw new ForbiddenError('Verify your email address before signing in.', 'EMAIL_NOT_VERIFIED');
     const session = await this.createSession(user.id, input.rememberMe, user.passwordHash, user.email);
     return { user: publicUser(user), sessionToken: session.sessionToken, maxAgeMs: session.maxAgeMs };
   }
@@ -149,6 +168,50 @@ export class AuthService {
         await tx.passwordResetToken.updateMany({ where: { userId: record.userId, usedAt: null }, data: { usedAt: now } });
         await tx.session.updateMany({ where: { userId: record.userId, revokedAt: null }, data: { revokedAt: now } });
       }
+    });
+  }
+  async verifyRegistrationOtp(emailInput: string, otp: string): Promise<{ user: PublicUser; sessionToken: string; maxAgeMs: number }> {
+    const prisma = getPrismaClient();
+    const user = await prisma.user.findUnique({ where: { email: normalizeEmail(emailInput) } });
+    const now = new Date();
+    if (!user || user.status !== AccountStatus.ACTIVE || user.emailVerifiedAt) {
+      throw new NotFoundError('Verification code is invalid or expired.', 'INVALID_VERIFICATION_OTP');
+    }
+    const record = await prisma.emailVerificationToken.findFirst({ where: {
+      userId: user.id,
+      purpose: EmailVerificationPurpose.REGISTRATION,
+      targetEmail: user.email,
+      tokenHash: hashSecret(`${user.id}:${otp}`),
+      deliveryPending: false,
+      usedAt: null,
+      expiresAt: { gt: now },
+    } });
+    if (!record) throw new NotFoundError('Verification code is invalid or expired.', 'INVALID_VERIFICATION_OTP');
+
+    const sessionToken = createSecret();
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    return prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${user.id}::uuid FOR UPDATE`;
+      const current = await tx.user.findUnique({ where: { id: user.id } });
+      if (!current || current.status !== AccountStatus.ACTIVE || current.emailVerifiedAt || current.email !== user.email) {
+        throw new NotFoundError('Verification code is invalid or expired.', 'INVALID_VERIFICATION_OTP');
+      }
+      const consumed = await tx.emailVerificationToken.updateMany({ where: {
+        id: record.id,
+        deliveryPending: false,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+        targetEmail: current.email,
+      }, data: { usedAt: new Date() } });
+      if (consumed.count !== 1) throw new NotFoundError('Verification code is invalid or expired.', 'INVALID_VERIFICATION_OTP');
+      const verified = await tx.user.update({ where: { id: current.id }, data: { emailVerifiedAt: new Date() } });
+      await tx.emailVerificationToken.updateMany({ where: { userId: current.id, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.session.create({ data: {
+        userId: current.id,
+        tokenHash: hashSecret(sessionToken),
+        expiresAt: new Date(Date.now() + maxAgeMs),
+      } });
+      return { user: publicUser(verified), sessionToken, maxAgeMs };
     });
   }
   async forgot(emailInput: string): Promise<void> {

@@ -22,6 +22,7 @@ export interface AdminProductVariant {
   size: string;
   colorName: string;
   colorHex: string;
+  imageUrl?: string | null;
   priceOverridePaise: number | null;
   stockQuantity: number;
   lowStockThreshold: number;
@@ -98,6 +99,7 @@ export interface AdminVariantInput {
   size: string;
   colorName: string;
   colorHex: string;
+  imageUrl?: string | null;
   priceOverridePaise?: number | null;
   stockQuantity?: number;
   lowStockThreshold?: number;
@@ -178,6 +180,15 @@ export interface AdminOrder {
   paymentProvider: 'COD' | 'PHONEPE' | string | null;
   payments: AdminPayment[];
   returnRequest?: AdminOrderReturn | null;
+  shipment?: {
+    id: string;
+    carrier: string;
+    trackingNumber: string;
+    awbCode?: string | null;
+    status: string;
+    trackingUrl?: string | null;
+    details?: { providerMode?: 'demo' | 'manual'; simulated?: boolean } | null;
+  } | null;
   allowedActions?: AdminOrderTransition[];
   createdAt: string;
   updatedAt: string;
@@ -257,6 +268,7 @@ export interface AdminVariant {
   size: string;
   colorName: string;
   colorHex: string;
+  imageUrl?: string | null;
   priceOverridePaise: number | null;
   stockQuantity: number;
   lowStockThreshold: number;

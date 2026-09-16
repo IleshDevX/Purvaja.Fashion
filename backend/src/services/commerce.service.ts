@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { commercePolicy, isWithinReturnWindow } from '@purvaja/commerce-policy';
 import { getPrismaClient } from '../config/database.js';
+import { ERROR_CONTRACTS } from '../contracts/error-contracts.js';
 import { env } from '../config/env.js';
 import { logger, logOperationalEvent } from '../utils/logger.js';
 import { metrics } from '../utils/metrics.js';
@@ -635,8 +636,10 @@ export class CommerceService {
       throw new ValidationError('Malformed PhonePe callback payload.', undefined, 'INVALID_CALLBACK_PAYLOAD');
     }
 
-    if (!['checkout.order.completed', 'checkout.order.failed'].includes(decodedJson.event ?? '')) {
-      throw new ValidationError('Unsupported PhonePe webhook event.', undefined, 'INVALID_CALLBACK_EVENT');
+    const isSuccessEvent = ['pg.order.completed', 'checkout.order.completed', 'order.completed'].includes(decodedJson.event ?? '');
+    const isFailedEvent = ['pg.order.failed', 'checkout.order.failed', 'order.failed'].includes(decodedJson.event ?? '');
+    if (!isSuccessEvent && !isFailedEvent) {
+      throw new ValidationError(`Unsupported PhonePe webhook event: ${decodedJson.event}`, undefined, 'INVALID_CALLBACK_EVENT');
     }
     const payload = decodedJson.payload;
     const paymentId = payload?.merchantOrderId || routePaymentId;
@@ -687,9 +690,9 @@ export class CommerceService {
     // Map PhonePe state
     let targetResult: 'SUCCESS' | 'FAILED' | 'PENDING' = 'PENDING';
     const state = payload?.state;
-    if (state === 'COMPLETED' && decodedJson.event === 'checkout.order.completed') {
+    if (state === 'COMPLETED' && isSuccessEvent) {
       targetResult = 'SUCCESS';
-    } else if (state === 'FAILED' && decodedJson.event === 'checkout.order.failed') {
+    } else if (state === 'FAILED' && isFailedEvent) {
       targetResult = 'FAILED';
     }
 
@@ -1044,7 +1047,7 @@ export class CommerceService {
       });
       if (!order) throw new NotFoundError('Order was not found.', 'ORDER_NOT_FOUND');
       if (order.status !== 'DELIVERED') {
-        throw new ConflictError('Only delivered orders can be returned.', 'ORDER_NOT_RETURNABLE');
+        throw new ConflictError('Only delivered orders can be returned.', ERROR_CONTRACTS.orderNotReturnable.code);
       }
       if (!order.deliveredAt) {
         throw new ConflictError('Delivery time is unavailable for this order.', 'DELIVERY_TIME_MISSING');

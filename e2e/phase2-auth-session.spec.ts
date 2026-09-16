@@ -1,7 +1,24 @@
 import { expect, test, type Page } from '@playwright/test';
+import { Client } from 'pg';
 import { reloadDocument } from './browser-navigation.js';
 
 const password = 'BrowserSecurity123!';
+
+async function verifyIsolatedFixture(email: string) {
+  const connectionString = process.env.TEST_DATABASE_URL;
+  if (!connectionString) throw new Error('TEST_DATABASE_URL is required for the isolated browser fixture.');
+  const client = new Client({ connectionString });
+  try {
+    await client.connect();
+    const result = await client.query(
+      'UPDATE users SET email_verified_at = NOW() WHERE email = $1 AND email_verified_at IS NULL',
+      [email],
+    );
+    if (result.rowCount !== 1) throw new Error('Expected one newly registered isolated fixture account.');
+  } finally {
+    await client.end();
+  }
+}
 
 async function register(page: Page, firstName: string, lastName: string, email: string) {
   await page.goto('/auth/register', { waitUntil: 'domcontentloaded' });
@@ -11,6 +28,13 @@ async function register(page: Page, firstName: string, lastName: string, email: 
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm Password').fill(password);
   await page.getByRole('button', { name: 'REGISTER ACCOUNT' }).click();
+  await expect(page).toHaveURL(/\/auth\/verify-email/);
+
+  // This suite tests session and private-state ownership rather than external
+  // email delivery. Promote only its isolated fixture account, then exercise
+  // the real login and session boundary through the browser.
+  await verifyIsolatedFixture(email);
+  await login(page, email);
   await expect(page).toHaveURL(/\/account$/);
 }
 
@@ -64,7 +88,7 @@ test('keeps persisted private state with its owner across logout, account switch
   await expect(page.getByText(emailB, { exact: false })).toHaveCount(0);
 });
 
-test('applies one persisted guest-cart contribution across parallel login tabs and reload', async ({ page, context }) => {
+test('applies one persisted guest-cart contribution when login synchronizes parallel tabs and after reload', async ({ page, context }) => {
   const run = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const email = `browser-cart-${run}@example.invalid`;
   await register(page, 'Cart', 'Owner', email);
@@ -122,7 +146,14 @@ test('applies one persisted guest-cart contribution across parallel login tabs a
   const secondTab = await context.newPage();
   await secondTab.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await Promise.all([login(page, email), login(secondTab, email)]);
+  // Tabs in one browser context share the session cookie. One login is the
+  // session boundary; the other tab must observe it and revalidate rather than
+  // racing a second login form that may correctly disappear mid-submission.
+  const secondTabSynchronized = secondTab.waitForResponse(response =>
+    response.url().endsWith('/api/v1/auth/me') && response.status() === 200,
+  );
+  await login(page, email);
+  await secondTabSynchronized;
   await expect.poll(async () => {
     const response = await page.request.get('/api/v1/cart');
     const body = await response.json() as { data?: { items?: Array<{ variantId: string; quantity: number }> } };

@@ -8,6 +8,9 @@ const image = z.object({
   url: z.string().trim().min(1).max(2048).refine(value => /^\/(?![\\/])/.test(value) || /^https:\/\//i.test(value), 'Use a safe site-relative path or HTTPS URL.'),
   isPrimary: z.boolean(),
 });
+const safeImageUrl = z.string().trim().min(1).max(2048).refine(value =>
+  (value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')) || /^https:\/\//i.test(value),
+'Use a safe site-relative path or HTTPS URL.');
 export const product = z.object({
   name: z.string().trim().min(2).max(255),
   slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(255),
@@ -31,7 +34,7 @@ export const product = z.object({
   images: z.array(image).max(12).refine(items => items.length === 0 || items.filter(item => item.isPrimary).length === 1, 'Select exactly one primary image.').optional(),
 });
 export const category = z.object({ name: z.string().trim().min(2).max(120), slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().trim().max(500).optional(), isActive: z.boolean().optional() });
-export const variant = z.object({ productId: uuid.optional(), sku: z.string().trim().min(3).max(160), size: z.string().trim().min(1).max(80), colorName: z.string().trim().min(1).max(120), colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/), priceOverridePaise: z.number().int().min(0).nullable().optional(), stockQuantity: z.number().int().min(0).optional(), lowStockThreshold: z.number().int().min(0).max(100000).optional(), status: z.enum(['ACTIVE', 'DISCONTINUED']).optional() });
+export const variant = z.object({ productId: uuid.optional(), sku: z.string().trim().min(3).max(160), size: z.string().trim().min(1).max(80), colorName: z.string().trim().min(1).max(120), colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/), imageUrl: safeImageUrl.nullable().optional(), priceOverridePaise: z.number().int().min(0).nullable().optional(), stockQuantity: z.number().int().min(0).optional(), lowStockThreshold: z.number().int().min(0).max(100000).optional(), status: z.enum(['ACTIVE', 'DISCONTINUED']).optional() });
 export const adjustment = z.object({ variantId: uuid, quantity: z.number().int().refine(value => value !== 0), type: z.enum(['RESTOCK', 'ADJUSTMENT', 'DAMAGE', 'RETURN', 'CORRECTION']), reason: z.string().trim().min(3).max(500) });
 export const stockCorrection = z.object({ stock: z.number().int().min(0) });
 export const orderStatus = z.object({ status: z.enum(['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED']) });

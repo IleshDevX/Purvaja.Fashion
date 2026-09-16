@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Phone, Eye, EyeOff, Check, X } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/store/authStore.js';
 import { useToast } from '../../app/providers.js';
+import { sanitizeInternalRedirect } from '../../features/auth/utils/redirect.js';
 
 export function RegisterPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { register, isLoading, error, fieldErrors, clearError } = useAuthStore();
@@ -38,7 +40,7 @@ export function RegisterPage() {
       return;
     }
 
-    const success = await register({
+    const result = await register({
       firstName,
       lastName,
       email,
@@ -47,9 +49,11 @@ export function RegisterPage() {
       confirmPassword,
     });
 
-    if (success) {
-      addToast(`Welcome to Purvaja Fashion, ${firstName}!`, 'success');
-      // GuestRoute owns navigation when the authenticated state is committed.
+    if (result) {
+      addToast(result.emailSent ? 'We sent a verification code to your email.' : 'Account created. Request a new verification code to continue.', result.emailSent ? 'success' : 'error');
+      const redirectTarget = sanitizeInternalRedirect(searchParams.get('redirect'));
+      const verificationParams = new URLSearchParams({ email: result.user.email, redirect: redirectTarget });
+      navigate(`/auth/verify-email?${verificationParams.toString()}`);
     }
   };
 

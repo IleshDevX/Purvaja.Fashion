@@ -35,8 +35,13 @@ export function LoginPage() {
       </div>
 
       {error && (
-        <div role="alert" className="p-3 bg-error/10 border border-error/30 text-caption text-error">
-          {error}
+        <div role="alert" className="space-y-2 border border-error/30 bg-error/10 p-3 text-caption text-error">
+          <p>{error}</p>
+          {error.toLowerCase().includes('verify your email') && email && (
+            <Link to={`/auth/verify-email?${new URLSearchParams({ email }).toString()}`} className="inline-block font-semibold underline underline-offset-4">
+              Enter or resend verification code
+            </Link>
+          )}
         </div>
       )}
 

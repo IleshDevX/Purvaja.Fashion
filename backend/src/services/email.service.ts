@@ -8,9 +8,11 @@ export interface OrderEmailDetails {
   totalAmountPaise?: number;
   trackingNumber?: string;
   reason?: string;
+  simulated?: boolean;
 }
 
 export interface AuthEmailSender {
+  sendRegistrationOtp(email: string, otp: string, idempotencyKey?: string): Promise<void>;
   sendVerification(email: string, token: string, idempotencyKey?: string): Promise<void>;
   sendPasswordReset(email: string, token: string, idempotencyKey?: string): Promise<void>;
   sendOrderConfirmation?(email: string, details: OrderEmailDetails): Promise<void>;
@@ -22,7 +24,10 @@ export interface AuthEmailSender {
 function link(path: string, token: string): string { return `${env.FRONTEND_URL}${path}?token=${encodeURIComponent(token)}`; }
 
 export class ResendAuthEmailSender implements AuthEmailSender {
-  private readonly client = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : undefined;
+  // Automated tests must never contact a real email provider merely because a
+  // developer has credentials in backend/.env. Delivery behavior is covered by
+  // injecting an AuthEmailSender test double into AuthService.
+  private readonly client = env.NODE_ENV !== 'test' && env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : undefined;
 
   private async send(to: string, subject: string, body: string, idempotencyKey?: string): Promise<void> {
     if (!this.client || !env.EMAIL_FROM) {
@@ -39,6 +44,15 @@ export class ResendAuthEmailSender implements AuthEmailSender {
   sendVerification(email: string, token: string, idempotencyKey?: string): Promise<void> {
     const url = link('/auth/verify-email', token);
     return this.send(email, 'Verify your Purvaja Fashion email', `<p>Welcome to Purvaja Fashion.</p><p><a href="${url}">Verify your email</a></p><p>This link expires in 24 hours.</p>`, idempotencyKey);
+  }
+
+  sendRegistrationOtp(email: string, otp: string, idempotencyKey?: string): Promise<void> {
+    return this.send(
+      email,
+      'Your Purvaja Fashion verification code',
+      `<p>Welcome to Purvaja Fashion.</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${otp}</p><p>This code expires in 10 minutes. If you did not create this account, you can ignore this email.</p>`,
+      idempotencyKey,
+    );
   }
 
   sendPasswordReset(email: string, token: string, idempotencyKey?: string): Promise<void> {
@@ -71,10 +85,10 @@ export class ResendAuthEmailSender implements AuthEmailSender {
     try {
       await this.send(
         email,
-        `Order Dispatched #${orderRef} - Purvaja Fashion`,
+        `${details.simulated ? '[DEMO] Shipment Created' : 'Order Dispatched'} #${orderRef} - Purvaja Fashion`,
         `<div style="font-family: sans-serif; color: #1a1a1a;">` +
-        `<h2>Your Order is on the Way</h2>` +
-        `<p>Your order #${orderRef} has been dispatched.</p>` +
+        `<h2>${details.simulated ? 'Demo Shipment Created' : 'Your Order is on the Way'}</h2>` +
+        `<p>${details.simulated ? 'This is a simulated shipment for testing; no real consignment was booked.' : `Your order #${orderRef} has been dispatched.`}</p>` +
         (details.trackingNumber ? `<p><strong>Tracking Number:</strong> ${details.trackingNumber}</p>` : '') +
         `<p>Track your delivery at <a href="${env.FRONTEND_URL}/orders/${details.id}">your orders page</a>.</p>` +
         `</div>`,

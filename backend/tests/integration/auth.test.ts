@@ -19,6 +19,7 @@ describe('custom authentication', () => {
     expect(response.status).toBe(201); userId = response.body.data.user.id;
     expect(response.body.data.user.role).toBe('customer');
     expect(JSON.stringify(response.body)).not.toMatch(/passwordHash|tokenHash|sessionToken/i);
+    expect((response.headers['set-cookie'] as unknown as string[] | undefined)?.join(';') ?? '').not.toContain('pf_session=');
     const stored = await getPrismaClient().user.findUniqueOrThrow({ where: { id: userId } });
     expect(stored.passwordHash).not.toBe(password);
   });
@@ -26,12 +27,19 @@ describe('custom authentication', () => {
   it('rejects weak passwords and duplicate registrations', async () => {
     const [weak, duplicate] = await Promise.all([
       request(app).post('/api/v1/auth/register').send({ firstName: 'A', lastName: 'B', email: `weak-${randomUUID()}@example.invalid`, password: 'weak', confirmPassword: 'weak' }),
-      request(app).post('/api/v1/auth/register').send({ firstName: 'A', lastName: 'B', email, password, confirmPassword: password }),
+      request(app).post('/api/v1/auth/register').send({ firstName: 'A', lastName: 'B', email, password: 'DifferentPassword123', confirmPassword: 'DifferentPassword123' }),
     ]);
     expect(weak.status).toBe(400); expect(duplicate.status).toBe(409);
   });
 
-  it('creates a hashed server session, supports me, CSRF-protected logout, and revoked sessions', async () => {
+  it('blocks login until OTP verification, then creates a hashed server session', async () => {
+    expect((await request(app).post('/api/v1/auth/login').send({ email, password })).status).toBe(403);
+    const otp = '482913';
+    await getPrismaClient().emailVerificationToken.create({ data: { userId, tokenHash: hash(`${userId}:${otp}`), expiresAt: new Date(Date.now() + 60000), purpose: 'REGISTRATION', targetEmail: email } });
+    const verification = await request(app).post('/api/v1/auth/verify-email').send({ email: email.toUpperCase(), otp });
+    expect(verification.status).toBe(200);
+    expect(((verification.headers['set-cookie'] as unknown as string[]) || []).join(';')).toMatch(/pf_session=.*HttpOnly/);
+    expect((await request(app).post('/api/v1/auth/verify-email').send({ email, otp })).status).toBe(404);
     const agent = request.agent(app);
     const login = await agent.post('/api/v1/auth/login').send({ email: email.toUpperCase(), password });
     const setCookie = (login.headers['set-cookie'] as unknown as string[]) || [];
@@ -43,12 +51,8 @@ describe('custom authentication', () => {
     expect((await agent.get('/api/v1/auth/me')).status).toBe(401);
   });
 
-  it('consumes verification and reset tokens and revokes existing sessions on reset', async () => {
+  it('consumes reset tokens and revokes existing sessions on reset', async () => {
     const prisma = getPrismaClient();
-    const verification = `verify-${randomUUID()}-${randomUUID()}`;
-    await prisma.emailVerificationToken.create({ data: { userId, tokenHash: hash(verification), expiresAt: new Date(Date.now() + 60000), purpose: 'REGISTRATION', targetEmail: email } });
-    expect((await request(app).post('/api/v1/auth/verify-email').send({ token: verification })).status).toBe(200);
-    expect((await request(app).post('/api/v1/auth/verify-email').send({ token: verification })).status).toBe(404);
     const reset = `reset-${randomUUID()}-${randomUUID()}`;
     await prisma.passwordResetToken.create({ data: { userId, tokenHash: hash(reset), expiresAt: new Date(Date.now() + 60000) } });
     expect((await request(app).post('/api/v1/auth/reset-password').send({ token: reset, password: 'NewSecurePassword123', confirmPassword: 'NewSecurePassword123' })).status).toBe(200);

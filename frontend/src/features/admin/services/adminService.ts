@@ -83,6 +83,7 @@ interface BackendOrder {
   items: AdminOrderItem[];
   payments: AdminPayment[];
   returnRequest?: AdminOrder['returnRequest'];
+  shipment?: AdminOrder['shipment'];
   allowedActions?: AdminOrder['allowedActions'];
 }
 
@@ -108,6 +109,7 @@ function mapOrder(dto: BackendOrder): AdminOrder {
     payments: dto.payments ?? [],
     items: dto.items ?? [],
     returnRequest: dto.returnRequest ?? null,
+    shipment: dto.shipment ?? null,
     allowedActions: dto.allowedActions ?? [],
   };
 }
@@ -186,6 +188,13 @@ export const adminService = {
       await apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/status`, { status }),
     );
     return mapOrder(raw);
+  },
+
+  async shipOrder(
+    id: string,
+    details: { carrier?: string; trackingNumber?: string; awbCode?: string; trackingUrl?: string },
+  ): Promise<void> {
+    await apiClient.post(`/admin/orders/${encodeURIComponent(id)}/ship`, details);
   },
 
   async getCustomers(search = '', page = 1): Promise<AdminPage<AdminCustomer>> {

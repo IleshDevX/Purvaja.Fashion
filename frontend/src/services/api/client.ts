@@ -70,15 +70,13 @@ export function setCsrfToken(token: string | null): void {
 }
 
 export function getCsrfToken(): string | null {
-  if (inMemoryCsrfToken) return inMemoryCsrfToken;
-  if (typeof document !== 'undefined') {
-    const fromCookie = document.cookie
-      .split('; ')
-      .find(value => value.startsWith('pf_csrf='))
-      ?.split('=')[1];
-    if (fromCookie) return decodeURIComponent(fromCookie);
+  if (typeof document !== 'undefined' && document.cookie) {
+    const matches = [...document.cookie.matchAll(/(?:^|;\s*)pf_csrf=([^;]+)/g)];
+    if (matches.length > 0) {
+      return decodeURIComponent(matches[matches.length - 1][1]);
+    }
   }
-  return null;
+  return inMemoryCsrfToken;
 }
 
 type SessionExpiredHandler = () => void;

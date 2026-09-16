@@ -17,8 +17,8 @@ import { useToast } from '../../app/providers.js';
 const transitions: Record<AdminOrder['status'], AdminOrderTransition[]> = {
   PENDING: [],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['SHIPPED', 'CANCELLED'],
-  SHIPPED: ['DELIVERED'],
+  PROCESSING: ['CANCELLED'],
+  SHIPPED: [],
   DELIVERED: [],
   CANCELLED: [],
   RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
@@ -32,6 +32,7 @@ export function AdminOrderDetailsPage() {
   const [selectedStatus, setSelectedStatus] = useState<AdminOrderTransition | ''>('');
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [shipment, setShipment] = useState({ carrier: '', trackingNumber: '', awbCode: '', trackingUrl: '' });
 
   useEffect(() => {
     if (!orderId) return;
@@ -97,6 +98,24 @@ export function AdminOrderDetailsPage() {
       addToast(`Order transitioned to ${updated.status}.`, 'success');
     } catch (error) {
       addToast(error instanceof Error ? error.message : 'Unable to update order status.', 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleShipOrder = async () => {
+    try {
+      setUpdating(true);
+      const details = Object.fromEntries(
+        Object.entries(shipment).filter(([, value]) => value.trim().length > 0),
+      );
+      await adminService.shipOrder(order.id, details);
+      const updated = await adminService.getOrder(order.id);
+      setOrder(updated);
+      setSelectedStatus('');
+      addToast('Shipment manifested and order transitioned to SHIPPED.', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Unable to create shipment.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -245,6 +264,59 @@ export function AdminOrderDetailsPage() {
               Current stage: <strong className="text-charcoal-950">{order.status}</strong>
             </p>
 
+            {order.shipment && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-charcoal-700">
+                <p className="font-bold text-charcoal-950">
+                  {order.shipment.details?.simulated ? 'Simulated shipment' : 'Shipment'} · {order.shipment.status}
+                </p>
+                <p>{order.shipment.carrier} · {order.shipment.trackingNumber}</p>
+              </div>
+            )}
+
+            {order.status === 'PROCESSING' && (
+              <div className="space-y-2 rounded-xl border border-ivory-300 bg-white/80 p-3">
+                <p className="text-[11px] text-charcoal-600">
+                  Demo mode creates clearly marked test tracking. Manual mode requires carrier and tracking number.
+                </p>
+                <input
+                  aria-label="Shipment carrier"
+                  value={shipment.carrier}
+                  onChange={event => setShipment(current => ({ ...current, carrier: event.target.value }))}
+                  placeholder="Carrier (manual mode)"
+                  className="w-full rounded-lg border border-ivory-300 px-3 py-2 text-xs"
+                />
+                <input
+                  aria-label="Shipment tracking number"
+                  value={shipment.trackingNumber}
+                  onChange={event => setShipment(current => ({ ...current, trackingNumber: event.target.value }))}
+                  placeholder="Tracking number (manual mode)"
+                  className="w-full rounded-lg border border-ivory-300 px-3 py-2 text-xs"
+                />
+                <input
+                  aria-label="Shipment AWB code"
+                  value={shipment.awbCode}
+                  onChange={event => setShipment(current => ({ ...current, awbCode: event.target.value }))}
+                  placeholder="AWB code (optional)"
+                  className="w-full rounded-lg border border-ivory-300 px-3 py-2 text-xs"
+                />
+                <input
+                  aria-label="Shipment tracking URL"
+                  value={shipment.trackingUrl}
+                  onChange={event => setShipment(current => ({ ...current, trackingUrl: event.target.value }))}
+                  placeholder="Tracking URL (optional)"
+                  className="w-full rounded-lg border border-ivory-300 px-3 py-2 text-xs"
+                />
+                <button
+                  type="button"
+                  disabled={updating}
+                  onClick={handleShipOrder}
+                  className="w-full rounded-xl bg-charcoal-950 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
+                >
+                  {updating ? 'Creating…' : 'Create Shipment'}
+                </button>
+              </div>
+            )}
+
             {validTransitions.length > 0 ? (
               <>
                 <label htmlFor="admin-order-status-select" className="sr-only">Select new dispatch status</label>
@@ -271,12 +343,14 @@ export function AdminOrderDetailsPage() {
                   <span>{updating ? 'Applying…' : 'Apply Status Transition'}</span>
                 </button>
               </>
-            ) : (
+            ) : order.status !== 'PROCESSING' ? (
               <div className="rounded-xl bg-white/80 p-3 border border-ivory-300 text-xs text-charcoal-600">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 inline mr-1" />
-                This order is in a final dispatch state ({order.status}).
+                {order.status === 'SHIPPED'
+                  ? 'Delivery status is controlled by authenticated carrier events.'
+                  : `This order is in a final dispatch state (${order.status}).`}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Return Request Details Card (if present) */}

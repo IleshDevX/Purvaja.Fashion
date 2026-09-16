@@ -29,6 +29,7 @@ const router = Router();
 
 // Public PhonePe webhook endpoints use the SHA authorization configured in the
 // PhonePe dashboard. They never trust a browser session or redirect payload.
+router.post('/payments/phonepe/callback', phonepeCallback);
 router.post('/payments/phonepe-callback', phonepeCallback);
 router.post('/payments/:paymentId/callback', phonepeCallback);
 router.post('/payments/webhook', phonepeCallback);

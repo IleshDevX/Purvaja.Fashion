@@ -1,6 +1,6 @@
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
+import express, { Express, type Request } from 'express';
 import { createLimiter } from './rate-limit.middleware.js';
 import helmet from 'helmet';
 import { env } from '../config/env.js';
@@ -69,6 +69,11 @@ export function applySecurityMiddleware(app: Express): void {
 
 
   // JSON Body Parser with reasonable size limits
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({
+    limit: '1mb',
+    verify: (req, _res, buffer) => {
+      (req as Request).rawBody = Buffer.from(buffer);
+    },
+  }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 }

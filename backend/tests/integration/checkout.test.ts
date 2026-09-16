@@ -34,7 +34,7 @@ describe('UPI checkout', () => {
     expect(await prisma.inventoryReservation.count({ where: { orderId, status: 'ACTIVE' } })).toBe(1);
   });
   it('enforces payment ownership and makes repeated success idempotent', async () => {
-    const stranger = request.agent(app); const strangerEmail = `stranger-${randomUUID()}@example.invalid`; await prisma.user.create({ data: { email: strangerEmail, passwordHash: await argon2.hash('SecurePassword123') } });
+    const stranger = request.agent(app); const strangerEmail = `stranger-${randomUUID()}@example.invalid`; await prisma.user.create({ data: { email: strangerEmail, passwordHash: await argon2.hash('SecurePassword123'), emailVerifiedAt: new Date() } });
     const login = await stranger.post('/api/v1/auth/login').send({ email: strangerEmail, password: 'SecurePassword123' }); const strangerCsrf = (login.headers['set-cookie'] as unknown as string[]).find(value => value.startsWith(`${CSRF_COOKIE}=`))!.split(';')[0]!.split('=')[1]!;
     expect((await stranger.post(`/api/v1/payments/${paymentId}/demo-result`).set('X-CSRF-Token', strangerCsrf).send({ result: 'SUCCESS' })).status).toBe(404);
     const [first, duplicate] = await Promise.all([agent.post(`/api/v1/payments/${paymentId}/demo-result`).set('X-CSRF-Token', csrf).send({ result: 'SUCCESS' }), agent.post(`/api/v1/payments/${paymentId}/demo-result`).set('X-CSRF-Token', csrf).send({ result: 'SUCCESS' })]);

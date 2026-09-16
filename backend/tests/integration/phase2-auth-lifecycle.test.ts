@@ -59,6 +59,7 @@ it('activates reset links only after an idempotent provider acceptance', async (
   let deliveredKey = '';
   let observedPending = false;
   const mailer: AuthEmailSender = {
+    async sendRegistrationOtp() {},
     async sendVerification() {},
     async sendPasswordReset(_recipient, token, idempotencyKey) {
       deliveredToken = token;
@@ -85,6 +86,7 @@ it('removes an undelivered reset candidate without invalidating an older link', 
     userId, tokenHash: hashSecret(oldToken), expiresAt: new Date(Date.now() + 60000),
   } });
   const failing: AuthEmailSender = {
+    async sendRegistrationOtp() {},
     async sendVerification() {},
     async sendPasswordReset() { throw new Error('provider unavailable'); },
   };

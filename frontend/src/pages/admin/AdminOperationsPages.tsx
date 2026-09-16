@@ -221,11 +221,11 @@ export function AdminVariantsPage() {
 
   const openCreate = () => {
     setEditing(null); setFormOpen(true);
-    setForm({productId:params.get('productId')??products[0]?.id??'',sku:'',size:'',colorName:'',colorHex:'#000000',priceOverridePaise:null,stockQuantity:0,lowStockThreshold:5,status:'ACTIVE'});
+    setForm({productId:params.get('productId')??products[0]?.id??'',sku:'',size:'',colorName:'',colorHex:'#000000',imageUrl:null,priceOverridePaise:null,stockQuantity:0,lowStockThreshold:5,status:'ACTIVE'});
   };
   const openEdit = (variant: AdminVariant) => {
     setEditing(variant); setFormOpen(true);
-    setForm({sku:variant.sku,size:variant.size,colorName:variant.colorName,colorHex:variant.colorHex,priceOverridePaise:variant.priceOverridePaise,stockQuantity:variant.stockQuantity,lowStockThreshold:variant.lowStockThreshold,status:variant.status==='DISCONTINUED'?'DISCONTINUED':'ACTIVE'});
+    setForm({sku:variant.sku,size:variant.size,colorName:variant.colorName,colorHex:variant.colorHex,imageUrl:variant.imageUrl??null,priceOverridePaise:variant.priceOverridePaise,stockQuantity:variant.stockQuantity,lowStockThreshold:variant.lowStockThreshold,status:variant.status==='DISCONTINUED'?'DISCONTINUED':'ACTIVE'});
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError('');
@@ -292,6 +292,7 @@ export function AdminVariantsPage() {
         <input aria-label="SKU" required minLength={3} value={form.sku} onChange={e=>setForm({...form,sku:e.target.value})} placeholder="SKU" />
         <input aria-label="Size" required value={form.size} onChange={e=>setForm({...form,size:e.target.value})} placeholder="Size" />
         <input aria-label="Colour name" required value={form.colorName} onChange={e=>setForm({...form,colorName:e.target.value})} placeholder="Colour name" />
+        <input aria-label="Variant image URL" type="text" value={form.imageUrl??''} onChange={e=>setForm({...form,imageUrl:e.target.value||null})} placeholder="https://… or /uploads/…" className="sm:col-span-2" />
         <label className="flex items-center gap-2 text-xs">Colour <input aria-label="Colour" type="color" value={form.colorHex} onChange={e=>setForm({...form,colorHex:e.target.value})} /></label>
         <label className="text-xs">Price override (INR)<input className="block w-full" min="0" step="0.01" type="number" value={form.priceOverridePaise==null?'':form.priceOverridePaise/100} onChange={e=>setForm({...form,priceOverridePaise:e.target.value===''?null:Math.round(Number(e.target.value)*100)})} /></label>
         <label className="text-xs">Stock<input className="block w-full" required min="0" type="number" value={form.stockQuantity??0} onChange={e=>setForm({...form,stockQuantity:Number(e.target.value)})} /></label>

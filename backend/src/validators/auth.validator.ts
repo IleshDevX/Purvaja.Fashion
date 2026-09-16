@@ -7,7 +7,10 @@ export const registerSchema = z.object({ firstName: z.string().trim().min(1).max
 export const loginSchema = z.object({ email, password: z.string().min(1).max(128), rememberMe: z.boolean().optional() });
 export const forgotSchema = z.object({ email });
 export const resetSchema = z.object({ token: z.string().min(32).max(256), password, confirmPassword: z.string() }).refine(value => value.password === value.confirmPassword, { message: 'Passwords do not match.', path: ['confirmPassword'] });
-export const tokenSchema = z.object({ token: z.string().min(32).max(256) });
+export const verifyEmailSchema = z.union([
+  z.object({ email, otp: z.string().trim().regex(/^\d{6}$/, 'Enter the six-digit verification code.') }),
+  z.object({ token: z.string().min(32).max(256) }),
+]);
 export const updateMeSchema = z.object({
   firstName: z.string().trim().min(1).max(100).optional(),
   lastName: z.string().trim().min(1).max(100).optional(),

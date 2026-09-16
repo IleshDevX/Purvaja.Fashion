@@ -36,6 +36,11 @@ describe('Production Configuration Validator', () => {
     PHONEPE_CALLBACK_URL: 'https://purvaja.fashion/api/v1/payments/webhook',
     PHONEPE_WEBHOOK_USERNAME: 'purvaja-webhook',
     PHONEPE_WEBHOOK_PASSWORD: 'secure-webhook-password',
+    SHIPPING_PROVIDER: 'manual',
+    SHIPPING_WEBHOOK_SECRET: 'secure-shipping-webhook-secret-for-tests',
+    SHIPPING_WEBHOOK_PROVIDER: 'manual-carrier',
+    UPLOAD_PROVIDER: 'local',
+    UPLOADS_DIRECTORY: 'C:\\purvaja-data\\uploads',
     EMAIL_FROM: 'noreply@purvaja.fashion',
     RESEND_API_KEY: 're_valid_live_key',
     RATE_LIMIT_REDIS_URL: 'rediss://quota.internal:6380/1',
@@ -81,6 +86,15 @@ describe('Production Configuration Validator', () => {
     expect(result.errors.some((err) => err.includes('must enforce TLS with sslmode=require'))).toBe(true);
   });
 
+  it('rejects Windows-local certificate paths in deployment database URLs', () => {
+    const result = validateProductionConfig({
+      ...baseValidProdEnv,
+      DATABASE_URL: 'postgresql://user:pass@host:5432/db?sslmode=verify-full&sslrootcert=E%3A%5Ccerts%5Cprod-ca.pem',
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some(error => error.includes('Windows-local path'))).toBe(true);
+  });
+
   it('strictly rejects production DIRECT_URL when TLS sslmode is omitted', () => {
     const env = {
       ...baseValidProdEnv,
@@ -119,6 +133,31 @@ describe('Production Configuration Validator', () => {
     const result = validateProductionConfig(env);
     expect(result.isValid).toBe(false);
     expect(result.errors.some((err) => err.includes('PAYMENT_PROVIDER=demo is not permitted in production'))).toBe(true);
+  });
+
+  it('rejects demo shipping and missing webhook identity in production', () => {
+    const demo = validateProductionConfig({ ...baseValidProdEnv, SHIPPING_PROVIDER: 'demo' });
+    expect(demo.isValid).toBe(false);
+    expect(demo.errors).toContain('SHIPPING_PROVIDER=demo is not permitted in production.');
+
+    const missingIdentity = validateProductionConfig({ ...baseValidProdEnv, SHIPPING_WEBHOOK_PROVIDER: '' });
+    expect(missingIdentity.isValid).toBe(false);
+    expect(missingIdentity.errors.some(error => error.includes('SHIPPING_WEBHOOK_PROVIDER'))).toBe(true);
+  });
+
+  it('requires persistent local upload storage or complete S3 credentials', () => {
+    const releaseDirectory = validateProductionConfig({ ...baseValidProdEnv, UPLOADS_DIRECTORY: '' });
+    expect(releaseDirectory.isValid).toBe(false);
+    expect(releaseDirectory.errors.some(error => error.includes('UPLOADS_DIRECTORY'))).toBe(true);
+
+    const incompleteS3 = validateProductionConfig({
+      ...baseValidProdEnv,
+      UPLOAD_PROVIDER: 's3',
+      UPLOADS_DIRECTORY: '',
+      OBJECT_STORAGE_BUCKET: 'products',
+    });
+    expect(incompleteS3.isValid).toBe(false);
+    expect(incompleteS3.errors.some(error => error.includes('UPLOAD_PROVIDER=s3 requires'))).toBe(true);
   });
 
   it('allows PAYMENT_PROVIDER=demo in staging or development', () => {

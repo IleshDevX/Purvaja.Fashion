@@ -28,7 +28,7 @@ export const catalogProductSelect = {
   images: { select: { url: true }, orderBy: { sortOrder: 'asc' } },
   categories: { select: { category: { select: { id: true, name: true, slug: true } } } },
   variants: {
-    select: { id: true, sku: true, size: true, colorName: true, colorHex: true, stockQuantity: true, status: true, priceOverridePaise: true },
+    select: { id: true, sku: true, size: true, colorName: true, colorHex: true, imageUrl: true, stockQuantity: true, status: true, priceOverridePaise: true },
     orderBy: [{ colorName: 'asc' }, { size: 'asc' }],
   },
 } satisfies Prisma.ProductSelect;

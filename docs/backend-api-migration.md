@@ -52,6 +52,8 @@ All API endpoints follow the standardized response envelope:
 | GET | `/api/v1/products/:productId/reviews` | Public | Paginated published product reviews |
 | POST | `/api/v1/products/:productId/reviews` | Customer | Submit a 1-5 star review (Requires completed purchase) |
 
+Review lifecycle policy: this release intentionally supports public listing and one immutable review per eligible delivered purchase. Customer edit/delete and administrator moderation are not part of the current product contract; they must not be represented in the UI or API documentation as available capabilities. If that policy changes, ownership checks, moderation audit history, and transactional aggregate recalculation are required before exposing those operations.
+
 ### 5. Cart Management (`/api/v1/cart`)
 | Method | Path | Auth / Role | Description |
 | --- | --- | --- | --- |

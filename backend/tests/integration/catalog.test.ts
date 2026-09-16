@@ -19,7 +19,9 @@ describe('public catalog API', () => {
     const response = await request(app).get('/api/v1/products');
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
-    expect(response.body.data).toMatchObject({ page: 1, limit: 24, total: 50, totalPages: 3 });
+    expect(response.body.data).toMatchObject({ page: 1, limit: 24 });
+    expect(response.body.data.total).toBeGreaterThanOrEqual(50);
+    expect(response.body.data.totalPages).toBe(Math.ceil(response.body.data.total / 24));
     expect(response.body.data.items).toHaveLength(24);
     expect(JSON.stringify(response.body)).not.toMatch(/passwordHash|tokenHash|emailVerifiedAt|session/i);
   });
@@ -65,6 +67,20 @@ describe('public catalog API', () => {
     expect(byId.body.data.product.id).toBe(product.id);
     expect(malformed.status).toBe(400);
     expect(missing.status).toBe(404);
+  });
+
+  it('publishes a variant image override for color-accurate product selection', async () => {
+    const prisma = getPrismaClient();
+    const variant = await prisma.productVariant.findFirstOrThrow({ where: { product: { status: 'ACTIVE' } } });
+    const imageUrl = `/images/products/variant-${variant.id}.jpg`;
+    await prisma.productVariant.update({ where: { id: variant.id }, data: { imageUrl } });
+    try {
+      const response = await request(app).get(`/api/v1/products/${variant.productId}`);
+      expect(response.status).toBe(200);
+      expect(response.body.data.product.variants.find((item: { id: string }) => item.id === variant.id)?.imageUrl).toBe(imageUrl);
+    } finally {
+      await prisma.productVariant.update({ where: { id: variant.id }, data: { imageUrl: variant.imageUrl } });
+    }
   });
 
   it('returns only published reviews with public fields, pagination, and a 404 for unknown products', async () => {

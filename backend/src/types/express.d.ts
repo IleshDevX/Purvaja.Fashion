@@ -5,6 +5,7 @@ declare global {
     interface Request {
       auth?: { userId: string; role: UserRole; email: string };
       id?: string;
+      rawBody?: Buffer;
     }
   }
 }

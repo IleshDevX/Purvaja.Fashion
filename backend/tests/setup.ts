@@ -8,3 +8,6 @@ process.env.TEST_DATABASE_URL = testUrl ?? '';
 if (testUrl) await verifyTestDatabase(testUrl);
 process.env.DATABASE_URL = testUrl ?? 'postgresql://unavailable:unavailable@127.0.0.1:1/unconfigured_test';
 process.env.DIRECT_URL = process.env.DATABASE_URL;
+process.env.SHIPPING_PROVIDER ??= 'demo';
+process.env.SHIPPING_WEBHOOK_SECRET ??= 'isolated-test-shipping-webhook-secret-at-least-32';
+process.env.SHIPPING_WEBHOOK_PROVIDER ??= 'demo';

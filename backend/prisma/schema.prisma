@@ -332,6 +332,7 @@ model ProductVariant {
   size               String             @db.VarChar(80)
   colorName          String             @map("color_name") @db.VarChar(120)
   colorHex           String             @map("color_hex") @db.Char(7)
+  imageUrl           String?            @map("image_url") @db.Text
   priceOverridePaise Int?               @map("price_override_paise")
   stockQuantity      Int                @default(0) @map("stock_quantity")
   lowStockThreshold  Int                @default(10) @map("low_stock_threshold")
@@ -615,9 +616,28 @@ model OrderShipment {
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  webhookEvents  ShipmentWebhookEvent[]
 
   @@index([trackingNumber])
   @@map("order_shipments")
+}
+
+model ShipmentWebhookEvent {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider        String        @db.VarChar(64)
+  externalEventId String        @map("external_event_id") @db.VarChar(128)
+  shipmentId      String        @map("shipment_id") @db.Uuid
+  eventType       String        @map("event_type") @db.VarChar(64)
+  payloadHash     String        @map("payload_hash") @db.VarChar(64)
+  status          String        @default("RECEIVED") @db.VarChar(32)
+  receivedAt      DateTime      @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt     DateTime?     @map("processed_at") @db.Timestamptz(6)
+  shipment        OrderShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalEventId])
+  @@index([shipmentId, receivedAt])
+  @@index([status, receivedAt])
+  @@map("shipment_webhook_events")
 }
 
 model InventoryReservation {

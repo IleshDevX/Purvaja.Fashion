@@ -654,14 +654,15 @@ export class AdminService {
         user: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
         items: true,
         payments: { include: { refunds: { orderBy: { requestedAt: 'desc' } } } },
+        shipment: true,
         returnRequest: { include: { items: true } },
       },
     });
     if (!item) throw new NotFoundError('Order was not found.', 'ORDER_NOT_FOUND');
     const allowedTransitions: Record<string, Array<'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'RETURNED'>> = {
       CONFIRMED: ['PROCESSING', 'CANCELLED'],
-      PROCESSING: ['SHIPPED', 'CANCELLED'],
-      SHIPPED: ['DELIVERED'],
+      PROCESSING: ['CANCELLED'],
+      SHIPPED: [],
       DELIVERED: [],
       CANCELLED: [],
       RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
@@ -681,13 +682,19 @@ export class AdminService {
       if (!order) throw new NotFoundError('Order was not found.', 'ORDER_NOT_FOUND');
       const allowed: Record<string, string[]> = {
         CONFIRMED: ['PROCESSING', 'CANCELLED'],
-        PROCESSING: ['SHIPPED', 'CANCELLED'],
-        SHIPPED: ['DELIVERED'],
+        PROCESSING: ['CANCELLED'],
+        SHIPPED: [],
         DELIVERED: ['RETURN_REQUESTED'],
         RETURN_REQUESTED: ['RETURNED', 'DELIVERED'],
       };
       if (!allowed[order.status]?.includes(status)) {
-        throw new ValidationError('Invalid order status transition.', undefined, 'INVALID_ORDER_TRANSITION');
+        throw new ValidationError(
+          status === 'SHIPPED' || status === 'DELIVERED'
+            ? 'Shipping transitions must use the shipment workflow and verified carrier events.'
+            : 'Invalid order status transition.',
+          undefined,
+          'INVALID_ORDER_TRANSITION',
+        );
       }
 
       if (status === 'CANCELLED' || status === 'RETURNED') {

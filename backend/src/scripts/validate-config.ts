@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -96,6 +96,10 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
       errors.push('DATABASE_URL must be a valid PostgreSQL connection string starting with postgresql:// or postgres://.');
     } else {
       summary.DATABASE_URL = maskConnectionString(dbUrl);
+      const sslRootCert = new URL(dbUrl).searchParams.get('sslrootcert');
+      if (isEnforced && sslRootCert && (/^[a-z]:[\\/]/i.test(sslRootCert) || sslRootCert.includes('\\'))) {
+        errors.push('DATABASE_URL sslrootcert must use a path available on the deployment host, not a Windows-local path.');
+      }
       if (dbUrl.toLowerCase().includes('sslmode=no-verify')) {
         if (isEnforced) {
           errors.push('Insecure sslmode=no-verify is prohibited in production and staging environments.');
@@ -119,6 +123,10 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
       errors.push('DIRECT_URL must be a valid PostgreSQL connection string starting with postgresql:// or postgres://.');
     } else {
       summary.DIRECT_URL = maskConnectionString(directUrl);
+      const sslRootCert = new URL(directUrl).searchParams.get('sslrootcert');
+      if (isEnforced && sslRootCert && (/^[a-z]:[\\/]/i.test(sslRootCert) || sslRootCert.includes('\\'))) {
+        errors.push('DIRECT_URL sslrootcert must use a path available on the deployment host, not a Windows-local path.');
+      }
       if (directUrl.toLowerCase().includes('sslmode=no-verify')) {
         if (isEnforced) {
           errors.push('Insecure sslmode=no-verify is prohibited in DIRECT_URL for production and staging environments.');
@@ -217,6 +225,54 @@ export function validateProductionConfig(rawEnv: Record<string, string | undefin
           errors.push(`PHONEPE_CALLBACK_URL must not point to localhost in production (received: ${callbackUrl}).`);
         }
       }
+    }
+  }
+
+  const shippingProvider = rawEnv.SHIPPING_PROVIDER ?? 'demo';
+  summary.SHIPPING_PROVIDER = shippingProvider;
+  if (!['demo', 'manual'].includes(shippingProvider)) {
+    errors.push('SHIPPING_PROVIDER must be either demo or manual.');
+  }
+  if (isProd && shippingProvider === 'demo') {
+    errors.push('SHIPPING_PROVIDER=demo is not permitted in production.');
+  }
+  if (isEnforced && (!rawEnv.SHIPPING_WEBHOOK_SECRET || rawEnv.SHIPPING_WEBHOOK_SECRET.length < 32)) {
+    errors.push('SHIPPING_WEBHOOK_SECRET with at least 32 characters is required in production/staging.');
+  } else if (rawEnv.SHIPPING_WEBHOOK_SECRET) {
+    summary.SHIPPING_WEBHOOK_SECRET = maskSecret(rawEnv.SHIPPING_WEBHOOK_SECRET);
+  }
+  if (isEnforced && !rawEnv.SHIPPING_WEBHOOK_PROVIDER) {
+    errors.push('SHIPPING_WEBHOOK_PROVIDER is required in production/staging.');
+  } else if (rawEnv.SHIPPING_WEBHOOK_PROVIDER) {
+    summary.SHIPPING_WEBHOOK_PROVIDER = rawEnv.SHIPPING_WEBHOOK_PROVIDER;
+  }
+
+  const uploadProvider = rawEnv.UPLOAD_PROVIDER ?? 'local';
+  summary.UPLOAD_PROVIDER = uploadProvider;
+  if (!['local', 's3'].includes(uploadProvider)) {
+    errors.push('UPLOAD_PROVIDER must be either local or s3.');
+  }
+  if (isEnforced && uploadProvider === 'local') {
+    if (!rawEnv.UPLOADS_DIRECTORY) {
+      errors.push('UPLOADS_DIRECTORY is required for persistent local uploads in production/staging.');
+    } else if (!isAbsolute(rawEnv.UPLOADS_DIRECTORY)) {
+      errors.push('UPLOADS_DIRECTORY must be an absolute persistent path in production/staging.');
+    } else {
+      summary.UPLOADS_DIRECTORY = rawEnv.UPLOADS_DIRECTORY;
+    }
+  }
+  if (uploadProvider === 's3') {
+    const requiredStorage = [
+      'OBJECT_STORAGE_BUCKET',
+      'OBJECT_STORAGE_ACCESS_KEY_ID',
+      'OBJECT_STORAGE_SECRET_ACCESS_KEY',
+      'OBJECT_STORAGE_PUBLIC_URL',
+    ].filter(key => !rawEnv[key]);
+    if (requiredStorage.length > 0) {
+      errors.push(`UPLOAD_PROVIDER=s3 requires: ${requiredStorage.join(', ')}`);
+    }
+    if (rawEnv.OBJECT_STORAGE_SECRET_ACCESS_KEY) {
+      summary.OBJECT_STORAGE_SECRET_ACCESS_KEY = maskSecret(rawEnv.OBJECT_STORAGE_SECRET_ACCESS_KEY);
     }
   }
 

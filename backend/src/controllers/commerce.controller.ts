@@ -47,7 +47,7 @@ export const phonepeCallback: RequestHandler = async (req, res, next) => {
   try {
     const authorization = req.get('Authorization')?.trim();
     const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    const routePaymentId = typeof req.params.paymentId === 'string' ? req.params.paymentId : undefined;
+    const routePaymentId = typeof req.params.paymentId === 'string' && req.params.paymentId !== 'phonepe' ? req.params.paymentId : undefined;
     const result = await commerce.handlePhonePeCallback(rawBody, authorization, routePaymentId);
     send(res, result);
   } catch (error) {

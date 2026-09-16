@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { ERROR_CONTRACTS } from '../contracts/error-contracts.js';
 import { app } from '../app.js';
 import { getPrismaClient } from '../config/database.js';
 import { CommerceService } from '../services/commerce.service.js';
@@ -328,13 +329,16 @@ export async function runProductionSmokeTests(options: SmokeTestOptions = {}): P
 
     // 13. Return request validation
     await runStep(13, 'Return Request Policy Enforcement', async () => {
-      // Order is CANCELLED, return should be rejected with 400
+      // Order is CANCELLED, return should be rejected by the canonical conflict contract.
       const res = await customerAgent
         .post(`/api/v1/orders/${testOrderId}/returns`)
         .set('X-CSRF-Token', customerCsrf)
         .send({ reason: 'Wrong fit', items: [{ variantId: testVariantId, quantity: 1 }] });
-      if (res.status !== 400) throw new Error(`Expected 400 on returning cancelled order, got ${res.status}`);
-      return 'Return on non-delivered order correctly rejected with 400';
+      const contract = ERROR_CONTRACTS.orderNotReturnable;
+      if (res.status !== contract.status || res.body?.error?.code !== contract.code) {
+        throw new Error(`Expected ${contract.status} ${contract.code} on returning cancelled order, got ${res.status} ${res.body?.error?.code ?? ''}`.trim());
+      }
+      return 'Return on non-delivered order correctly rejected with 409 ORDER_NOT_RETURNABLE';
     });
 
     // 14. Admin unauthenticated access -> 401

@@ -3,6 +3,7 @@ import {
   AuthState,
   LoginCredentials,
   RegisterCredentials,
+  RegistrationResult,
   ForgotPasswordRequest,
   ResetPasswordRequest,
 } from '../types/auth.js';
@@ -50,19 +51,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       },
 
-      register: async (credentials: RegisterCredentials): Promise<boolean> => {
+      register: async (credentials: RegisterCredentials): Promise<RegistrationResult | null> => {
         const generation = ++authGeneration;
         set({ isLoading: true, error: null, fieldErrors: null });
         try {
-          const user = await authService.register(credentials);
-          if (generation !== authGeneration) return false;
-          set({ user, status: 'authenticated', isLoading: false, error: null, fieldErrors: null });
-          return true;
+          const result = await authService.register(credentials);
+          if (generation !== authGeneration) return null;
+          set({ user: null, status: 'guest', isLoading: false, error: null, fieldErrors: null });
+          return result;
         } catch (err: unknown) {
-          if (generation !== authGeneration) return false;
+          if (generation !== authGeneration) return null;
           const { message, fieldErrors } = parseAuthError(err, 'Unable to create account. Please check your details and try again.');
           set({ error: message, fieldErrors, isLoading: false });
-          return false;
+          return null;
         }
       },
 

@@ -284,11 +284,11 @@ export const operationalMetrics: RequestHandler = async (_req, res, next) => {
 
 export const presignedUpload: RequestHandler = async (req, res, next) => {
   try {
-    const { filename, contentType } = req.body as { filename: string; contentType: string };
-    if (!filename || !contentType) {
-      throw new ValidationError('filename and contentType are required.', undefined, 'INVALID_UPLOAD_INPUT');
+    const { filename, contentType, sizeBytes } = req.body as { filename: string; contentType: string; sizeBytes: number };
+    if (!filename || !contentType || !Number.isInteger(sizeBytes)) {
+      throw new ValidationError('filename, contentType, and sizeBytes are required.', undefined, 'INVALID_UPLOAD_INPUT');
     }
-    const contract = await uploadService.getPresignedUploadUrl(filename, contentType);
+    const contract = await uploadService.getPresignedUploadUrl(filename, contentType, sizeBytes);
     send(res, contract);
   } catch (e) {
     next(e);

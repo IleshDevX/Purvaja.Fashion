@@ -1,4 +1,4 @@
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator, type Store } from 'express-rate-limit';
 import type { Request } from 'express';
 import { env } from '../config/env.js';
 import { SharedRateLimitStore } from '../services/rate-limit-store.js';
@@ -10,21 +10,29 @@ export function createLimiter(options: {
   allowTestLimitOverride?: boolean;
   code: string;
   message: string;
+  store?: Store;
 }) {
+  // Resolve the environment once when the application is constructed. Tests may
+  // create applications for different deployment modes, but a live limiter must
+  // never change policy because a mutable configuration object changed later.
+  const isTestEnvironment = env.NODE_ENV === 'test';
+  const isTestProcess = process.env.NODE_ENV === 'test';
   return rateLimit({
     windowMs: options.windowMs,
-    store: env.RATE_LIMIT_REDIS_URL ? new SharedRateLimitStore(options.code, options.windowMs) : undefined,
+    // Unit/integration processes always receive a fresh in-memory store. They
+    // must not inherit or mutate a developer's shared Redis quota state.
+    store: options.store ?? (!isTestProcess && env.RATE_LIMIT_REDIS_URL ? new SharedRateLimitStore(options.code, options.windowMs) : undefined),
     passOnStoreError: false,
     limit: (req: Request) => {
       const testOverride = req.get('X-Test-Rate-Limit-Max');
-      if (testOverride && env.NODE_ENV === 'test' && options.allowTestLimitOverride !== false) {
+      if (testOverride && isTestEnvironment && options.allowTestLimitOverride !== false) {
         const limit = Number(testOverride);
         if (Number.isSafeInteger(limit) && limit > 0) return limit;
       }
-      return env.NODE_ENV === 'test' ? (options.testMax ?? 1000) : options.prodMax;
+      return isTestEnvironment ? (options.testMax ?? 1000) : options.prodMax;
     },
     keyGenerator: (req: Request) => {
-      const testKey = env.NODE_ENV === 'test' ? req.get('X-Test-Client-Id') : undefined;
+      const testKey = isTestEnvironment ? req.get('X-Test-Client-Id') : undefined;
       if (testKey) {
         return testKey.split(',')[0]?.trim() || testKey;
       }
@@ -87,6 +95,18 @@ export const verificationResendLimiter = createLimiter({
   testMax: 3,
   code: 'VERIFICATION_RESEND_RATE_LIMIT_EXCEEDED',
   message: 'Too many verification requests. Please try again later.',
+});
+
+/**
+ * 4b. Verification Attempt Limiter
+ * A six-digit OTP has intentionally low entropy, so verification attempts need
+ * an independent quota from code delivery requests.
+ */
+export const verificationAttemptLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  prodMax: 10,
+  code: 'VERIFICATION_ATTEMPT_RATE_LIMIT_EXCEEDED',
+  message: 'Too many verification attempts. Please request a new code and try again later.',
 });
 
 /**

@@ -30,6 +30,7 @@ function toProduct(record: CatalogProductRecord) {
       color: { name: variant.colorName, hex: variant.colorHex },
       size: variant.size,
       sku: variant.sku,
+      imageUrl: variant.imageUrl ?? undefined,
       inStock: variant.status === 'ACTIVE' && variant.stockQuantity > 0,
       stockCount: variant.stockQuantity,
       pricePaise: variant.priceOverridePaise ?? record.basePricePaise,

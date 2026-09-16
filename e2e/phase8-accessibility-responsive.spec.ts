@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { Client } from 'pg';
 import { reloadDocument } from './browser-navigation.js';
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440] as const;
@@ -55,6 +56,23 @@ async function registerCustomer(page: Page, email: string) {
   await page.getByLabel('Password', { exact: true }).fill(customerPassword);
   await page.getByLabel('Confirm Password').fill(customerPassword);
   await page.getByRole('button', { name: 'REGISTER ACCOUNT' }).click();
+  await expect(page).toHaveURL(/\/auth\/verify-email/);
+
+  const connectionString = process.env.TEST_DATABASE_URL;
+  if (!connectionString) throw new Error('TEST_DATABASE_URL is required for the isolated browser fixture.');
+  const client = new Client({ connectionString });
+  try {
+    await client.connect();
+    const result = await client.query('UPDATE users SET email_verified_at = NOW() WHERE email = $1', [email]);
+    expect(result.rowCount).toBe(1);
+  } finally {
+    await client.end();
+  }
+
+  await page.goto('/auth/login');
+  await page.getByLabel('Email Address').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(customerPassword);
+  await page.getByRole('button', { name: 'SIGN IN' }).click();
   await expect(page).toHaveURL(/\/account$/);
 }
 

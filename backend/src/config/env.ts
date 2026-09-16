@@ -4,6 +4,9 @@ import { validateProductionConfig } from '../scripts/validate-config.js';
 
 dotenv.config();
 
+const optionalString = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(value => typeof value === 'string' && value.trim() === '' ? undefined : value, schema.optional());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   PORT: z.coerce.number().default(5001),
@@ -22,14 +25,25 @@ const envSchema = z.object({
   OPERATIONAL_ALERT_WEBHOOK_URL: z.string().url().optional(),
   OPERATIONAL_ALERT_WEBHOOK_TOKEN: z.string().min(16).optional(),
   PAYMENT_PROVIDER: z.enum(['demo', 'phonepe']).default('demo'),
-  PHONEPE_MERCHANT_ID: z.string().optional(),
-  PHONEPE_CLIENT_ID: z.string().optional(),
-  PHONEPE_CLIENT_SECRET: z.string().optional(),
-  PHONEPE_CLIENT_VERSION: z.string().optional(),
+  SHIPPING_PROVIDER: z.enum(['demo', 'manual']).default('demo'),
+  SHIPPING_WEBHOOK_SECRET: optionalString(z.string().min(32)),
+  SHIPPING_WEBHOOK_PROVIDER: z.string().trim().min(1).max(64).default('demo'),
+  UPLOAD_PROVIDER: z.enum(['local', 's3']).default('local'),
+  UPLOADS_DIRECTORY: optionalString(z.string()),
+  OBJECT_STORAGE_ENDPOINT: optionalString(z.string().url()),
+  OBJECT_STORAGE_REGION: z.string().default('auto'),
+  OBJECT_STORAGE_BUCKET: optionalString(z.string()),
+  OBJECT_STORAGE_ACCESS_KEY_ID: optionalString(z.string()),
+  OBJECT_STORAGE_SECRET_ACCESS_KEY: optionalString(z.string()),
+  OBJECT_STORAGE_PUBLIC_URL: optionalString(z.string().url()),
+  PHONEPE_MERCHANT_ID: optionalString(z.string()),
+  PHONEPE_CLIENT_ID: optionalString(z.string()),
+  PHONEPE_CLIENT_SECRET: optionalString(z.string()),
+  PHONEPE_CLIENT_VERSION: optionalString(z.string()),
   PHONEPE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
-  PHONEPE_CALLBACK_URL: z.string().url().optional(),
-  PHONEPE_WEBHOOK_USERNAME: z.string().min(1).optional(),
-  PHONEPE_WEBHOOK_PASSWORD: z.string().min(16).optional(),
+  PHONEPE_CALLBACK_URL: optionalString(z.string().url()),
+  PHONEPE_WEBHOOK_USERNAME: optionalString(z.string().min(1)),
+  PHONEPE_WEBHOOK_PASSWORD: optionalString(z.string().min(8)),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -58,6 +72,21 @@ if (env.PAYMENT_PROVIDER === 'phonepe') {
   if (env.NODE_ENV === 'production' && process.env.PHONEPE_ENVIRONMENT !== 'production') {
     throw new Error('PHONEPE_ENVIRONMENT must be explicitly set to "production" in production environments.');
   }
+}
+
+if (env.NODE_ENV === 'production' && env.SHIPPING_PROVIDER === 'demo') {
+  throw new Error('SHIPPING_PROVIDER=demo is not permitted in production. Use verified manual carrier details or a real carrier adapter.');
+}
+if ((env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') && !env.SHIPPING_WEBHOOK_SECRET) {
+  throw new Error('Staging and production require SHIPPING_WEBHOOK_SECRET for authenticated carrier events.');
+}
+if ((env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') && env.UPLOAD_PROVIDER === 'local' && !env.UPLOADS_DIRECTORY) {
+  throw new Error('Staging and production local uploads require an explicit persistent UPLOADS_DIRECTORY.');
+}
+if (env.UPLOAD_PROVIDER === 's3') {
+  const missing = ['OBJECT_STORAGE_BUCKET', 'OBJECT_STORAGE_ACCESS_KEY_ID', 'OBJECT_STORAGE_SECRET_ACCESS_KEY', 'OBJECT_STORAGE_PUBLIC_URL']
+    .filter(key => !env[key as keyof typeof env]);
+  if (missing.length > 0) throw new Error(`UPLOAD_PROVIDER=s3 requires: ${missing.join(', ')}`);
 }
 
 if (env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') {

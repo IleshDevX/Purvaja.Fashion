@@ -11,6 +11,7 @@ import { getHealthStatus, getReadinessStatus } from './controllers/health.contro
 import { requestIdMiddleware } from './middleware/requestId.middleware.js';
 import { boundedRouteLabel, metrics } from './utils/metrics.js';
 import routes from './routes/index.js';
+import { getLocalUploadsRoot } from './services/upload.service.js';
 
 function parseTrustProxy(val: string): boolean | number | string {
   if (val.toLowerCase() === 'true') return true;
@@ -51,8 +52,14 @@ export function createApp(): Express {
   app.use(compression());
 
   // Static uploads directory (for product images uploaded locally or on VPS)
-  const uploadsDir = join(fileURLToPath(new URL('../../', import.meta.url)), 'uploads');
-  app.use('/uploads', express.static(uploadsDir));
+  if (env.UPLOAD_PROVIDER === 'local') {
+    app.use('/uploads', express.static(getLocalUploadsRoot(), {
+      setHeaders: response => {
+        response.setHeader('X-Content-Type-Options', 'nosniff');
+        response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    }));
+  }
 
   // Routes
   app.use(routes);

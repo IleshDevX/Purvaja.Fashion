@@ -19,9 +19,31 @@ export function requireRole(...roles: UserRole[]): RequestHandler {
   return (req, _res, next) => { if (!req.auth) return next(new UnauthorizedError()); if (!roles.includes(req.auth.role)) return next(new ForbiddenError()); return next(); };
 }
 
+import { logger } from '../utils/logger.js';
+
 export const requireCsrf: RequestHandler = (req, _res, next) => {
   const header = req.get('X-CSRF-Token');
   const cookie = req.cookies?.[CSRF_COOKIE] as string | undefined;
-  if (!header || !cookie || header !== cookie) return next(new ForbiddenError('Invalid CSRF token.', 'CSRF_INVALID'));
+  const rawCookieHeader = req.headers.cookie ?? '';
+  const csrfCookies: string[] = [];
+  if (rawCookieHeader) {
+    for (const pair of rawCookieHeader.split(';')) {
+      const [name, ...val] = pair.trim().split('=');
+      if (name === CSRF_COOKIE) {
+        csrfCookies.push(decodeURIComponent(val.join('=')));
+      }
+    }
+  }
+  const isMatch = Boolean(header && (header === cookie || csrfCookies.includes(header)));
+  if (!header || !isMatch) {
+    logger.warn({
+      headerPresent: Boolean(header),
+      cookiePresent: Boolean(cookie),
+      csrfCookieCount: csrfCookies.length,
+      matched: isMatch,
+      url: req.url,
+    }, 'CSRF validation failed');
+    return next(new ForbiddenError('Invalid CSRF token.', 'CSRF_INVALID'));
+  }
   next();
 };
